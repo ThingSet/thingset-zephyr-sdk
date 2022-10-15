@@ -1,0 +1,8 @@
+# Copyright (c) 2022 Martin Jäger
+
+mainmenu "ThingSet sample for serial interface"
+
+rsource "../../Kconfig"
+
+# include main Zephyr menu entries from Zephyr root directory
+source "Kconfig.zephyr"

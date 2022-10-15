@@ -1,0 +1,44 @@
+# Kconfig - application configuration options
+
+# Copyright (c) 2022 Libre Solar Technologies GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+menu "ThingSet SDK"
+
+rsource "src/Kconfig.serial"
+
+menu "General Publication Settings"
+
+config THINGSET_PUB_EVENTS_DEFAULT
+    bool "Enable event-based publication by default"
+    depends on THINGSET
+    default y
+
+config THINGSET_PUB_LIVE_DATA_DEFAULT
+    bool "Enable live data publication by default"
+    depends on THINGSET
+    default y
+
+config THINGSET_PUB_LIVE_DATA_PERIOD_DEFAULT
+    int "Default period for live data publication"
+    depends on THINGSET
+    default 1
+
+config THINGSET_PUB_REPORTS_DEFAULT
+    bool "Enable publication of reports by default"
+    depends on THINGSET
+    default y
+
+config THINGSET_PUB_REPORTS_PERIOD_DEFAULT
+    int "Default period for publication of reports"
+    depends on THINGSET
+    default 900
+
+endmenu # General Publication Settings
+
+config THINGSET_GENERATE_NODE_ID
+    bool "Automatically generate node ID"
+    select HWINFO
+    default y
+
+endmenu # ThingSet SDK

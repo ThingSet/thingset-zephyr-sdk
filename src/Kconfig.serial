@@ -1,0 +1,21 @@
+# Copyright (c) 2022 Libre Solar Technologies GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig THINGSET_SERIAL
+    bool "Serial interface"
+
+if THINGSET_SERIAL
+
+config THINGSET_SERIAL_RX_BUF_SIZE
+    depends on THINGSET_SERIAL
+    int "ThingSet serial RX buffer size"
+    range 64 2048
+    default 512
+
+config THINGSET_SERIAL_TX_BUF_SIZE
+    depends on THINGSET_SERIAL
+    int "ThingSet serial TX buffer size"
+    range 256 2048
+    default 1024
+
+endif # THINGSET_SERIAL

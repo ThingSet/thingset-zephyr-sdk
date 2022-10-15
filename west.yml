@@ -1,0 +1,26 @@
+# Copyright (c) 2022 Martin Jäger
+
+manifest:
+  remotes:
+    - name: zephyrproject
+      url-base: https://github.com/zephyrproject-rtos
+    - name: thingset
+      url-base: https://github.com/ThingSet
+  projects:
+    - name: zephyr
+      remote: zephyrproject
+      revision: v3.2-branch
+      import:
+        name-allowlist:
+          - cmsis
+          - edtt
+          - hal_espressif
+          - hal_stm32
+          - hal_st
+          - loramac-node
+          - mbedtls
+          - tinycrypt
+    - name: thingset-device-library
+      remote: thingset
+      revision: 897b276c3f69ea9284e5b6ec9c30760c9e21c496
+      path: modules/thingset

@@ -1,0 +1,7 @@
+# Copyright (c) 2022 Martin Jäger
+# SPDX-License-Identifier: Apache-2.0
+
+name: ThingSet SDK
+build:
+  cmake: .
+  kconfig: Kconfig
