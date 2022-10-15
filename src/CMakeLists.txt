@@ -2,6 +2,7 @@
 target_sources(app PRIVATE thingset_sdk.c)
 
 target_sources_ifdef(CONFIG_THINGSET_SERIAL app PRIVATE thingset_serial.c)
+target_sources_ifdef(CONFIG_THINGSET_STORAGE app PRIVATE thingset_storage.c)
 
 # determine git tag and commit hash for automatic firmware versioning
 find_package(Git)

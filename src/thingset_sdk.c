@@ -113,6 +113,11 @@ static int thingset_sdk_init(const struct device *dev)
     generate_device_eui();
 #endif
 
+#ifdef CONFIG_THINGSET_STORAGE
+    thingset_storage_load();
+    ts_set_update_callback(&ts, SUBSET_NVM, thingset_storage_save);
+#endif
+
     return 0;
 }
 

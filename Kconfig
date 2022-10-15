@@ -6,6 +6,7 @@
 menu "ThingSet SDK"
 
 rsource "src/Kconfig.serial"
+rsource "src/Kconfig.storage"
 
 menu "General Publication Settings"
 

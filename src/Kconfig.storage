@@ -1,0 +1,40 @@
+# Copyright (c) 2022 Libre Solar Technologies GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig THINGSET_STORAGE
+    bool "Storage backend"
+    depends on EEPROM || NVS
+    help
+      Enables long-term storage of data in non-volatile memory (EEPROM or Flash).
+
+if THINGSET_STORAGE
+
+config THINGSET_STORAGE_CHANGE
+    depends on THINGSET_STORAGE
+    bool "Store data upon change to ThingSet stored items"
+    default y
+
+config THINGSET_STORAGE_REGULAR
+    depends on THINGSET_STORAGE
+    bool "Store data in regular intervals"
+    default y
+
+config THINGSET_STORAGE_INTERVAL
+    depends on THINGSET_STORAGE_REGULAR
+    int "Regular storage interval (in hours)"
+    range 1 8760
+    default 6
+
+config THINGSET_STORAGE_DATA_VERSION
+    int "Data objects version"
+    range 1 65536
+    default 1
+    help
+      This version number has to be increased each time IDs previously used for data objects
+      stored in non-volatile memory are re-used for different data objects (different data type
+      or different semantics).
+
+      Warning: This will discard previously stored data in order to prevent data corruption. Try
+      to avoid changing data object IDs used previously.
+
+endif # THINGSET_STORAGE
