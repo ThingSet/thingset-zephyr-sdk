@@ -280,6 +280,6 @@ static int thingset_storage_init(const struct device *dev)
     return 0;
 }
 
-SYS_INIT(thingset_storage_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
+SYS_INIT(thingset_storage_init, APPLICATION, THINGSET_INIT_PRIORITY_STORAGE);
 
 #endif /* CONFIG_THINGSET_STORAGE_REGULAR */

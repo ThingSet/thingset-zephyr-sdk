@@ -44,6 +44,14 @@
 #define SUBSET_REPORT (1U << 2) // summarized data for low bandwidth interfaces (e.g. LoRaWAN)
 #define SUBSET_EVENT  (1U << 3) // data only published on events (e.g. received meter reading)
 
+/*
+ * The storage has to be initialized first, so that the configuration can be read by the SDK
+ * and used by all other components (using default priority)
+ */
+#define THINGSET_INIT_PRIORITY_STORAGE 30
+#define THINGSET_INIT_PRIORITY_SDK     40
+#define THINGSET_INIT_PRIORITY_DEFAULT 60
+
 extern bool pub_events_enable;
 
 extern bool pub_live_data_enable;

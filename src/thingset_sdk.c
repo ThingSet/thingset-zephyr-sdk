@@ -127,4 +127,4 @@ static int thingset_sdk_init(const struct device *dev)
     return 0;
 }
 
-SYS_INIT(thingset_sdk_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
+SYS_INIT(thingset_sdk_init, APPLICATION, THINGSET_INIT_PRIORITY_SDK);
