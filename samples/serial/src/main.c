@@ -5,7 +5,6 @@
 #include <zephyr/kernel.h>
 
 #include "thingset/sdk.h"
-#include "thingset/serial.h"
 
 static uint32_t counter;
 
@@ -13,7 +12,7 @@ static uint32_t counter;
 
 TS_ADD_GROUP(ID_SAMPLE, "Sample", TS_NO_CALLBACK, ID_ROOT);
 
-TS_ADD_ITEM_UINT32(0x50, "rCounter", &counter, ID_SAMPLE, TS_ANY_R, SUBSET_LIVE);
+TS_ADD_ITEM_UINT32(0x50, "rCounter", &counter, ID_SAMPLE, TS_ANY_R, SUBSET_LIVE | SUBSET_REPORT);
 
 void main(void)
 {

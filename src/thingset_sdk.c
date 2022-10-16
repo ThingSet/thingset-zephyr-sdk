@@ -17,11 +17,17 @@
 
 LOG_MODULE_REGISTER(thingset_sdk, CONFIG_LOG_DEFAULT_LEVEL);
 
-static const char firmware_version[] = FIRMWARE_VERSION_ID;
-static char node_id[17];
-
-/* see https://standards.ieee.org/wp-content/uploads/import/documents/tutorials/eui.pdf */
+/*
+ * The ThingSet node ID is an EUI-64 stored as upper-case hex string. It is also used as the
+ * DevEUI for LoRaWAN. If available, it should be generated from a MAC address.
+ *
+ * Further information regarding EUI-64:
+ * https://standards.ieee.org/wp-content/uploads/import/documents/tutorials/eui.pdf
+ */
+char node_id[17];
 uint8_t eui64[8];
+
+static const char firmware_version[] = FIRMWARE_VERSION_ID;
 
 bool pub_events_enable = IS_ENABLED(CONFIG_THINGSET_PUB_LIVE_DATA_DEFAULT);
 

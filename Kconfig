@@ -5,6 +5,7 @@
 
 menu "ThingSet SDK"
 
+rsource "src/Kconfig.lorawan"
 rsource "src/Kconfig.serial"
 rsource "src/Kconfig.storage"
 
