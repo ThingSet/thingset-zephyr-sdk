@@ -1,6 +1,4 @@
-# Kconfig - application configuration options
-
-# Copyright (c) 2022 Libre Solar Technologies GmbH
+# Copyright (c) The ThingSet Project Contributors
 # SPDX-License-Identifier: Apache-2.0
 
 menu "ThingSet SDK"

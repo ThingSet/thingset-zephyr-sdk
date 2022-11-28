@@ -1,5 +1,7 @@
 /*
- * Copyright (c) 2022 Martin Jäger
+ * Copyright (c) The ThingSet Project Contributors
+ *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #ifndef THINGSET_BLE_H_

@@ -13,3 +13,7 @@ west build -b native_posix samples/counter -t run
 ```
 west build -b olimex_lora_stm32wl_devkit samples/counter -- -DOVERLAY_CONFIG=lorawan.conf
 ```
+
+## License
+
+This software is released under the [Apache-2.0 License](LICENSE).

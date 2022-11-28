@@ -1,5 +1,5 @@
 /*
- * Copyright (c) The Libre Solar Project Contributors
+ * Copyright (c) The ThingSet Project Contributors
  *
  * SPDX-License-Identifier: Apache-2.0
  */
