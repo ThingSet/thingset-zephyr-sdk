@@ -14,11 +14,11 @@
 /*
  * ID ranges for this firmware:
  *
- * 0x01 - 0x04: reserved
- * 0x04 - 0x0F: common groups
+ * 0x01 - 0x0F: groups defined by the application
  * 0x10 - 0x1F: reserved for ThingSet
- * 0x20 - 0x2F: common subsets
- * 0x30 - 0x3F: reserved for further groups
+ * 0x20 - 0x2F: groups defined by ThingSet SDK
+ * 0x30 - 0x37: subsets defined by ThingSet SDK
+ * 0x38 - 0x3F: subsets defined by the application
  * 0x40 - 0xFF: items of groups (starting e.g. with 0x40 for group 0x04)
  * 0x100 - 0x1FF: items for _pub group
  */
@@ -27,14 +27,16 @@
  * Groups / first layer data object IDs
  */
 #define ID_ROOT    0x00
-#define ID_DEVICE  0x04
-#define ID_LORAWAN 0x07
-#define ID_WIFI    0x08
 
-#define ID_EVENT  0x20
-#define ID_LIVE   0x21
-#define ID_REPORT 0x22
-#define ID_PUB    0x3F
+#define ID_DEVICE  0x20
+#define ID_LORAWAN 0x27
+#define ID_WIFI    0x28
+#define ID_DFU     0x2D
+#define ID_PUB     0x2F
+
+#define ID_EVENT  0x30
+#define ID_LIVE   0x31
+#define ID_REPORT 0x32
 
 #define SUBSET_EVENT_PATH  "e"
 #define SUBSET_LIVE_PATH   "mLive"
