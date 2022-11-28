@@ -28,7 +28,6 @@
  */
 #define ID_ROOT    0x00
 
-#define ID_DEVICE  0x20
 #define ID_LORAWAN 0x27
 #define ID_WIFI    0x28
 #define ID_DFU     0x2D

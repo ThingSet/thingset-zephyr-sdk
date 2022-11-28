@@ -37,8 +37,6 @@ static struct shared_buffer sbuf = {
     .size = sizeof(buf_data),
 };
 
-static const char firmware_version[] = FIRMWARE_VERSION_ID;
-
 bool pub_events_enable = IS_ENABLED(CONFIG_THINGSET_PUB_LIVE_DATA_DEFAULT);
 
 bool pub_live_data_enable = IS_ENABLED(CONFIG_THINGSET_PUB_LIVE_DATA_DEFAULT);
@@ -53,11 +51,6 @@ struct ts_context ts;
 
 TS_ADD_ITEM_STRING(0x1D, "cNodeID", node_id, sizeof(node_id),
     ID_ROOT, TS_ANY_R | TS_MKR_W, SUBSET_NVM);
-
-TS_ADD_GROUP(ID_DEVICE, "Device", TS_NO_CALLBACK, ID_ROOT);
-
-TS_ADD_ITEM_STRING(0x40, "cFirmwareVersion", firmware_version, 0,
-    ID_DEVICE, TS_ANY_R, 0);
 
 TS_ADD_SUBSET(ID_EVENT, SUBSET_EVENT_PATH, SUBSET_EVENT, ID_ROOT, TS_ANY_RW);
 TS_ADD_SUBSET(ID_LIVE, SUBSET_LIVE_PATH, SUBSET_LIVE, ID_ROOT, TS_ANY_RW);
