@@ -1,0 +1,38 @@
+name: Build with Zephyr toolchain
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: zephyrprojectrtos/ci:v0.24.3
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: thingset-zephyr-sdk
+
+      - name: Set up Python
+        uses: actions/setup-python@v1
+
+      - name: Initialize
+        working-directory: thingset-zephyr-sdk
+        run: |
+          pip3 install -U west
+          west init -l .
+          west update --narrow
+          pip3 install -r ../zephyr/scripts/requirements-base.txt
+
+      - name: Trailing whitespace check
+        working-directory: thingset-zephyr-sdk
+        run: |
+          git diff --check `git rev-list HEAD | tail -n 1`..
+
+      - name: Run build tests
+        working-directory: thingset-zephyr-sdk
+        run: |
+          west build -p -b olimex_lora_stm32wl_devkit samples/counter -- -DOVERLAY_CONFIG=lorawan.conf
+          west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=can.conf
+          west build -p -b native_posix samples/counter

@@ -7,9 +7,12 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: thingset
       url-base: https://github.com/ThingSet
+    - name: libresolar
+      url-base: https://github.com/LibreSolar
   projects:
     - name: zephyr
-      remote: zephyrproject
+      # libresolar fork includes https://github.com/zephyrproject-rtos/zephyr/pull/51327
+      remote: libresolar
       revision: v3.2-branch
       import:
         name-allowlist:
