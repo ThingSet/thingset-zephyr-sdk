@@ -9,6 +9,14 @@
 
 #include <thingset.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void thingset_serial_pub_statement(struct ts_data_object *subset);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* THINGSET_SERIAL_H_ */

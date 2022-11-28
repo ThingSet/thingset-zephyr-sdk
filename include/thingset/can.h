@@ -10,6 +10,10 @@
 #include <zephyr/canbus/isotp.h>
 #include <zephyr/device.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * ThingSet CAN context storing all information required for one instance.
  */
@@ -76,5 +80,9 @@ void thingset_can_process(struct thingset_can *ts_can);
  * @returns 0 for success or negative errno in case of error
  */
 int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* THINGSET_CAN_H_ */

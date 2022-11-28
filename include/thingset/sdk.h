@@ -11,6 +11,10 @@
 
 #include <thingset.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * ID ranges for this firmware:
  *
@@ -82,5 +86,9 @@ struct shared_buffer
  * @returns Pointer to shared_buffer instance
  */
 struct shared_buffer *thingset_sdk_shared_buffer(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* THINGSET_SDK_H_ */
