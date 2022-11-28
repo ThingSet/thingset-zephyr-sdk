@@ -25,7 +25,6 @@ LOG_MODULE_REGISTER(thingset_serial, CONFIG_LOG_DEFAULT_LEVEL);
 
 static const struct device *uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 
-static char tx_buf[CONFIG_THINGSET_SERIAL_TX_BUF_SIZE];
 static char rx_buf[CONFIG_THINGSET_SERIAL_RX_BUF_SIZE];
 
 static volatile size_t rx_buf_pos = 0;
@@ -39,10 +38,16 @@ static struct ts_data_object *live_data_subset;
 void thingset_serial_pub_statement(struct ts_data_object *subset)
 {
     if (subset != NULL) {
-        int len = ts_txt_statement(&ts, tx_buf, sizeof(tx_buf), subset);
+        struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
+        k_sem_take(&tx_buf->lock, K_FOREVER);
+
+        int len = ts_txt_statement(&ts, tx_buf->data, tx_buf->size, subset);
         for (int i = 0; i < len; i++) {
-            uart_poll_out(uart_dev, tx_buf[i]);
+            uart_poll_out(uart_dev, tx_buf->data[i]);
         }
+
+        k_sem_give(&tx_buf->lock);
+
         uart_poll_out(uart_dev, '\r');
         uart_poll_out(uart_dev, '\n');
     }
@@ -53,12 +58,16 @@ static void serial_process_command()
     if (rx_buf_pos > 0) {
         LOG_DBG("Received Request (%d bytes): %s", strlen(rx_buf), rx_buf);
 
-        int len =
-            ts_process(&ts, (uint8_t *)rx_buf, strlen(rx_buf), (uint8_t *)tx_buf, sizeof(tx_buf));
+        struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
+        k_sem_take(&tx_buf->lock, K_FOREVER);
 
+        int len = ts_process(&ts, (uint8_t *)rx_buf, strlen(rx_buf), tx_buf->data, tx_buf->size);
         for (int i = 0; i < len; i++) {
-            uart_poll_out(uart_dev, tx_buf[i]);
+            uart_poll_out(uart_dev, tx_buf->data[i]);
         }
+
+        k_sem_give(&tx_buf->lock);
+
         uart_poll_out(uart_dev, '\r');
         uart_poll_out(uart_dev, '\n');
     }

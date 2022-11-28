@@ -5,6 +5,8 @@
 #ifndef THINGSET_SDK_H_
 #define THINGSET_SDK_H_
 
+#include <zephyr/kernel.h>
+
 #include <thingset.h>
 
 /*
@@ -61,5 +63,20 @@ extern bool pub_reports_enable;
 extern uint32_t pub_reports_period;
 
 extern struct ts_context ts;
+
+struct shared_buffer
+{
+    struct k_sem lock;
+    uint8_t *data;
+    const size_t size;
+    size_t pos;
+};
+
+/**
+ * Get TX buffer that can be shared between different ThingSet interfaces
+ *
+ * @returns Pointer to shared_buffer instance
+ */
+struct shared_buffer *thingset_sdk_shared_buffer(void);
 
 #endif /* THINGSET_SDK_H_ */

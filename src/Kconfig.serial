@@ -12,10 +12,4 @@ config THINGSET_SERIAL_RX_BUF_SIZE
     range 64 2048
     default 512
 
-config THINGSET_SERIAL_TX_BUF_SIZE
-    depends on THINGSET_SERIAL
-    int "ThingSet serial TX buffer size"
-    range 256 2048
-    default 1024
-
 endif # THINGSET_SERIAL

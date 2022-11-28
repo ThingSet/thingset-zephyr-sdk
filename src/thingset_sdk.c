@@ -27,6 +27,14 @@ LOG_MODULE_REGISTER(thingset_sdk, CONFIG_LOG_DEFAULT_LEVEL);
 char node_id[17];
 uint8_t eui64[8];
 
+/* buffer should be word-aligned e.g. for hardware CRC calculations */
+static uint8_t buf_data[CONFIG_THINGSET_SHARED_TX_BUF_SIZE] __aligned(sizeof(int));
+
+static struct shared_buffer sbuf = {
+    .data = buf_data,
+    .size = sizeof(buf_data),
+};
+
 static const char firmware_version[] = FIRMWARE_VERSION_ID;
 
 bool pub_events_enable = IS_ENABLED(CONFIG_THINGSET_PUB_LIVE_DATA_DEFAULT);
@@ -109,9 +117,16 @@ static void generate_device_eui()
 }
 #endif /* CONFIG_THINGSET_GENERATE_NODE_ID */
 
+struct shared_buffer *thingset_sdk_shared_buffer(void)
+{
+    return &sbuf;
+}
+
 static int thingset_sdk_init(const struct device *dev)
 {
     ARG_UNUSED(dev);
+
+    k_sem_init(&sbuf.lock, 1, 1);
 
     ts_init_global(&ts);
 

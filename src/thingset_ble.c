@@ -83,7 +83,6 @@ static struct bt_conn *ble_conn;
 
 volatile bool notify_resp;
 
-static char tx_buf[CONFIG_THINGSET_SERIAL_TX_BUF_SIZE];
 static char rx_buf[CONFIG_THINGSET_SERIAL_RX_BUF_SIZE];
 
 static volatile size_t rx_buf_pos = 0;
@@ -222,8 +221,13 @@ static void thingset_ble_tx(const uint8_t *buf, size_t len)
 void ble_pub_statement(struct ts_data_object *subset)
 {
     if (subset != NULL) {
-        int len = ts_txt_statement(&ts, tx_buf, sizeof(tx_buf), subset);
-        thingset_ble_tx(tx_buf, len);
+        struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
+        k_sem_take(&tx_buf->lock, K_FOREVER);
+
+        int len = ts_txt_statement(&ts, tx_buf->data, tx_buf->size, subset);
+        thingset_ble_tx(tx_buf->data, len);
+
+        k_sem_give(&tx_buf->lock);
     }
 }
 
@@ -233,10 +237,13 @@ static void ble_process_command()
     if (rx_buf_pos > 1) {
         printf("Received Request (%d bytes): %s\n", strlen(rx_buf), rx_buf);
 
-        int len =
-            ts_process(&ts, (uint8_t *)rx_buf, strlen(rx_buf), (uint8_t *)tx_buf, sizeof(tx_buf));
+        struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
+        k_sem_take(&tx_buf->lock, K_FOREVER);
+
+        int len = ts_process(&ts, (uint8_t *)rx_buf, strlen(rx_buf), tx_buf->data, tx_buf->size);
 
         thingset_ble_tx(tx_buf, len);
+        k_sem_give(&tx_buf->lock);
     }
 
     // release buffer and start waiting for new commands
