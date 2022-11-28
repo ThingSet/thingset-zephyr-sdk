@@ -47,6 +47,7 @@
 #define SUBSET_LIVE   (1U << 1) // live data for high bandwidth interfaces (e.g. UART, BLE)
 #define SUBSET_REPORT (1U << 2) // summarized data for low bandwidth interfaces (e.g. LoRaWAN)
 #define SUBSET_EVENT  (1U << 3) // data only published on events (e.g. received meter reading)
+#define SUBSET_CTRL   (1U << 4) // control data sent and received via CAN
 
 /*
  * The storage has to be initialized first, so that the configuration can be read by the SDK

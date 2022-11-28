@@ -1,0 +1,27 @@
+# Copyright (c) The ThingSet Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig THINGSET_CAN
+    bool "CAN interface"
+    depends on CAN
+    depends on EVENTS
+    depends on ISOTP
+    default y
+
+if THINGSET_CAN
+
+config THINGSET_CAN_THREAD_STACK_SIZE
+    int "ThingSet CAN thread stack size"
+    default 2048
+    help
+      Stack size of thread for processing ThingSet messages transmitted
+      via CAN ISO-TP.
+
+config THINGSET_CAN_THREAD_PRIORITY
+    int "ThingSet CAN thread priority"
+    default 2
+    help
+      Priority of thread for processing ThingSet messages transmitted
+      via CAN ISO-TP.
+
+endif # THINGSET_CAN

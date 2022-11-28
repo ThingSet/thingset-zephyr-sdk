@@ -1,0 +1,22 @@
+/*
+ * Copyright (c) The ThingSet Project Contributors
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	chosen {
+		zephyr,canbus = &can0;
+	};
+};
+
+/*
+ * Set up a virtual CAN interface with following commands:
+ *
+ * sudo ip link add dev vcan0 type vcan
+ * sudo ip link set up vcan0
+ */
+&can0 {
+	status = "okay";
+	host-interface = "vcan0";
+};
