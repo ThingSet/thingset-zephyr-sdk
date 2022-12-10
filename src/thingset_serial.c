@@ -17,8 +17,8 @@
 
 LOG_MODULE_REGISTER(thingset_serial, CONFIG_LOG_DEFAULT_LEVEL);
 
-#if DT_NODE_EXISTS(DT_ALIAS(thingset_serial))
-#define UART_DEVICE_NODE DT_ALIAS(thingset_serial)
+#if DT_NODE_EXISTS(DT_CHOSEN(thingset_serial))
+#define UART_DEVICE_NODE DT_CHOSEN(thingset_serial)
 #else
 #define UART_DEVICE_NODE DT_CHOSEN(zephyr_console)
 #endif
