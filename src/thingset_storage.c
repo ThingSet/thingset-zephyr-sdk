@@ -15,6 +15,16 @@
 
 LOG_MODULE_REGISTER(thingset_storage, CONFIG_LOG_DEFAULT_LEVEL);
 
+K_MUTEX_DEFINE(data_buf_lock);
+
+/*
+ * Buffer used by store and restore functions:
+ *  - Must be word-aligned for hardware CRC calculation
+ *  - Cannot be shared with the comms interfaces as storage functions are called from the comms
+ *    interfaces, which would create deadlocks
+ */
+static uint8_t buf[512] __aligned(sizeof(uint32_t));
+
 #if defined(CONFIG_EEPROM) && defined(CONFIG_SOC_FAMILY_STM32)
 
 #include <stm32_ll_bus.h>
@@ -75,24 +85,22 @@ void thingset_storage_load()
             buf_header[2], buf_header[3], buf_header[4], buf_header[5], buf_header[6],
             buf_header[7]);
 
-    struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
-    if (version == CONFIG_THINGSET_STORAGE_DATA_VERSION && len <= sbuf->size) {
-        k_sem_take(&sbuf->lock, K_FOREVER);
-
-        err = eeprom_read(eeprom_dev, EEPROM_HEADER_SIZE, sbuf->data, len);
+    if (version == CONFIG_THINGSET_STORAGE_DATA_VERSION && len <= sizeof(buf)) {
+        k_mutex_lock(&data_buf_lock, K_FOREVER);
+        err = eeprom_read(eeprom_dev, EEPROM_HEADER_SIZE, buf, len);
 
         // printf("Data (len=%d): ", len);
         // for (int i = 0; i < len; i++) printf("%.2x ", buf[i]);
 
-        if (_calc_crc(sbuf->data, len) == crc) {
-            int status = ts_bin_import(&ts, sbuf->data, sbuf->size, TS_WRITE_MASK, SUBSET_NVM);
+        if (_calc_crc(buf, len) == crc) {
+            int status = ts_bin_import(&ts, buf, sizeof(buf), TS_WRITE_MASK, SUBSET_NVM);
             LOG_INF("EEPROM read and data objects updated, ThingSet result: 0x%x", status);
         }
         else {
             LOG_ERR("EEPROM data CRC invalid, expected 0x%x (data_len = %d)", (unsigned int)crc,
                     len);
         }
-        k_sem_give(&sbuf->lock);
+        k_mutex_unlock(&data_buf_lock);
     }
     else {
         LOG_INF("EEPROM empty or data layout version changed");
@@ -104,30 +112,28 @@ void thingset_storage_save()
     int err;
 
     const struct device *eeprom_dev = device_get_binding("EEPROM_0");
-    struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
 
-    k_sem_take(&sbuf->lock, K_FOREVER);
+    k_mutex_lock(&data_buf_lock, K_FOREVER);
 
-    int len = ts_bin_export(&ts, sbuf->data + EEPROM_HEADER_SIZE, sbuf->size - EEPROM_HEADER_SIZE,
-                            SUBSET_NVM);
-    uint32_t crc = _calc_crc(sbuf->data + EEPROM_HEADER_SIZE, len);
+    int len =
+        ts_bin_export(&ts, buf + EEPROM_HEADER_SIZE, sizeof(buf) - EEPROM_HEADER_SIZE, SUBSET_NVM);
+    uint32_t crc = _calc_crc(buf + EEPROM_HEADER_SIZE, len);
 
-    *((uint16_t *)&sbuf->data[0]) = (uint16_t)CONFIG_THINGSET_STORAGE_DATA_VERSION;
-    *((uint16_t *)&sbuf->data[2]) = (uint16_t)(len);
-    *((uint32_t *)&sbuf->data[4]) = crc;
+    *((uint16_t *)&buf[0]) = (uint16_t)CONFIG_THINGSET_STORAGE_DATA_VERSION;
+    *((uint16_t *)&buf[2]) = (uint16_t)(len);
+    *((uint32_t *)&buf[4]) = crc;
 
     // printf("Data (len=%d): ", len);
     // for (int i = 0; i < len; i++) printf("%.2x ", buf[i + EEPROM_HEADER_SIZE]);
 
-    LOG_DBG("Header: %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x", sbuf->data[0], sbuf->data[1],
-            sbuf->data[2], sbuf->data[3], sbuf->data[4], sbuf->data[5], sbuf->data[6],
-            sbuf->data[7]);
+    LOG_DBG("Header: %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x", buf[0], buf[1], buf[2], buf[3],
+            buf[4], buf[5], buf[6], buf[7]);
 
     if (len == 0) {
         LOG_ERR("EEPROM data could not be stored. ThingSet error (len = %d)", len);
     }
     else {
-        err = eeprom_write(eeprom_dev, 0, sbuf->data, len + EEPROM_HEADER_SIZE);
+        err = eeprom_write(eeprom_dev, 0, buf, len + EEPROM_HEADER_SIZE);
         if (err == 0) {
             LOG_INF("EEPROM data successfully stored");
         }
@@ -135,7 +141,7 @@ void thingset_storage_save()
             LOG_ERR("EEPROM write error %d", err);
         }
     }
-    k_sem_give(&sbuf->lock);
+    k_mutex_unlock(&data_buf_lock);
 }
 
 #elif defined(CONFIG_NVS)
@@ -197,28 +203,28 @@ void thingset_storage_load()
         }
     }
 
-    struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
-    k_sem_take(&sbuf->lock, K_FOREVER);
+    int num_bytes = nvs_read(&fs, THINGSET_DATA_ID, &buf, sizeof(buf));
 
-    int num_bytes = nvs_read(&fs, THINGSET_DATA_ID, &sbuf->data, sbuf->size);
     if (num_bytes < 0) {
         LOG_INF("NVS empty (read error %d)", num_bytes);
-        goto out;
+        return;
     }
 
-    uint16_t version = *((uint16_t *)&sbuf->data[0]);
-    if (version == CONFIG_THINGSET_STORAGE_DATA_VERSION && num_bytes <= sbuf->size) {
-        int status = ts_bin_import(&ts, sbuf->data + NVS_HEADER_SIZE, num_bytes - NVS_HEADER_SIZE,
+    uint16_t version = *((uint16_t *)&buf[0]);
+
+    if (version == CONFIG_THINGSET_STORAGE_DATA_VERSION) {
+        k_mutex_lock(&data_buf_lock, K_FOREVER);
+
+        int status = ts_bin_import(&ts, buf + NVS_HEADER_SIZE, num_bytes - NVS_HEADER_SIZE,
                                    TS_WRITE_MASK, SUBSET_NVM);
 
         LOG_INF("NVS read and data objects updated, ThingSet result: 0x%x", status);
+
+        k_mutex_unlock(&data_buf_lock);
     }
     else {
         LOG_INF("NVS data layout version changed");
     }
-
-out:
-    k_sem_give(&sbuf->lock);
 }
 
 void thingset_storage_save()
@@ -230,19 +236,17 @@ void thingset_storage_save()
         }
     }
 
-    struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
-    k_sem_take(&sbuf->lock, K_FOREVER);
+    k_mutex_lock(&data_buf_lock, K_FOREVER);
 
-    *((uint16_t *)&sbuf->data[0]) = (uint16_t)CONFIG_THINGSET_STORAGE_DATA_VERSION;
+    *((uint16_t *)&buf[0]) = (uint16_t)CONFIG_THINGSET_STORAGE_DATA_VERSION;
 
-    int len =
-        ts_bin_export(&ts, sbuf->data + NVS_HEADER_SIZE, sbuf->size - NVS_HEADER_SIZE, SUBSET_NVM);
+    int len = ts_bin_export(&ts, buf + NVS_HEADER_SIZE, sizeof(buf) - NVS_HEADER_SIZE, SUBSET_NVM);
 
     if (len == 0) {
         LOG_ERR("NVS data could not be stored. ThingSet error (len = %d)", len);
     }
     else {
-        int ret = nvs_write(&fs, THINGSET_DATA_ID, &sbuf->data, len + NVS_HEADER_SIZE);
+        int ret = nvs_write(&fs, THINGSET_DATA_ID, &buf, len + NVS_HEADER_SIZE);
         if (ret == len + NVS_HEADER_SIZE) {
             LOG_DBG("NVS data successfully stored");
         }
@@ -254,7 +258,7 @@ void thingset_storage_save()
         }
     }
 
-    k_sem_give(&sbuf->lock);
+    k_mutex_unlock(&data_buf_lock);
 }
 
 #endif /* CONFIG_NVS */
