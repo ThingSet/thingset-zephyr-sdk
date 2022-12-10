@@ -197,7 +197,7 @@ int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev)
         k_event_set_masked(&ts_can->events, 0, EVENT_ADDRESS_ALREADY_USED);
 
         /* send out address discovery frame */
-        uint8_t rand = sys_rand32_get() % (TS_CAN_ADDR_MAX + 1);
+        uint8_t rand = sys_rand32_get() & 0xFF;
         tx_frame.id = TS_CAN_PRIO_NETWORK_MGMT | TS_CAN_TYPE_NETWORK | TS_CAN_RAND_SET(rand)
                       | TS_CAN_TARGET_SET(ts_can->node_addr)
                       | TS_CAN_SOURCE_SET(TS_CAN_ADDR_ANONYMOUS);
@@ -212,8 +212,8 @@ int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev)
         uint32_t event =
             k_event_wait(&ts_can->events, EVENT_ADDRESS_ALREADY_USED, false, K_MSEC(500));
         if (event & EVENT_ADDRESS_ALREADY_USED) {
-            /* try again with new random node_addr */
-            ts_can->node_addr = sys_rand32_get() % (TS_CAN_ADDR_MAX + 1);
+            /* try again with new random node_addr between 0x01 and 0xFD */
+            ts_can->node_addr = 1 + sys_rand32_get() % TS_CAN_ADDR_MAX;
             LOG_WRN("Node addr already in use, trying 0x%.2X", ts_can->node_addr);
         }
         else {
