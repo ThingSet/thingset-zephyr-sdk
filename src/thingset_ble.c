@@ -85,7 +85,7 @@ static struct bt_conn *ble_conn;
 
 volatile bool notify_resp;
 
-static char rx_buf[CONFIG_THINGSET_SERIAL_RX_BUF_SIZE];
+static char rx_buf[CONFIG_THINGSET_BLE_RX_BUF_SIZE];
 
 static volatile size_t rx_buf_pos = 0;
 

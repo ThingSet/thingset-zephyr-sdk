@@ -6,7 +6,6 @@ menuconfig THINGSET_CAN
     depends on CAN
     depends on EVENTS
     depends on ISOTP
-    default y
 
 if THINGSET_CAN
 

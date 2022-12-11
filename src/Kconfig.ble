@@ -1,6 +1,15 @@
 # Copyright (c) The ThingSet Project Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-config THINGSET_BLE
-    depends on BT
+menuconfig THINGSET_BLE
     bool "Bluetooth LE interface"
+    depends on BT
+
+if THINGSET_BLE
+
+config THINGSET_BLE_RX_BUF_SIZE
+    int "ThingSet BLE RX buffer size"
+    range 64 2048
+    default 512
+
+endif # THINGSET_BLE

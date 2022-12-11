@@ -10,18 +10,16 @@ menuconfig THINGSET_STORAGE
 if THINGSET_STORAGE
 
 config THINGSET_STORAGE_CHANGE
-    depends on THINGSET_STORAGE
     bool "Store data upon change to ThingSet stored items"
     default y
 
 config THINGSET_STORAGE_REGULAR
-    depends on THINGSET_STORAGE
     bool "Store data in regular intervals"
     default y
 
 config THINGSET_STORAGE_INTERVAL
-    depends on THINGSET_STORAGE_REGULAR
     int "Regular storage interval (in hours)"
+    depends on THINGSET_STORAGE_REGULAR
     range 1 8760
     default 6
 

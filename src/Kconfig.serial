@@ -7,7 +7,6 @@ menuconfig THINGSET_SERIAL
 if THINGSET_SERIAL
 
 config THINGSET_SERIAL_RX_BUF_SIZE
-    depends on THINGSET_SERIAL
     int "ThingSet serial RX buffer size"
     range 64 2048
     default 512
