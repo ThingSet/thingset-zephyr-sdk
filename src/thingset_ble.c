@@ -220,7 +220,7 @@ static void thingset_ble_tx(const uint8_t *buf, size_t len)
     }
 }
 
-void ble_pub_statement(struct ts_data_object *subset)
+void thingset_ble_pub_statement(struct ts_data_object *subset)
 {
     if (subset != NULL) {
         struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
@@ -233,7 +233,7 @@ void ble_pub_statement(struct ts_data_object *subset)
     }
 }
 
-static void ble_process_command()
+static void thingset_ble_process_command()
 {
     // commands must have 2 or more characters
     if (rx_buf_pos > 1) {
@@ -244,7 +244,7 @@ static void ble_process_command()
 
         int len = ts_process(&ts, (uint8_t *)rx_buf, strlen(rx_buf), tx_buf->data, tx_buf->size);
 
-        thingset_ble_tx(tx_buf, len);
+        thingset_ble_tx(tx_buf->data, len);
         k_sem_give(&tx_buf->lock);
     }
 
