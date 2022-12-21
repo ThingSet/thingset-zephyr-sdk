@@ -4,6 +4,7 @@
 menuconfig THINGSET_STORAGE
     bool "Storage backend"
     depends on EEPROM || NVS
+    select CRC
     help
       Enables long-term storage of data in non-volatile memory (EEPROM or Flash).
 
@@ -34,5 +35,15 @@ config THINGSET_STORAGE_DATA_VERSION
 
       Warning: This will discard previously stored data in order to prevent data corruption. Try
       to avoid changing data object IDs used previously.
+
+config THINGSET_STORAGE_BUFFER_SIZE
+    int "ThingSet storage buffer size"
+    range 64 2048
+    default 512
+    help
+      Buffer used for load and save functions.
+
+      This buffer cannot be shared with the comms interfaces as storage functions may be called
+      from the comms interfaces, resulting in deadlocks.
 
 endif # THINGSET_STORAGE

@@ -17,18 +17,12 @@ LOG_MODULE_REGISTER(thingset_storage, CONFIG_LOG_DEFAULT_LEVEL);
 
 K_MUTEX_DEFINE(data_buf_lock);
 
-/*
- * Buffer used by store and restore functions:
- *  - Must be word-aligned for hardware CRC calculation
- *  - Cannot be shared with the comms interfaces as storage functions are called from the comms
- *    interfaces, which would create deadlocks
- */
-static uint8_t buf[512] __aligned(sizeof(uint32_t));
+static uint8_t buf[CONFIG_THINGSET_STORAGE_BUFFER_SIZE];
 
-#if defined(CONFIG_EEPROM) && defined(CONFIG_SOC_FAMILY_STM32)
+#ifdef CONFIG_EEPROM
 
-#include <stm32_ll_bus.h>
 #include <zephyr/drivers/eeprom.h>
+#include <zephyr/sys/crc.h>
 
 /*
  * EEPROM header bytes:
@@ -39,30 +33,6 @@ static uint8_t buf[512] __aligned(sizeof(uint32_t));
  * Data starts from byte 8
  */
 #define EEPROM_HEADER_SIZE 8
-
-uint32_t _calc_crc(const uint8_t *buf, size_t len)
-{
-    LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_CRC);
-
-    // we keep standard polynomial 0x04C11DB7 (same for STM32L0 and STM32F0)
-    // and we don't care for endianness here
-    CRC->CR |= CRC_CR_RESET;
-    for (size_t i = 0; i < len; i += 4) {
-        // printf("CRC buf: %.8x, CRC->DR: %.8x\n", *((uint32_t*)&buf[i]), CRC->DR);
-        size_t remaining_bytes = len - i;
-        if (remaining_bytes >= 4) {
-            CRC->DR = *((uint32_t *)&buf[i]);
-        }
-        else {
-            // ignore bytes >= len if len is not a multiple of 4
-            CRC->DR = *((uint32_t *)&buf[i]) & (0xFFFFFFFFU >> (32 - remaining_bytes * 8));
-        }
-    }
-
-    LL_AHB1_GRP1_DisableClock(LL_AHB1_GRP1_PERIPH_CRC);
-
-    return CRC->DR;
-}
 
 void thingset_storage_load()
 {
@@ -92,7 +62,7 @@ void thingset_storage_load()
         // printf("Data (len=%d): ", len);
         // for (int i = 0; i < len; i++) printf("%.2x ", buf[i]);
 
-        if (_calc_crc(buf, len) == crc) {
+        if (crc32_ieee(buf, len) == crc) {
             int status = ts_bin_import(&ts, buf, sizeof(buf), TS_WRITE_MASK, SUBSET_NVM);
             LOG_INF("EEPROM read and data objects updated, ThingSet result: 0x%x", status);
         }
@@ -117,7 +87,7 @@ void thingset_storage_save()
 
     int len =
         ts_bin_export(&ts, buf + EEPROM_HEADER_SIZE, sizeof(buf) - EEPROM_HEADER_SIZE, SUBSET_NVM);
-    uint32_t crc = _calc_crc(buf + EEPROM_HEADER_SIZE, len);
+    uint32_t crc = crc32_ieee(buf + EEPROM_HEADER_SIZE, len);
 
     *((uint16_t *)&buf[0]) = (uint16_t)CONFIG_THINGSET_STORAGE_DATA_VERSION;
     *((uint16_t *)&buf[2]) = (uint16_t)(len);
