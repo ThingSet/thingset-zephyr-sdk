@@ -196,7 +196,8 @@ static void thingset_ble_tx(const uint8_t *buf, size_t len)
 
         int pos_buf = 0;
         int pos_chunk = 1;
-        while (pos_buf < len) {
+        bool finished = false;
+        while (!finished) {
             while (pos_chunk < max_mtu && pos_buf < len) {
                 if (buf[pos_buf] == SLIP_END) {
                     chunk[pos_chunk++] = SLIP_ESC;
@@ -211,8 +212,9 @@ static void thingset_ble_tx(const uint8_t *buf, size_t len)
                 }
                 pos_buf++;
             }
-            if (pos_chunk < max_mtu) {
+            if (pos_chunk < max_mtu - 1 && pos_buf >= len) {
                 chunk[pos_chunk++] = SLIP_END;
+                finished = true;
             }
             bt_gatt_notify(ble_conn, attr_ccc_req, chunk, pos_chunk);
             pos_chunk = 0;
