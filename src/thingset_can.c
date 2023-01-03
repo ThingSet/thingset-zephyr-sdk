@@ -69,7 +69,7 @@ static int thingset_can_send_addr_claim_msg(const struct thingset_can *ts_can, k
     tx_frame.id = TS_CAN_TYPE_NETWORK | TS_CAN_PRIO_NETWORK_MGMT
                   | TS_CAN_TARGET_SET(TS_CAN_ADDR_BROADCAST) | TS_CAN_SOURCE_SET(ts_can->node_addr);
     tx_frame.dlc = sizeof(eui64);
-    memcpy(tx_frame.data, eui64, sizeof(tx_frame.data));
+    memcpy(tx_frame.data, eui64, sizeof(eui64));
 
     return can_send(ts_can->dev, &tx_frame, timeout, cb, NULL);
 }
