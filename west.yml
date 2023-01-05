@@ -26,5 +26,5 @@ manifest:
           - tinycrypt
     - name: thingset-device-library
       remote: thingset
-      revision: 897b276c3f69ea9284e5b6ec9c30760c9e21c496
+      revision: 9630a357de071ac63bfbbaf9d91c6c937663601f
       path: modules/thingset
