@@ -90,7 +90,7 @@ static void serial_rx_buf_put(uint8_t c)
     // there is always one last character left for the \0
     if (c == '\n') {
         if (rx_buf_pos > 0 && rx_buf[rx_buf_pos - 1] == '\r') {
-            rx_buf[rx_buf_pos - 1] = '\0';
+            rx_buf[--rx_buf_pos] = '\0';
         }
         else {
             rx_buf[rx_buf_pos] = '\0';
