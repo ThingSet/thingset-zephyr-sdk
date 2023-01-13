@@ -34,11 +34,16 @@ static uint8_t buf[CONFIG_THINGSET_STORAGE_BUFFER_SIZE];
  */
 #define EEPROM_HEADER_SIZE 8
 
+static const struct device *eeprom_dev = DEVICE_DT_GET(DT_NODELABEL(eeprom));
+
 void thingset_storage_load()
 {
     int err;
 
-    const struct device *eeprom_dev = device_get_binding("EEPROM_0");
+    if (!device_is_ready(eeprom_dev)) {
+        LOG_ERR("EEPROM device not ready");
+        return;
+    }
 
     uint8_t buf_header[EEPROM_HEADER_SIZE] = {};
     err = eeprom_read(eeprom_dev, 0, buf_header, EEPROM_HEADER_SIZE);
@@ -81,7 +86,10 @@ void thingset_storage_save()
 {
     int err;
 
-    const struct device *eeprom_dev = device_get_binding("EEPROM_0");
+    if (!device_is_ready(eeprom_dev)) {
+        LOG_ERR("EEPROM device not ready");
+        return;
+    }
 
     k_mutex_lock(&data_buf_lock, K_FOREVER);
 
