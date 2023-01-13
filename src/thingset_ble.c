@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 
-LOG_MODULE_REGISTER(thingset_ble);
+LOG_MODULE_REGISTER(thingset_ble, CONFIG_LOG_DEFAULT_LEVEL);
 
 /* ThingSet Custom Service: xxxxyyyy-5a19-4887-9c6a-14ad27bfc06d */
 #define BT_UUID_THINGSET_SERVICE_VAL \
@@ -91,6 +91,8 @@ static volatile size_t rx_buf_pos = 0;
 
 static struct k_sem command_flag; // used as an event to signal a received command
 static struct k_sem rx_buf_mutex; // binary semaphore used as mutex in ISR context
+
+static thingset_sdk_rx_callback_t rx_callback;
 
 static void thingset_ble_ccc_change(const struct bt_gatt_attr *attr, uint16_t value)
 {
@@ -178,13 +180,7 @@ static void thingset_ble_disconn(struct bt_conn *conn, uint8_t reason)
     }
 }
 
-/**
- * Send ThingSet response or statement to BLE client.
- *
- * @param buf Buffer with ThingSet payload (w/o SLIP characters)
- * @param len Length of payload inside the buffer
- */
-static void thingset_ble_tx(const uint8_t *buf, size_t len)
+int thingset_ble_tx(const uint8_t *buf, size_t len)
 {
     if (ble_conn && notify_resp) {
         /* Max. notification: ATT_MTU - 3 */
@@ -219,6 +215,11 @@ static void thingset_ble_tx(const uint8_t *buf, size_t len)
             bt_gatt_notify(ble_conn, attr_ccc_req, chunk, pos_chunk);
             pos_chunk = 0;
         }
+
+        return 0;
+    }
+    else {
+        return -EIO;
     }
 }
 
@@ -237,22 +238,32 @@ void thingset_ble_pub_statement(struct ts_data_object *subset)
 
 static void thingset_ble_process_command()
 {
-    // commands must have 2 or more characters
-    if (rx_buf_pos > 1) {
-        printf("Received Request (%d bytes): %s\n", strlen(rx_buf), rx_buf);
+    if (rx_buf_pos > 0) {
+        LOG_DBG("Received Request (%d bytes): %s", rx_buf_pos, rx_buf);
 
-        struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
-        k_sem_take(&tx_buf->lock, K_FOREVER);
+        if (rx_callback == NULL) {
+            struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
+            k_sem_take(&tx_buf->lock, K_FOREVER);
 
-        int len = ts_process(&ts, (uint8_t *)rx_buf, strlen(rx_buf), tx_buf->data, tx_buf->size);
+            int len = ts_process(&ts, (uint8_t *)rx_buf, rx_buf_pos, tx_buf->data, tx_buf->size);
 
-        thingset_ble_tx(tx_buf->data, len);
-        k_sem_give(&tx_buf->lock);
+            thingset_ble_tx(tx_buf->data, len);
+            k_sem_give(&tx_buf->lock);
+        }
+        else {
+            /* external processing (e.g. for gateway applications) */
+            rx_callback(rx_buf, rx_buf_pos);
+        }
     }
 
     // release buffer and start waiting for new commands
     rx_buf_pos = 0;
     k_sem_give(&rx_buf_mutex);
+}
+
+void thingset_ble_set_rx_callback(thingset_sdk_rx_callback_t rx_cb)
+{
+    rx_callback = rx_cb;
 }
 
 static void thingset_ble_thread()

@@ -81,6 +81,11 @@ struct shared_buffer
 };
 
 /**
+ * Callback typedef for received ThingSet messages in different interfaces
+ */
+typedef void (*thingset_sdk_rx_callback_t)(const uint8_t *buf, size_t len);
+
+/**
  * Get TX buffer that can be shared between different ThingSet interfaces
  *
  * @returns Pointer to shared_buffer instance

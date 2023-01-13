@@ -1,0 +1,9 @@
+# Copyright (c) The ThingSet Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "ThingSet sample for serial interface"
+
+rsource "../../Kconfig"
+
+# include main Zephyr menu entries from Zephyr root directory
+source "Kconfig.zephyr"

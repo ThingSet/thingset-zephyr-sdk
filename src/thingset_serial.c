@@ -33,7 +33,21 @@ static bool discard_buffer;
 static struct k_sem command_flag; // used as an event to signal a received command
 static struct k_sem rx_buf_mutex; // binary semaphore used as mutex in ISR context
 
+static thingset_sdk_rx_callback_t rx_callback;
+
 static struct ts_data_object *live_data_subset;
+
+int thingset_serial_tx(const uint8_t *buf, size_t len)
+{
+    for (int i = 0; i < len; i++) {
+        uart_poll_out(uart_dev, buf[i]);
+    }
+
+    uart_poll_out(uart_dev, '\r');
+    uart_poll_out(uart_dev, '\n');
+
+    return 0;
+}
 
 void thingset_serial_pub_statement(struct ts_data_object *subset)
 {
@@ -42,34 +56,35 @@ void thingset_serial_pub_statement(struct ts_data_object *subset)
         k_sem_take(&tx_buf->lock, K_FOREVER);
 
         int len = ts_txt_statement(&ts, tx_buf->data, tx_buf->size, subset);
-        for (int i = 0; i < len; i++) {
-            uart_poll_out(uart_dev, tx_buf->data[i]);
-        }
+        thingset_serial_tx(tx_buf->data, len);
 
         k_sem_give(&tx_buf->lock);
-
-        uart_poll_out(uart_dev, '\r');
-        uart_poll_out(uart_dev, '\n');
     }
 }
 
 static void serial_process_command()
 {
     if (rx_buf_pos > 0) {
-        LOG_DBG("Received Request (%d bytes): %s", strlen(rx_buf), rx_buf);
+        LOG_DBG("Received Request (%d bytes): %s", rx_buf_pos, rx_buf);
 
-        struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
-        k_sem_take(&tx_buf->lock, K_FOREVER);
+        if (rx_callback == NULL) {
+            struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
+            k_sem_take(&tx_buf->lock, K_FOREVER);
 
-        int len = ts_process(&ts, (uint8_t *)rx_buf, strlen(rx_buf), tx_buf->data, tx_buf->size);
-        for (int i = 0; i < len; i++) {
-            uart_poll_out(uart_dev, tx_buf->data[i]);
+            int len = ts_process(&ts, (uint8_t *)rx_buf, rx_buf_pos, tx_buf->data, tx_buf->size);
+            for (int i = 0; i < len; i++) {
+                uart_poll_out(uart_dev, tx_buf->data[i]);
+            }
+
+            k_sem_give(&tx_buf->lock);
+
+            uart_poll_out(uart_dev, '\r');
+            uart_poll_out(uart_dev, '\n');
         }
-
-        k_sem_give(&tx_buf->lock);
-
-        uart_poll_out(uart_dev, '\r');
-        uart_poll_out(uart_dev, '\n');
+        else {
+            /* external processing (e.g. for gateway applications) */
+            rx_callback(rx_buf, rx_buf_pos);
+        }
     }
 
     // release buffer and start waiting for new commands
@@ -137,6 +152,11 @@ static void serial_rx_cb(const struct device *dev, void *user_data)
     }
 }
 #endif
+
+void thingset_serial_set_rx_callback(thingset_sdk_rx_callback_t rx_cb)
+{
+    rx_callback = rx_cb;
+}
 
 static void thingset_serial_thread()
 {
