@@ -1,0 +1,28 @@
+/*
+ * Copyright (c) The ThingSet Project Contributors
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	chosen {
+		zephyr,console = &usb_serial;
+		zephyr,shell-uart = &usb_serial;
+		thingset,serial = &uart0;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		red_led_1: led_1 {
+			gpios = <&gpio0 0 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	aliases {
+		led0 = &red_led_1;
+	};
+};
+
+&usb_serial {
+	status = "okay";
+};

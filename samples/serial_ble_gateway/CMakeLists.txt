@@ -8,5 +8,8 @@ project(thingset_sample_counter)
 
 target_include_directories(app PRIVATE src)
 
+# hack required for ESP32-C3 to keep USB serial enabled when BLE or WiFi is used
+zephyr_compile_definitions(CONFIG_ESP_PHY_ENABLE_USB)
+
 target_sources(app PRIVATE src/main.c)
 zephyr_sources_ifdef(CONFIG_THINGSET_CAN src/can.c)
