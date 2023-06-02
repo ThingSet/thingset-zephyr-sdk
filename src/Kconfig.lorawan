@@ -4,11 +4,3 @@
 config THINGSET_LORAWAN
     depends on LORAWAN
     bool "LoRaWAN interface"
-
-if LORAWAN
-
-# LoRaWAN subsystem requires larger work queue stack
-config SYSTEM_WORKQUEUE_STACK_SIZE
-	default 2048
-
-endif

@@ -25,26 +25,20 @@ extern uint8_t eui64[8];
 
 static const struct can_filter pubsub_filter = {
     .id = TS_CAN_TYPE_PUBSUB,
-    .rtr = CAN_DATAFRAME,
-    .id_type = CAN_EXTENDED_IDENTIFIER,
-    .id_mask = TS_CAN_TYPE_MASK,
-    .rtr_mask = 1,
+    .mask = TS_CAN_TYPE_MASK,
+    .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
 };
 
 static const struct can_filter addr_claim_filter = {
     .id = TS_CAN_TYPE_NETWORK | TS_CAN_TARGET_SET(TS_CAN_ADDR_BROADCAST),
-    .rtr = CAN_DATAFRAME,
-    .id_type = CAN_EXTENDED_IDENTIFIER,
-    .id_mask = TS_CAN_TYPE_MASK | TS_CAN_TARGET_MASK,
-    .rtr_mask = 1,
+    .mask = TS_CAN_TYPE_MASK | TS_CAN_TARGET_MASK,
+    .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
 };
 
 static struct can_filter addr_discovery_filter = {
     .id = TS_CAN_TYPE_NETWORK | TS_CAN_SOURCE_SET(TS_CAN_ADDR_ANONYMOUS),
-    .rtr = CAN_DATAFRAME,
-    .id_type = CAN_EXTENDED_IDENTIFIER,
-    .id_mask = TS_CAN_TYPE_MASK | TS_CAN_TARGET_MASK | TS_CAN_TARGET_MASK,
-    .rtr_mask = 1,
+    .mask = TS_CAN_TYPE_MASK | TS_CAN_TARGET_MASK | TS_CAN_TARGET_MASK,
+    .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
 };
 
 const struct isotp_fc_opts fc_opts = {
@@ -63,8 +57,7 @@ static int thingset_can_send_addr_claim_msg(const struct thingset_can *ts_can, k
                                             can_tx_callback_t cb)
 {
     struct can_frame tx_frame = {
-        .id_type = CAN_EXTENDED_IDENTIFIER,
-        .rtr = CAN_DATAFRAME,
+        .flags = CAN_FRAME_IDE,
     };
     tx_frame.id = TS_CAN_TYPE_NETWORK | TS_CAN_PRIO_NETWORK_MGMT
                   | TS_CAN_TARGET_SET(TS_CAN_ADDR_BROADCAST) | TS_CAN_SOURCE_SET(ts_can->node_addr);
@@ -137,8 +130,7 @@ static void thingset_can_pubsub_tx_handler(struct k_work *work)
     int data_len = 0;
 
     struct can_frame frame = {
-        .id_type = CAN_EXTENDED_IDENTIFIER,
-        .rtr = CAN_DATAFRAME,
+        .flags = CAN_FRAME_IDE,
     };
 
     while (true) {
@@ -169,8 +161,7 @@ static void thingset_can_pubsub_tx_handler(struct k_work *work)
 int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev)
 {
     struct can_frame tx_frame = {
-        .id_type = CAN_EXTENDED_IDENTIFIER,
-        .rtr = CAN_DATAFRAME,
+        .flags = CAN_FRAME_IDE,
     };
     int filter_id;
     int err;
@@ -242,11 +233,11 @@ int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev)
         }
     }
 
-    ts_can->rx_addr.id_type = CAN_EXTENDED_IDENTIFIER;
+    ts_can->rx_addr.ide = 1;
     ts_can->rx_addr.use_ext_addr = 0;   /* Normal ISO-TP addressing (using only CAN ID) */
     ts_can->rx_addr.use_fixed_addr = 1; /* enable SAE J1939 compatible addressing */
 
-    ts_can->tx_addr.id_type = CAN_EXTENDED_IDENTIFIER;
+    ts_can->tx_addr.ide = 1;
     ts_can->tx_addr.use_ext_addr = 0;
     ts_can->tx_addr.use_fixed_addr = 1;
 

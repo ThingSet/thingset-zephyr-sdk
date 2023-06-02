@@ -44,7 +44,7 @@ void ble_rx_callback(const uint8_t *buf, size_t len)
     flash_led();
 }
 
-void main(void)
+int main(void)
 {
     thingset_serial_set_rx_callback(serial_rx_callback);
     thingset_ble_set_rx_callback(ble_rx_callback);
@@ -58,4 +58,6 @@ void main(void)
     gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
     k_sleep(K_SECONDS(1));
     gpio_pin_set_dt(&led, 0);
+
+    return 0;
 }

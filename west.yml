@@ -11,9 +11,8 @@ manifest:
       url-base: https://github.com/LibreSolar
   projects:
     - name: zephyr
-      # libresolar fork includes https://github.com/zephyrproject-rtos/zephyr/pull/51327
-      remote: libresolar
-      revision: v3.2-branch
+      remote: zephyrproject
+      revision: v3.4.0-rc2
       import:
         name-allowlist:
           - cmsis

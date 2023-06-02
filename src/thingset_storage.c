@@ -254,7 +254,7 @@ static void regular_storage_handler(struct k_work *work)
     k_work_reschedule(dwork, K_HOURS(CONFIG_THINGSET_STORAGE_INTERVAL));
 }
 
-static int thingset_storage_init(const struct device *dev)
+static int thingset_storage_init(void)
 {
     k_work_init_delayable(&storage_work, regular_storage_handler);
 

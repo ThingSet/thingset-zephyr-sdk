@@ -16,10 +16,12 @@ TS_ADD_GROUP(ID_SAMPLE, "Sample", TS_NO_CALLBACK, ID_ROOT);
 
 TS_ADD_ITEM_UINT32(0x50, "rCounter", &counter, ID_SAMPLE, TS_ANY_R, SUBSET_LIVE | SUBSET_REPORT);
 
-void main(void)
+int main(void)
 {
     while (true) {
         counter++;
         k_sleep(K_SECONDS(1));
     }
+
+    return 0;
 }

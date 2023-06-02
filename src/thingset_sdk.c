@@ -117,10 +117,8 @@ struct shared_buffer *thingset_sdk_shared_buffer(void)
     return &sbuf;
 }
 
-static int thingset_sdk_init(const struct device *dev)
+static int thingset_sdk_init(void)
 {
-    ARG_UNUSED(dev);
-
     k_sem_init(&sbuf.lock, 1, 1);
 
     ts_init_global(&ts);
