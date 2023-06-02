@@ -12,9 +12,13 @@ static uint32_t counter;
 
 #define ID_SAMPLE 0x05
 
-TS_ADD_GROUP(ID_SAMPLE, "Sample", TS_NO_CALLBACK, ID_ROOT);
+THINGSET_ADD_GROUP(ID_ROOT, ID_SAMPLE, "Sample", THINGSET_NO_CALLBACK);
 
-TS_ADD_ITEM_UINT32(0x50, "rCounter", &counter, ID_SAMPLE, TS_ANY_R, SUBSET_LIVE | SUBSET_REPORT);
+THINGSET_ADD_ITEM_UINT32(ID_SAMPLE, 0x50, "rCounter", &counter, THINGSET_ANY_R,
+                         SUBSET_LIVE | SUBSET_SUMMARY);
+
+THINGSET_ADD_ITEM_UINT32(ID_SAMPLE, 0x51, "wCounter", &counter, THINGSET_ANY_RW,
+                         SUBSET_LIVE | SUBSET_SUMMARY);
 
 int main(void)
 {

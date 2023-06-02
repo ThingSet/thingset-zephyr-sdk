@@ -4,12 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "thingset/sdk.h"
-#include "thingset/storage.h"
-
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+
+#include <thingset.h>
+#include <thingset/sdk.h>
+#include <thingset/storage.h>
 
 #include <stdio.h>
 
@@ -107,7 +108,7 @@ void thingset_storage_save()
     LOG_DBG("Header: %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x", buf[0], buf[1], buf[2], buf[3],
             buf[4], buf[5], buf[6], buf[7]);
 
-    if (len == 0) {
+    if (len < 0) {
         LOG_ERR("EEPROM data could not be stored. ThingSet error (len = %d)", len);
     }
     else {
@@ -193,8 +194,8 @@ void thingset_storage_load()
     if (version == CONFIG_THINGSET_STORAGE_DATA_VERSION) {
         k_mutex_lock(&data_buf_lock, K_FOREVER);
 
-        int status = ts_bin_import(&ts, buf + NVS_HEADER_SIZE, num_bytes - NVS_HEADER_SIZE,
-                                   TS_WRITE_MASK, SUBSET_NVM);
+        int status = thingset_import_data(&ts, buf + NVS_HEADER_SIZE, num_bytes - NVS_HEADER_SIZE,
+                                          THINGSET_WRITE_MASK, THINGSET_BIN_IDS_VALUES);
 
         LOG_INF("NVS read and data objects updated, ThingSet result: 0x%x", status);
 
@@ -218,9 +219,10 @@ void thingset_storage_save()
 
     *((uint16_t *)&buf[0]) = (uint16_t)CONFIG_THINGSET_STORAGE_DATA_VERSION;
 
-    int len = ts_bin_export(&ts, buf + NVS_HEADER_SIZE, sizeof(buf) - NVS_HEADER_SIZE, SUBSET_NVM);
+    int len = thingset_export_subsets(&ts, buf + NVS_HEADER_SIZE, sizeof(buf) - NVS_HEADER_SIZE,
+                                      SUBSET_NVM, THINGSET_BIN_IDS_VALUES);
 
-    if (len == 0) {
+    if (len < 0) {
         LOG_ERR("NVS data could not be stored. ThingSet error (len = %d)", len);
     }
     else {

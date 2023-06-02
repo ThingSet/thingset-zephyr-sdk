@@ -8,14 +8,13 @@
 #define THINGSET_SERIAL_H_
 
 #include <thingset.h>
-
-#include "thingset/sdk.h"
+#include <thingset/sdk.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void thingset_serial_pub_statement(struct ts_data_object *subset);
+void thingset_serial_pub_report(const char *path);
 
 /**
  * Send ThingSet message (response or statement) to serial client.

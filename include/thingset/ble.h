@@ -12,10 +12,9 @@ extern "C" {
 #endif
 
 #include <thingset.h>
+#include <thingset/sdk.h>
 
-#include "thingset/sdk.h"
-
-void thingset_ble_pub_statement(struct ts_data_object *subset);
+void thingset_ble_pub_report(const char *path);
 
 /**
  * Send ThingSet message (response or statement) to BLE client.

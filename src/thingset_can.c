@@ -12,9 +12,9 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/random/rand32.h>
 
-#include "thingset.h"
-#include "thingset/can.h"
-#include "thingset/sdk.h"
+#include <thingset.h>
+#include <thingset/can.h>
+#include <thingset/sdk.h>
 
 LOG_MODULE_REGISTER(thingset_can, CONFIG_CAN_LOG_LEVEL);
 
@@ -23,21 +23,21 @@ extern uint8_t eui64[8];
 #define EVENT_ADDRESS_CLAIMING_FINISHED 0x01
 #define EVENT_ADDRESS_ALREADY_USED      0x02
 
-static const struct can_filter pubsub_filter = {
-    .id = TS_CAN_TYPE_PUBSUB,
-    .mask = TS_CAN_TYPE_MASK,
+static const struct can_filter report_filter = {
+    .id = THINGSET_CAN_TYPE_REPORT,
+    .mask = THINGSET_CAN_TYPE_MASK,
     .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
 };
 
 static const struct can_filter addr_claim_filter = {
-    .id = TS_CAN_TYPE_NETWORK | TS_CAN_TARGET_SET(TS_CAN_ADDR_BROADCAST),
-    .mask = TS_CAN_TYPE_MASK | TS_CAN_TARGET_MASK,
+    .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_TARGET_SET(THINGSET_CAN_ADDR_BROADCAST),
+    .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_TARGET_MASK,
     .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
 };
 
 static struct can_filter addr_discovery_filter = {
-    .id = TS_CAN_TYPE_NETWORK | TS_CAN_SOURCE_SET(TS_CAN_ADDR_ANONYMOUS),
-    .mask = TS_CAN_TYPE_MASK | TS_CAN_TARGET_MASK | TS_CAN_TARGET_MASK,
+    .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS),
+    .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_TARGET_MASK | THINGSET_CAN_TARGET_MASK,
     .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
 };
 
@@ -59,8 +59,9 @@ static int thingset_can_send_addr_claim_msg(const struct thingset_can *ts_can, k
     struct can_frame tx_frame = {
         .flags = CAN_FRAME_IDE,
     };
-    tx_frame.id = TS_CAN_TYPE_NETWORK | TS_CAN_PRIO_NETWORK_MGMT
-                  | TS_CAN_TARGET_SET(TS_CAN_ADDR_BROADCAST) | TS_CAN_SOURCE_SET(ts_can->node_addr);
+    tx_frame.id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_PRIO_NETWORK_MGMT
+                  | THINGSET_CAN_TARGET_SET(THINGSET_CAN_ADDR_BROADCAST)
+                  | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
     tx_frame.dlc = sizeof(eui64);
     memcpy(tx_frame.data, eui64, sizeof(eui64));
 
@@ -73,7 +74,7 @@ static void thingset_can_addr_discovery_rx_cb(const struct device *dev, struct c
     const struct thingset_can *ts_can = user_data;
 
     LOG_INF("Received address discovery frame with ID %X (rand %.2X)", frame->id,
-            TS_CAN_RAND_GET(frame->id));
+            THINGSET_CAN_RAND_GET(frame->id));
 
     /* ToDo: offload from ISR (even though we use short timeout and non-blocking method */
     thingset_can_send_addr_claim_msg(ts_can, K_MSEC(1), thingset_can_addr_claim_tx_cb);
@@ -87,10 +88,10 @@ static void thingset_can_addr_claim_rx_cb(const struct device *dev, struct can_f
 
     LOG_INF("Received address claim from node 0x%.2X with EUI-64 "
             "%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x",
-            TS_CAN_SOURCE_GET(frame->id), data[0], data[1], data[2], data[3], data[4], data[5],
-            data[6], data[8]);
+            THINGSET_CAN_SOURCE_GET(frame->id), data[0], data[1], data[2], data[3], data[4],
+            data[5], data[6], data[8]);
 
-    if (ts_can->node_addr == TS_CAN_SOURCE_GET(frame->id)) {
+    if (ts_can->node_addr == THINGSET_CAN_SOURCE_GET(frame->id)) {
         k_event_post(&ts_can->events, EVENT_ADDRESS_ALREADY_USED);
     }
 
@@ -102,50 +103,48 @@ static void thingset_can_pub_tx_cb(const struct device *dev, int error, void *us
     // Do nothing. Publication messages are fire and forget.
 }
 
-static void thingset_can_pubsub_rx_cb(const struct device *dev, struct can_frame *frame,
+static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame *frame,
                                       void *user_data)
 {
     const struct thingset_can *ts_can = user_data;
-    uint16_t data_id = TS_CAN_DATA_ID_GET(frame->id);
-    uint8_t source_addr = TS_CAN_SOURCE_GET(frame->id);
+    uint16_t data_id = THINGSET_CAN_DATA_ID_GET(frame->id);
+    uint8_t source_addr = THINGSET_CAN_SOURCE_GET(frame->id);
 
     if (data_id >= 0x8000 && source_addr < ts_can->node_addr) {
         // control message
-        uint8_t buf[4 + 8]; // ThingSet bin headers + CAN frame payload
-        buf[0] = 0xA1;      // CBOR: map with 1 element
-        buf[1] = 0x19;      // CBOR: uint16 follows
+        uint8_t buf[4 + 8];
+        buf[0] = 0xA1; // CBOR: map with 1 element
+        buf[1] = 0x19; // CBOR: uint16 follows
         buf[2] = data_id >> 8;
         buf[3] = data_id;
         memcpy(&buf[4], frame->data, 8);
-        ts_bin_import(&ts, buf, 4 + frame->dlc, TS_WRITE_MASK, SUBSET_CTRL);
+        thingset_import_data(&ts, buf, 4 + frame->dlc, THINGSET_WRITE_MASK,
+                             THINGSET_BIN_IDS_VALUES);
     }
 }
 
-static void thingset_can_pubsub_tx_handler(struct k_work *work)
+static void thingset_can_report_tx_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
     struct thingset_can *ts_can = CONTAINER_OF(dwork, struct thingset_can, pub_work);
-    uint32_t can_id;
-    int start_pos = 0;
     int data_len = 0;
 
     struct can_frame frame = {
         .flags = CAN_FRAME_IDE,
     };
 
-    while (true) {
+    struct thingset_data_object *obj = NULL;
+    while ((obj = thingset_iterate_subsets(&ts, SUBSET_LIVE, obj)) != NULL) {
         data_len =
-            ts_bin_pub_can(&ts, &start_pos, SUBSET_LIVE, ts_can->node_addr, &can_id, frame.data);
+            thingset_export_item(&ts, frame.data, sizeof(frame.data), obj, THINGSET_BIN_IDS_VALUES);
         if (data_len > 0) {
-            frame.id = can_id;
+            frame.id = THINGSET_CAN_TYPE_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
+                       | THINGSET_CAN_DATA_ID_SET(obj->id)
+                       | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
             frame.dlc = data_len;
             if (can_send(ts_can->dev, &frame, K_MSEC(10), thingset_can_pub_tx_cb, NULL) != 0) {
-                LOG_DBG("Error sending CAN frame");
+                LOG_DBG("Error sending CAN frame with ID %x", frame.id);
             }
-        }
-        else {
-            /* finished with all data items */
-            break;
         }
     }
 
@@ -189,9 +188,9 @@ int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev)
 
         /* send out address discovery frame */
         uint8_t rand = sys_rand32_get() & 0xFF;
-        tx_frame.id = TS_CAN_PRIO_NETWORK_MGMT | TS_CAN_TYPE_NETWORK | TS_CAN_RAND_SET(rand)
-                      | TS_CAN_TARGET_SET(ts_can->node_addr)
-                      | TS_CAN_SOURCE_SET(TS_CAN_ADDR_ANONYMOUS);
+        tx_frame.id = THINGSET_CAN_PRIO_NETWORK_MGMT | THINGSET_CAN_TYPE_NETWORK
+                      | THINGSET_CAN_RAND_SET(rand) | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
+                      | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS);
         tx_frame.dlc = 0;
         err = can_send(ts_can->dev, &tx_frame, K_MSEC(10), NULL, NULL);
         if (err != 0) {
@@ -204,7 +203,7 @@ int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev)
             k_event_wait(&ts_can->events, EVENT_ADDRESS_ALREADY_USED, false, K_MSEC(500));
         if (event & EVENT_ADDRESS_ALREADY_USED) {
             /* try again with new random node_addr between 0x01 and 0xFD */
-            ts_can->node_addr = 1 + sys_rand32_get() % TS_CAN_ADDR_MAX;
+            ts_can->node_addr = 1 + sys_rand32_get() % THINGSET_CAN_ADDR_MAX;
             LOG_WRN("Node addr already in use, trying 0x%.2X", ts_can->node_addr);
         }
         else {
@@ -241,7 +240,7 @@ int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev)
     ts_can->tx_addr.use_ext_addr = 0;
     ts_can->tx_addr.use_fixed_addr = 1;
 
-    addr_discovery_filter.id |= TS_CAN_TARGET_SET(ts_can->node_addr);
+    addr_discovery_filter.id |= THINGSET_CAN_TARGET_SET(ts_can->node_addr);
     filter_id = can_add_rx_filter(ts_can->dev, thingset_can_addr_discovery_rx_cb, ts_can,
                                   &addr_discovery_filter);
     if (filter_id < 0) {
@@ -249,13 +248,13 @@ int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev)
         return filter_id;
     }
 
-    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_pubsub_rx_cb, ts_can, &pubsub_filter);
+    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_report_rx_cb, ts_can, &report_filter);
     if (filter_id < 0) {
-        LOG_ERR("Unable to add pubsub filter: %d", filter_id);
+        LOG_ERR("Unable to add report filter: %d", filter_id);
         return filter_id;
     }
 
-    k_work_init_delayable(&ts_can->pub_work, thingset_can_pubsub_tx_handler);
+    k_work_init_delayable(&ts_can->pub_work, thingset_can_report_tx_handler);
 
     k_work_reschedule(&ts_can->pub_work, K_NO_WAIT);
 
@@ -268,10 +267,10 @@ int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t
     int ret, rem_len, rx_len;
     struct net_buf *netbuf;
 
-    ts_can->rx_addr.ext_id =
-        TS_CAN_TYPE_REQRESP | TS_CAN_PRIO_REQRESP | TS_CAN_TARGET_SET(ts_can->node_addr);
-    ts_can->tx_addr.ext_id =
-        TS_CAN_TYPE_REQRESP | TS_CAN_PRIO_REQRESP | TS_CAN_SOURCE_SET(ts_can->node_addr);
+    ts_can->rx_addr.ext_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+                             | THINGSET_CAN_TARGET_SET(ts_can->node_addr);
+    ts_can->tx_addr.ext_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+                             | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
 
     ret = isotp_bind(&ts_can->recv_ctx, ts_can->dev, &ts_can->rx_addr, &ts_can->tx_addr, &fc_opts,
                      timeout);
@@ -302,7 +301,7 @@ int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t
         return -ENOMEM;
     }
     else if (rx_len > 0 && rem_len == 0) {
-        *source_addr = TS_CAN_SOURCE_GET(ts_can->recv_ctx.rx_addr.ext_id);
+        *source_addr = THINGSET_CAN_SOURCE_GET(ts_can->recv_ctx.rx_addr.ext_id);
         LOG_DBG("ISO-TP received %d bytes from addr %d", rx_len, *source_addr);
         return rx_len;
     }
@@ -314,13 +313,13 @@ int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t
 int thingset_can_send(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
                       uint8_t target_addr)
 {
-    ts_can->tx_addr.ext_id = TS_CAN_TYPE_REQRESP | TS_CAN_PRIO_REQRESP
-                             | TS_CAN_TARGET_SET(target_addr)
-                             | TS_CAN_SOURCE_SET(ts_can->node_addr);
+    ts_can->tx_addr.ext_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+                             | THINGSET_CAN_TARGET_SET(target_addr)
+                             | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
 
-    ts_can->rx_addr.ext_id = TS_CAN_TYPE_REQRESP | TS_CAN_PRIO_REQRESP
-                             | TS_CAN_TARGET_SET(ts_can->node_addr)
-                             | TS_CAN_SOURCE_SET(target_addr);
+    ts_can->rx_addr.ext_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+                             | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
+                             | THINGSET_CAN_SOURCE_SET(target_addr);
 
     int ret = isotp_send(&ts_can->send_ctx, ts_can->dev, tx_buf, tx_len, &ts_can->tx_addr,
                          &ts_can->rx_addr, NULL, NULL);
@@ -348,14 +347,14 @@ void thingset_can_process(struct thingset_can *ts_can)
         k_sem_take(&sbuf->lock, K_FOREVER);
 
         if (rx_len > 0) {
-            tx_len = ts_process(&ts, rx_buffer, rx_len, sbuf->data, sbuf->size);
+            tx_len = thingset_process_message(&ts, rx_buffer, rx_len, sbuf->data, sbuf->size);
         }
         else if (rx_len == -ENOMEM) {
-            sbuf->data[0] = TS_STATUS_REQUEST_TOO_LARGE;
+            sbuf->data[0] = THINGSET_ERR_REQUEST_TOO_LARGE;
             tx_len = 1;
         }
         else {
-            sbuf->data[0] = TS_STATUS_INTERNAL_SERVER_ERR;
+            sbuf->data[0] = THINGSET_ERR_INTERNAL_SERVER_ERR;
             tx_len = 1;
         }
 

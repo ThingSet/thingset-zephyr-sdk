@@ -4,13 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "thingset/sdk.h"
-#include "thingset/serial.h"
-
 #include <zephyr/drivers/uart.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/printk.h>
+
+#include <thingset.h>
+#include <thingset/sdk.h>
+#include <thingset/serial.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -35,8 +36,6 @@ static struct k_sem rx_buf_mutex; // binary semaphore used as mutex in ISR conte
 
 static thingset_sdk_rx_callback_t rx_callback;
 
-static struct ts_data_object *live_data_subset;
-
 int thingset_serial_tx(const uint8_t *buf, size_t len)
 {
     for (int i = 0; i < len; i++) {
@@ -49,17 +48,16 @@ int thingset_serial_tx(const uint8_t *buf, size_t len)
     return 0;
 }
 
-void thingset_serial_pub_statement(struct ts_data_object *subset)
+void thingset_serial_pub_report(const char *path)
 {
-    if (subset != NULL) {
-        struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
-        k_sem_take(&tx_buf->lock, K_FOREVER);
+    struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
+    k_sem_take(&tx_buf->lock, K_FOREVER);
 
-        int len = ts_txt_statement(&ts, tx_buf->data, tx_buf->size, subset);
-        thingset_serial_tx(tx_buf->data, len);
+    int len =
+        thingset_report_path(&ts, tx_buf->data, tx_buf->size, path, THINGSET_TXT_NAMES_VALUES);
+    thingset_serial_tx(tx_buf->data, len);
 
-        k_sem_give(&tx_buf->lock);
-    }
+    k_sem_give(&tx_buf->lock);
 }
 
 static void serial_process_command()
@@ -71,7 +69,8 @@ static void serial_process_command()
             struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
             k_sem_take(&tx_buf->lock, K_FOREVER);
 
-            int len = ts_process(&ts, (uint8_t *)rx_buf, rx_buf_pos, tx_buf->data, tx_buf->size);
+            int len = thingset_process_message(&ts, (uint8_t *)rx_buf, rx_buf_pos, tx_buf->data,
+                                               tx_buf->size);
             for (int i = 0; i < len; i++) {
                 uart_poll_out(uart_dev, tx_buf->data[i]);
             }
@@ -174,20 +173,17 @@ static void thingset_serial_thread()
     uart_irq_rx_enable(uart_dev);
 #endif
 
-    live_data_subset = ts_get_object_by_path(&ts, SUBSET_LIVE_PATH, sizeof(SUBSET_LIVE_PATH) - 1);
-
     int64_t pub_time = k_uptime_get();
     while (true) {
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
-        k_timeout_t timeout = live_data_subset ? K_TIMEOUT_ABS_MS(pub_time) : K_FOREVER;
-        if (k_sem_take(&command_flag, timeout) == 0) {
+        if (k_sem_take(&command_flag, K_TIMEOUT_ABS_MS(pub_time)) == 0) {
             serial_process_command();
         }
         else {
             // semaphore timed out (should happen exactly once every defined period)
             pub_time += 1000 * pub_live_data_period;
             if (pub_live_data_enable) {
-                thingset_serial_pub_statement(live_data_subset);
+                thingset_serial_pub_report(SUBSET_LIVE_PATH);
             }
         }
 #else /* Polling API */
@@ -201,7 +197,7 @@ static void thingset_serial_thread()
         if (k_uptime_get() >= pub_time) {
             pub_time += 1000 * pub_live_data_period;
             if (pub_live_data_enable) {
-                thingset_serial_pub_statement(live_data_subset);
+                thingset_serial_pub_report(SUBSET_LIVE_PATH);
             }
         }
         k_sleep(K_MSEC(1));

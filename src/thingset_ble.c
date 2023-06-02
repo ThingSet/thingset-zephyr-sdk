@@ -4,16 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "thingset/ble.h"
-#include "thingset/sdk.h"
-#include "thingset/storage.h"
-
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+
+#include <thingset.h>
+#include <thingset/ble.h>
+#include <thingset/sdk.h>
+#include <thingset/storage.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -223,17 +224,16 @@ int thingset_ble_tx(const uint8_t *buf, size_t len)
     }
 }
 
-void thingset_ble_pub_statement(struct ts_data_object *subset)
+void thingset_ble_pub_report(const char *path)
 {
-    if (subset != NULL) {
-        struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
-        k_sem_take(&tx_buf->lock, K_FOREVER);
+    struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
+    k_sem_take(&tx_buf->lock, K_FOREVER);
 
-        int len = ts_txt_statement(&ts, tx_buf->data, tx_buf->size, subset);
-        thingset_ble_tx(tx_buf->data, len);
+    int len =
+        thingset_report_path(&ts, tx_buf->data, tx_buf->size, path, THINGSET_TXT_NAMES_VALUES);
+    thingset_ble_tx(tx_buf->data, len);
 
-        k_sem_give(&tx_buf->lock);
-    }
+    k_sem_give(&tx_buf->lock);
 }
 
 static void thingset_ble_process_command()
@@ -245,7 +245,8 @@ static void thingset_ble_process_command()
             struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
             k_sem_take(&tx_buf->lock, K_FOREVER);
 
-            int len = ts_process(&ts, (uint8_t *)rx_buf, rx_buf_pos, tx_buf->data, tx_buf->size);
+            int len = thingset_process_message(&ts, (uint8_t *)rx_buf, rx_buf_pos, tx_buf->data,
+                                               tx_buf->size);
 
             thingset_ble_tx(tx_buf->data, len);
             k_sem_give(&tx_buf->lock);

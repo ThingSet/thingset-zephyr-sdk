@@ -23,7 +23,9 @@ manifest:
           - loramac-node
           - mbedtls
           - tinycrypt
-    - name: thingset-device-library
+          - picolibc
+    - name: thingset-node-c
       remote: thingset
-      revision: 9630a357de071ac63bfbbaf9d91c6c937663601f
-      path: modules/thingset
+      revision: 309cf1f2df75f5c09fe55c64089fd65fce2e808f
+      path: modules/thingset-node-c
+      import: true

@@ -14,8 +14,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "thingset/sdk.h"
-#include "thingset/storage.h"
+#include <thingset.h>
+#include <thingset/sdk.h>
+#include <thingset/storage.h>
 
 LOG_MODULE_REGISTER(thingset_sdk, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -45,31 +46,29 @@ uint32_t pub_live_data_period = CONFIG_THINGSET_PUB_LIVE_DATA_PERIOD_DEFAULT;
 bool pub_reports_enable = IS_ENABLED(CONFIG_THINGSET_PUB_REPORTS_DEFAULT);
 uint32_t pub_reports_period = CONFIG_THINGSET_PUB_REPORTS_PERIOD_DEFAULT;
 
-struct ts_context ts;
+struct thingset_context ts;
 
-/* clang-format off */
+THINGSET_ADD_ITEM_STRING(ID_ROOT, 0x1D, "pNodeID", node_id, sizeof(node_id),
+                         THINGSET_ANY_R | THINGSET_MFR_W, SUBSET_NVM);
 
-TS_ADD_ITEM_STRING(0x1D, "cNodeID", node_id, sizeof(node_id),
-    ID_ROOT, TS_ANY_R | TS_MKR_W, SUBSET_NVM);
+THINGSET_ADD_SUBSET(ID_ROOT, ID_EVENT, SUBSET_EVENT_PATH, SUBSET_EVENT, THINGSET_ANY_RW);
+THINGSET_ADD_SUBSET(ID_ROOT, ID_LIVE, SUBSET_LIVE_PATH, SUBSET_LIVE, THINGSET_ANY_RW);
+THINGSET_ADD_SUBSET(ID_ROOT, ID_SUMMARY, SUBSET_SUMMARY_PATH, ID_ROOT, THINGSET_ANY_RW);
 
-TS_ADD_SUBSET(ID_EVENT, SUBSET_EVENT_PATH, SUBSET_EVENT, ID_ROOT, TS_ANY_RW);
-TS_ADD_SUBSET(ID_LIVE, SUBSET_LIVE_PATH, SUBSET_LIVE, ID_ROOT, TS_ANY_RW);
-TS_ADD_SUBSET(ID_REPORT, SUBSET_REPORT_PATH, SUBSET_REPORT, ID_ROOT, TS_ANY_RW);
+THINGSET_ADD_GROUP(ID_ROOT, ID_REPORTING, "_Reporting", THINGSET_NO_CALLBACK);
 
-TS_ADD_GROUP(ID_PUB, "_Pub", TS_NO_CALLBACK, ID_ROOT);
+THINGSET_ADD_GROUP(ID_REPORTING, 0x100, SUBSET_EVENT_PATH, NULL);
+THINGSET_ADD_ITEM_BOOL(0x100, 0x101, "sEnable", &pub_events_enable, THINGSET_ANY_RW, SUBSET_NVM);
 
-TS_ADD_GROUP(0x100, SUBSET_EVENT_PATH, NULL, ID_PUB);
-TS_ADD_ITEM_BOOL(0x101, "sEnable", &pub_events_enable, 0x100, TS_ANY_RW, SUBSET_NVM);
+THINGSET_ADD_GROUP(ID_REPORTING, 0x110, SUBSET_LIVE_PATH, NULL);
+THINGSET_ADD_ITEM_BOOL(0x110, 0x111, "sEnable", &pub_live_data_enable, THINGSET_ANY_RW, SUBSET_NVM);
+THINGSET_ADD_ITEM_UINT32(0x110, 0x112, "sPeriod_s", &pub_live_data_period, THINGSET_ANY_RW,
+                         SUBSET_NVM);
 
-TS_ADD_GROUP(0x110, SUBSET_LIVE_PATH, NULL, ID_PUB);
-TS_ADD_ITEM_BOOL(0x111, "sEnable", &pub_live_data_enable, 0x110, TS_ANY_RW, SUBSET_NVM);
-TS_ADD_ITEM_UINT32(0x112, "sPeriod_s", &pub_live_data_period, 0x110, TS_ANY_RW, SUBSET_NVM);
-
-TS_ADD_GROUP(0x120, SUBSET_REPORT_PATH, NULL, ID_PUB);
-TS_ADD_ITEM_BOOL(0x121, "sEnable", &pub_reports_enable, 0x120, TS_ANY_RW, SUBSET_NVM);
-TS_ADD_ITEM_UINT32(0x122, "sPeriod_s", &pub_reports_period, 0x120, TS_ANY_RW, SUBSET_NVM);
-
-/* clang-format on */
+THINGSET_ADD_GROUP(ID_REPORTING, 0x120, SUBSET_SUMMARY_PATH, NULL);
+THINGSET_ADD_ITEM_BOOL(0x120, 0x121, "sEnable", &pub_reports_enable, THINGSET_ANY_RW, SUBSET_NVM);
+THINGSET_ADD_ITEM_UINT32(0x120, 0x122, "sPeriod_s", &pub_reports_period, THINGSET_ANY_RW,
+                         SUBSET_NVM);
 
 #ifdef CONFIG_THINGSET_GENERATE_NODE_ID
 /*
@@ -121,7 +120,7 @@ static int thingset_sdk_init(void)
 {
     k_sem_init(&sbuf.lock, 1, 1);
 
-    ts_init_global(&ts);
+    thingset_init_global(&ts);
 
 #ifdef CONFIG_THINGSET_GENERATE_NODE_ID
     generate_device_eui();
@@ -129,7 +128,7 @@ static int thingset_sdk_init(void)
 
 #ifdef CONFIG_THINGSET_STORAGE
     thingset_storage_load();
-    ts_set_update_callback(&ts, SUBSET_NVM, thingset_storage_save);
+    thingset_set_update_callback(&ts, SUBSET_NVM, thingset_storage_save);
 #endif
 
     return 0;
