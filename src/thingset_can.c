@@ -267,6 +267,10 @@ int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t
     int ret, rem_len, rx_len;
     struct net_buf *netbuf;
 
+    if (!device_is_ready(ts_can->dev)) {
+        return -ENODEV;
+    }
+
     ts_can->rx_addr.ext_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
                              | THINGSET_CAN_TARGET_SET(ts_can->node_addr);
     ts_can->tx_addr.ext_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
@@ -313,6 +317,10 @@ int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t
 int thingset_can_send(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
                       uint8_t target_addr)
 {
+    if (!device_is_ready(ts_can->dev)) {
+        return -ENODEV;
+    }
+
     ts_can->tx_addr.ext_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
                              | THINGSET_CAN_TARGET_SET(target_addr)
                              | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
@@ -339,6 +347,7 @@ void thingset_can_process(struct thingset_can *ts_can)
     static uint8_t rx_buffer[600]; // large enough to receive a 512 byte flash page for DFU
     uint8_t external_addr;
     int tx_len, rx_len;
+    int err;
 
     while (1) {
         rx_len =
@@ -370,7 +379,14 @@ void thingset_can_process(struct thingset_can *ts_can)
 #endif
 
         if (tx_len > 0) {
-            thingset_can_send(ts_can, sbuf->data, tx_len, external_addr);
+            err = thingset_can_send(ts_can, sbuf->data, tx_len, external_addr);
+            if (err == -ENODEV) {
+                LOG_ERR("CAN processing stopped because device not ready");
+                return;
+            }
+            else {
+                k_sleep(K_MSEC(1000));
+            }
         }
 
         k_sem_give(&sbuf->lock);
