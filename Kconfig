@@ -1,7 +1,10 @@
 # Copyright (c) The ThingSet Project Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-menu "ThingSet SDK"
+menuconfig THINGSET_SDK
+    bool "ThingSet SDK"
+
+if THINGSET_SDK
 
 rsource "src/Kconfig.ble"
 rsource "src/Kconfig.can"
@@ -48,4 +51,4 @@ config THINGSET_SHARED_TX_BUF_SIZE
     range 256 2048
     default 1024
 
-endmenu # ThingSet SDK
+endif # THINGSET_SDK
