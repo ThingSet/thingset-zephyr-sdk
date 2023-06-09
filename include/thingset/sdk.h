@@ -35,6 +35,7 @@ extern "C" {
 #define ID_LORAWAN   0x27
 #define ID_WIFI      0x28
 #define ID_DFU       0x2D
+#define ID_LOG       0x2E
 #define ID_REPORTING 0x2F
 
 #define ID_EVENT   0x30

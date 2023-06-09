@@ -5,6 +5,7 @@ target_sources(app PRIVATE sdk.c)
 
 target_sources_ifdef(CONFIG_THINGSET_BLE app PRIVATE ble.c)
 target_sources_ifdef(CONFIG_THINGSET_CAN app PRIVATE can.c)
+target_sources_ifdef(CONFIG_THINGSET_LOG_BACKEND app PRIVATE log_backend.c)
 target_sources_ifdef(CONFIG_THINGSET_LORAWAN app PRIVATE lorawan.c)
 target_sources_ifdef(CONFIG_THINGSET_SERIAL app PRIVATE serial.c)
 target_sources_ifdef(CONFIG_THINGSET_STORAGE app PRIVATE storage.c)
