@@ -20,6 +20,8 @@ K_MUTEX_DEFINE(data_buf_lock);
 
 static uint8_t buf[CONFIG_THINGSET_STORAGE_BUFFER_SIZE];
 
+static struct k_work_delayable storage_work;
+
 #ifdef CONFIG_EEPROM
 
 #include <zephyr/drivers/eeprom.h>
@@ -243,28 +245,31 @@ void thingset_storage_save()
 
 #endif /* CONFIG_NVS */
 
-#ifdef CONFIG_THINGSET_STORAGE_REGULAR
-
-static struct k_work_delayable storage_work;
-
 static void regular_storage_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
 
     thingset_storage_save();
 
-    k_work_reschedule(dwork, K_HOURS(CONFIG_THINGSET_STORAGE_INTERVAL));
+    if (IS_ENABLED(CONFIG_THINGSET_STORAGE_REGULAR)) {
+        thingset_sdk_reschedule_work(dwork, K_HOURS(CONFIG_THINGSET_STORAGE_INTERVAL));
+    }
+}
+
+void thingset_storage_save_queued()
+{
+    thingset_sdk_reschedule_work(&storage_work, K_NO_WAIT);
 }
 
 static int thingset_storage_init(void)
 {
     k_work_init_delayable(&storage_work, regular_storage_handler);
 
-    k_work_reschedule(&storage_work, K_HOURS(CONFIG_THINGSET_STORAGE_INTERVAL));
+    if (IS_ENABLED(CONFIG_THINGSET_STORAGE_REGULAR)) {
+        thingset_sdk_reschedule_work(&storage_work, K_HOURS(CONFIG_THINGSET_STORAGE_INTERVAL));
+    }
 
     return 0;
 }
 
 SYS_INIT(thingset_storage_init, APPLICATION, THINGSET_INIT_PRIORITY_STORAGE);
-
-#endif /* CONFIG_THINGSET_STORAGE_REGULAR */

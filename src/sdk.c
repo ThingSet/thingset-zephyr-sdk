@@ -38,6 +38,15 @@ static struct shared_buffer sbuf = {
     .size = sizeof(buf_data),
 };
 
+K_THREAD_STACK_DEFINE(thread_stack_area, CONFIG_THINGSET_SDK_THREAD_STACK_SIZE);
+
+/*
+ * The services need a dedicated work queue, as the LoRaWAN stack uses the system
+ * work queue and gets blocked if other LoRaWAN messages are sent and processed from
+ * the system work queue in parallel.
+ */
+static struct k_work_q thingset_workq;
+
 bool pub_events_enable = IS_ENABLED(CONFIG_THINGSET_PUB_LIVE_DATA_DEFAULT);
 
 bool pub_live_data_enable = IS_ENABLED(CONFIG_THINGSET_PUB_LIVE_DATA_DEFAULT);
@@ -116,9 +125,20 @@ struct shared_buffer *thingset_sdk_shared_buffer(void)
     return &sbuf;
 }
 
+int thingset_sdk_reschedule_work(struct k_work_delayable *dwork, k_timeout_t delay)
+{
+    return k_work_reschedule_for_queue(&thingset_workq, dwork, delay);
+}
+
 static int thingset_sdk_init(void)
 {
     k_sem_init(&sbuf.lock, 1, 1);
+
+    k_work_queue_init(&thingset_workq);
+    k_work_queue_start(&thingset_workq, thread_stack_area, K_THREAD_STACK_SIZEOF(thread_stack_area),
+                       CONFIG_THINGSET_SDK_THREAD_PRIORITY, NULL);
+
+    k_thread_name_set(&thingset_workq.thread, "thingset_sdk");
 
     thingset_init_global(&ts);
 
@@ -128,7 +148,7 @@ static int thingset_sdk_init(void)
 
 #ifdef CONFIG_THINGSET_STORAGE
     thingset_storage_load();
-    thingset_set_update_callback(&ts, SUBSET_NVM, thingset_storage_save);
+    thingset_set_update_callback(&ts, SUBSET_NVM, thingset_storage_save_queued);
 #endif
 
     return 0;

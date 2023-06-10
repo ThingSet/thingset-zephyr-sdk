@@ -93,6 +93,12 @@ typedef void (*thingset_sdk_rx_callback_t)(const uint8_t *buf, size_t len);
  */
 struct shared_buffer *thingset_sdk_shared_buffer(void);
 
+/**
+ * Add delayable work to the common ThingSet SDK work queue. This should be used to offload
+ * processing of incoming requests and sending out reports.
+ */
+int thingset_sdk_reschedule_work(struct k_work_delayable *dwork, k_timeout_t delay);
+
 #ifdef __cplusplus
 }
 #endif

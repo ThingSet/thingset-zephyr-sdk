@@ -19,8 +19,16 @@ extern "C" {
 
 /**
  * Save data from RAM into persistent storage
+ *
+ * This function must not be called from a ThingSet callback context, as this would result in a
+ * deadlock while. Use thingset_storage_save_queued in this case.
  */
 void thingset_storage_save();
+
+/**
+ * Save data from RAM into persistent storage (via work queue)
+ */
+void thingset_storage_save_queued();
 
 /**
  * Load data from persistent storage and write to variables in RAM

@@ -31,13 +31,20 @@ static char rx_buf[CONFIG_THINGSET_SERIAL_RX_BUF_SIZE];
 static volatile size_t rx_buf_pos = 0;
 static bool discard_buffer;
 
-static struct k_sem command_flag; // used as an event to signal a received command
-static struct k_sem rx_buf_mutex; // binary semaphore used as mutex in ISR context
+/* binary semaphore used as mutex in ISR context */
+static struct k_sem rx_buf_lock;
 
 static thingset_sdk_rx_callback_t rx_callback;
 
+static struct k_work_delayable reporting_work;
+static struct k_work_delayable processing_work;
+
 int thingset_serial_tx(const uint8_t *buf, size_t len)
 {
+    if (!device_is_ready(uart_dev)) {
+        return -ENODEV;
+    }
+
     for (int i = 0; i < len; i++) {
         uart_poll_out(uart_dev, buf[i]);
     }
@@ -55,12 +62,26 @@ void thingset_serial_pub_report(const char *path)
 
     int len =
         thingset_report_path(&ts, tx_buf->data, tx_buf->size, path, THINGSET_TXT_NAMES_VALUES);
+
     thingset_serial_tx(tx_buf->data, len);
 
     k_sem_give(&tx_buf->lock);
 }
 
-static void serial_process_command()
+static void serial_regular_report_handler(struct k_work *work)
+{
+    struct k_work_delayable *dwork = k_work_delayable_from_work(work);
+    static int64_t pub_time;
+
+    thingset_serial_pub_report(SUBSET_LIVE_PATH);
+
+    pub_time += 1000 * pub_live_data_period;
+    if (pub_live_data_enable) {
+        thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(pub_time));
+    }
+}
+
+static void serial_process_msg_handler(struct k_work *work)
 {
     if (rx_buf_pos > 0) {
         LOG_DBG("Received Request (%d bytes): %s", rx_buf_pos, rx_buf);
@@ -71,14 +92,10 @@ static void serial_process_command()
 
             int len = thingset_process_message(&ts, (uint8_t *)rx_buf, rx_buf_pos, tx_buf->data,
                                                tx_buf->size);
-            for (int i = 0; i < len; i++) {
-                uart_poll_out(uart_dev, tx_buf->data[i]);
-            }
+
+            thingset_serial_tx(tx_buf->data, len);
 
             k_sem_give(&tx_buf->lock);
-
-            uart_poll_out(uart_dev, '\r');
-            uart_poll_out(uart_dev, '\n');
         }
         else {
             /* external processing (e.g. for gateway applications) */
@@ -88,18 +105,18 @@ static void serial_process_command()
 
     // release buffer and start waiting for new commands
     rx_buf_pos = 0;
-    k_sem_give(&rx_buf_mutex);
+    k_sem_give(&rx_buf_lock);
 }
 
 static void serial_rx_buf_put(uint8_t c)
 {
-    if (k_sem_take(&rx_buf_mutex, K_NO_WAIT) != 0) {
+    if (k_sem_take(&rx_buf_lock, K_NO_WAIT) != 0) {
         // buffer not available: drop character
         discard_buffer = true;
         return;
     }
 
-    // \r\n and \n are markers for line end, i.e. command end
+    // \r\n and \n are markers for line end, i.e. request end
     // we accept this at any time, even if the buffer is 'full', since
     // there is always one last character left for the \0
     if (c == '\n') {
@@ -112,11 +129,11 @@ static void serial_rx_buf_put(uint8_t c)
         if (discard_buffer) {
             rx_buf_pos = 0;
             discard_buffer = false;
-            k_sem_give(&rx_buf_mutex);
+            k_sem_give(&rx_buf_lock);
         }
         else {
-            // start processing command and keep the rx_buf_mutex locked
-            k_sem_give(&command_flag);
+            // start processing request and keep the rx_buf_lock
+            thingset_sdk_reschedule_work(&processing_work, K_NO_WAIT);
         }
         return;
     }
@@ -130,7 +147,7 @@ static void serial_rx_buf_put(uint8_t c)
         rx_buf[rx_buf_pos++] = c;
     }
 
-    k_sem_give(&rx_buf_mutex);
+    k_sem_give(&rx_buf_lock);
 }
 
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
@@ -157,52 +174,47 @@ void thingset_serial_set_rx_callback(thingset_sdk_rx_callback_t rx_cb)
     rx_callback = rx_cb;
 }
 
-static void thingset_serial_thread()
+static int thingset_serial_init()
 {
     if (!device_is_ready(uart_dev)) {
         // this may happen if a phone charger is used to power the device, which will
         // usually short the USB D+ and D- wires. In this case we just don't use this interface
-        return;
+        return -ENODEV;
     }
 
-    k_sem_init(&command_flag, 0, 1);
-    k_sem_init(&rx_buf_mutex, 1, 1);
+    k_sem_init(&rx_buf_lock, 1, 1);
+
+    k_work_init_delayable(&processing_work, serial_process_msg_handler);
+    k_work_init_delayable(&reporting_work, serial_regular_report_handler);
 
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
     uart_irq_callback_user_data_set(uart_dev, serial_rx_cb, NULL);
     uart_irq_rx_enable(uart_dev);
 #endif
 
-    int64_t pub_time = k_uptime_get();
+    thingset_sdk_reschedule_work(&reporting_work, K_NO_WAIT);
+
+    return 0;
+}
+
+SYS_INIT(thingset_serial_init, APPLICATION, THINGSET_INIT_PRIORITY_DEFAULT);
+
+#ifndef CONFIG_UART_INTERRUPT_DRIVEN
+static void thingset_serial_polling_thread()
+{
+    if (!device_is_ready(uart_dev)) {
+        return;
+    }
+
     while (true) {
-#ifdef CONFIG_UART_INTERRUPT_DRIVEN
-        if (k_sem_take(&command_flag, K_TIMEOUT_ABS_MS(pub_time)) == 0) {
-            serial_process_command();
-        }
-        else {
-            // semaphore timed out (should happen exactly once every defined period)
-            pub_time += 1000 * pub_live_data_period;
-            if (pub_live_data_enable) {
-                thingset_serial_pub_report(SUBSET_LIVE_PATH);
-            }
-        }
-#else /* Polling API */
         uint8_t c;
         while (uart_poll_in(uart_dev, &c) == 0) {
             serial_rx_buf_put(c);
         }
-        if (k_sem_take(&command_flag, K_NO_WAIT) == 0) {
-            serial_process_command();
-        }
-        if (k_uptime_get() >= pub_time) {
-            pub_time += 1000 * pub_live_data_period;
-            if (pub_live_data_enable) {
-                thingset_serial_pub_report(SUBSET_LIVE_PATH);
-            }
-        }
         k_sleep(K_MSEC(1));
-#endif
     }
 }
 
-K_THREAD_DEFINE(thingset_serial, 1280, thingset_serial_thread, NULL, NULL, NULL, 6, 0, 1000);
+K_THREAD_DEFINE(thingset_serial_polling, 256, thingset_serial_polling_thread, NULL, NULL, NULL, 6,
+                0, 1000);
+#endif

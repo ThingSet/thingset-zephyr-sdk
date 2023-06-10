@@ -8,6 +8,7 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/uuid.h>
+#include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
@@ -90,10 +91,12 @@ static char rx_buf[CONFIG_THINGSET_BLE_RX_BUF_SIZE];
 
 static volatile size_t rx_buf_pos = 0;
 
-static struct k_sem command_flag; // used as an event to signal a received command
-static struct k_sem rx_buf_mutex; // binary semaphore used as mutex in ISR context
+/* binary semaphore used as mutex in ISR context */
+static struct k_sem tx_buf_lock;
 
 static thingset_sdk_rx_callback_t rx_callback;
+
+static struct k_work_delayable processing_work;
 
 static void thingset_ble_ccc_change(const struct bt_gatt_attr *attr, uint16_t value)
 {
@@ -112,7 +115,7 @@ static ssize_t thingset_ble_rx(struct bt_conn *conn, const struct bt_gatt_attr *
     static bool escape = false;
 
     bool finished = true;
-    if (buf != NULL && k_sem_take(&rx_buf_mutex, K_NO_WAIT) == 0) {
+    if (buf != NULL && k_sem_take(&tx_buf_lock, K_NO_WAIT) == 0) {
         for (int i = 0; i < len; i++) {
             uint8_t c = *((uint8_t *)buf + i);
             if (escape) {
@@ -137,9 +140,9 @@ static ssize_t thingset_ble_rx(struct bt_conn *conn, const struct bt_gatt_attr *
                 else {
                     finished = true;
                     rx_buf[rx_buf_pos] = '\0';
-                    // start processing command and keep the rx_buf_mutex locked
-                    k_sem_give(&command_flag);
-                    return len; // finish up
+                    /* start processing the request and keep the tx_buf_lock */
+                    thingset_sdk_reschedule_work(&processing_work, K_NO_WAIT);
+                    return len;
                 }
             }
             else {
@@ -148,7 +151,7 @@ static ssize_t thingset_ble_rx(struct bt_conn *conn, const struct bt_gatt_attr *
             rx_buf[rx_buf_pos++] = c;
         }
     }
-    k_sem_give(&rx_buf_mutex);
+    k_sem_give(&tx_buf_lock);
 
     return len;
 }
@@ -236,7 +239,7 @@ void thingset_ble_pub_report(const char *path)
     k_sem_give(&tx_buf->lock);
 }
 
-static void thingset_ble_process_command()
+static void ble_process_msg_handler(struct k_work *work)
 {
     if (rx_buf_pos > 0) {
         LOG_DBG("Received Request (%d bytes): %s", rx_buf_pos, rx_buf);
@@ -259,7 +262,7 @@ static void thingset_ble_process_command()
 
     // release buffer and start waiting for new commands
     rx_buf_pos = 0;
-    k_sem_give(&rx_buf_mutex);
+    k_sem_give(&tx_buf_lock);
 }
 
 void thingset_ble_set_rx_callback(thingset_sdk_rx_callback_t rx_cb)
@@ -267,29 +270,26 @@ void thingset_ble_set_rx_callback(thingset_sdk_rx_callback_t rx_cb)
     rx_callback = rx_cb;
 }
 
-static void thingset_ble_thread()
+static int thingset_ble_init()
 {
-    k_sem_init(&command_flag, 0, 1);
-    k_sem_init(&rx_buf_mutex, 1, 1);
+    k_sem_init(&tx_buf_lock, 1, 1);
+
+    k_work_init_delayable(&processing_work, ble_process_msg_handler);
 
     int err = bt_enable(NULL);
     if (err) {
         LOG_ERR("Bluetooth init failed (err %d)", err);
-        return;
+        return err;
     }
 
     err = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (err) {
         LOG_ERR("Advertising failed to start (err %d)", err);
-        return;
+        return err;
     }
     LOG_INF("Waiting for Bluetooth connections...");
 
-    while (true) {
-        if (k_sem_take(&command_flag, K_FOREVER) == 0) {
-            thingset_ble_process_command();
-        }
-    }
+    return 0;
 }
 
-K_THREAD_DEFINE(thingset_ble, 5000, thingset_ble_thread, NULL, NULL, NULL, 6, 0, 1000);
+SYS_INIT(thingset_ble_init, APPLICATION, THINGSET_INIT_PRIORITY_DEFAULT);

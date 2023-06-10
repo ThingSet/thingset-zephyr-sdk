@@ -129,7 +129,7 @@ void lorawan_thread(void)
             }
 
             // store used DevNonce for next join
-            thingset_storage_save();
+            thingset_storage_save_queued();
 
             connected = true;
         }
