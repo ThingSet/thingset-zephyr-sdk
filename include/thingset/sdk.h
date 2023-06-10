@@ -65,7 +65,11 @@ extern "C" {
 #define TS_ID_NET_CAN_NODE_ADDR        0x28C
 
 /* Device Firmware Upgrade group items */
-#define TS_ID_DFU 0x2D
+#define TS_ID_DFU       0x2D
+#define TS_ID_DFU_INIT  0x2D0
+#define TS_ID_DFU_WRITE 0x2D1
+#define TS_ID_DFU_DATA  0x2D2
+#define TS_ID_DFU_BOOT  0x2D3
 
 /* Log group items */
 #define TS_ID_LOG               0x2E

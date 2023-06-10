@@ -1,0 +1,18 @@
+# Copyright (c) The ThingSet Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig THINGSET_DFU
+    bool "ThingSet device firmware upgrade"
+    depends on FLASH
+    select REBOOT
+
+if THINGSET_DFU
+
+config THINGSET_DFU_CHUNK_SIZE
+    int "Firmware chunk size"
+    range 64 4096
+    default 256
+    help
+      Maximum chunk size that can be transmitted in one ThingSet message.
+
+endif # THINGSET_DFU
