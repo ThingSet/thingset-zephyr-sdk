@@ -23,6 +23,7 @@ manifest:
           - hal_st
           - loramac-node
           - mbedtls
+          - mcuboot
           - picolibc
           - segger
           - tinycrypt

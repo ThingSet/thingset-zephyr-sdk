@@ -43,6 +43,7 @@ jobs:
           west build -p -b esp32c3_devkitm samples/counter -- -DEXTRA_CONF_FILE=ble.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
           west build -p -b esp32c3_devkitm samples/counter -- -DEXTRA_CONF_FILE=wifi_websocket.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
           west build -p -b native_posix samples/counter -- -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
+          west build -p -b nrf52840dk_nrf52840 samples/counter -- -DEXTRA_CONF_FILE=dfu.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
           west build -p -b nucleo_l073rz samples/counter -- -DEXTRA_CONF_FILE=serial.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
           west build -p -b nucleo_l073rz samples/counter -- -DEXTRA_CONF_FILE=storage_eeprom.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
           west build -p -b native_posix samples/counter -- -DEXTRA_CONF_FILE=auth.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
