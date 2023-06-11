@@ -11,6 +11,7 @@ rsource "src/Kconfig.can"
 rsource "src/Kconfig.log_backend"
 rsource "src/Kconfig.lorawan"
 rsource "src/Kconfig.serial"
+rsource "src/Kconfig.shell"
 rsource "src/Kconfig.storage"
 
 menu "General Publication Settings"

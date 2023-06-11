@@ -1,0 +1,17 @@
+# Copyright (c) The ThingSet Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig THINGSET_SHELL
+    bool "Shell command"
+    depends on SHELL
+    help
+      Should not be used with the same serial interface as THINGSET_SERIAL
+
+if THINGSET_SHELL
+
+config THINGSET_SHELL_CMD_BUF_SIZE
+    int "ThingSet shell command buffer size"
+    range 64 2048
+    default 128
+
+endif # THINGSET_SHELL
