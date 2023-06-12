@@ -10,3 +10,5 @@ target_sources_ifdef(CONFIG_THINGSET_LORAWAN app PRIVATE lorawan.c)
 target_sources_ifdef(CONFIG_THINGSET_SERIAL app PRIVATE serial.c)
 target_sources_ifdef(CONFIG_THINGSET_SHELL app PRIVATE shell.c)
 target_sources_ifdef(CONFIG_THINGSET_STORAGE app PRIVATE storage.c)
+
+target_sources_ifdef(CONFIG_WIFI app PRIVATE wifi.c)
