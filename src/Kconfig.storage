@@ -4,15 +4,33 @@
 menuconfig THINGSET_STORAGE
     bool "Storage backend"
     depends on EEPROM || NVS
-    select CRC
     help
       Enables long-term storage of data in non-volatile memory (EEPROM or Flash).
 
 if THINGSET_STORAGE
 
+choice THINGSET_STORAGE_TYPE
+    prompt "Storage type"
+    help
+       Select whether the data should be stored in EEPROM or Flash.
+
+config THINGSET_STORAGE_EEPROM
+    bool "EEPROM"
+    depends on EEPROM
+    select CRC
+
+config THINGSET_STORAGE_FLASH
+    bool "Flash/NVS"
+    depends on NVS
+
+endchoice
+
 config THINGSET_STORAGE_CHANGE
     bool "Store data upon change to ThingSet stored items"
     default y
+    help
+      If enabled, a callback is invoked once a data object which is part of the SUBSET_NVM is
+      changed.
 
 config THINGSET_STORAGE_REGULAR
     bool "Store data in regular intervals"
@@ -35,15 +53,5 @@ config THINGSET_STORAGE_DATA_VERSION
 
       Warning: This will discard previously stored data in order to prevent data corruption. Try
       to avoid changing data object IDs used previously.
-
-config THINGSET_STORAGE_BUFFER_SIZE
-    int "ThingSet storage buffer size"
-    range 64 2048
-    default 512
-    help
-      Buffer used for load and save functions.
-
-      This buffer cannot be shared with the comms interfaces as storage functions may be called
-      from the comms interfaces, resulting in deadlocks.
 
 endif # THINGSET_STORAGE
