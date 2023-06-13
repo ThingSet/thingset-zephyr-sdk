@@ -135,8 +135,8 @@ static void thingset_can_report_tx_handler(struct k_work *work)
 
     struct thingset_data_object *obj = NULL;
     while ((obj = thingset_iterate_subsets(&ts, SUBSET_LIVE, obj)) != NULL) {
-        data_len =
-            thingset_export_item(&ts, frame.data, sizeof(frame.data), obj, THINGSET_BIN_IDS_VALUES);
+        data_len = thingset_export_item(&ts, frame.data, sizeof(frame.data), obj,
+                                        THINGSET_BIN_VALUES_ONLY);
         if (data_len > 0) {
             frame.id = THINGSET_CAN_TYPE_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
                        | THINGSET_CAN_DATA_ID_SET(obj->id)
@@ -146,6 +146,7 @@ static void thingset_can_report_tx_handler(struct k_work *work)
                 LOG_DBG("Error sending CAN frame with ID %x", frame.id);
             }
         }
+        obj++; /* continue with object behind current one */
     }
 
     ts_can->next_pub_time += 1000 * pub_live_data_period;
