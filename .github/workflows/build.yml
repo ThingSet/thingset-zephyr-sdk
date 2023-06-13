@@ -1,4 +1,4 @@
-name: Build with Zephyr toolchain
+name: Zephyr unit testing and docs build
 
 on: [push, pull_request]
 
@@ -10,26 +10,28 @@ jobs:
       CMAKE_PREFIX_PATH: /opt/toolchains
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: thingset-zephyr-sdk
-
-      - name: Set up Python
-        uses: actions/setup-python@v1
-
-      - name: Initialize
-        working-directory: thingset-zephyr-sdk
-        run: |
-          pip3 install -U west
-          west init -l .
-          west update --narrow
-          west blobs fetch hal_espressif
-          pip3 install -r ../zephyr/scripts/requirements-base.txt
+          fetch-depth: 0 # necessary to get tags
 
       - name: Trailing whitespace check
         working-directory: thingset-zephyr-sdk
         run: |
           git diff --check `git rev-list HEAD | tail -n 1`..
+
+      - name: Initialize west workspace
+        working-directory: thingset-zephyr-sdk
+        run: |
+          west init -l .
+          west update
+          west blobs fetch hal_espressif
+
+      - name: Install docs dependencies
+        working-directory: thingset-zephyr-sdk
+        run: |
+          sudo apt install -y git make python3 python3-pip doxygen
+          pip3 install -r docs/requirements.txt
 
       - name: Run build tests
         working-directory: thingset-zephyr-sdk
@@ -41,3 +43,20 @@ jobs:
           west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=can.conf
           west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=log_backend.conf
           west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=shell.conf
+
+      - name: Build documentation
+        working-directory: thingset-zephyr-sdk
+        run: |
+          cd docs
+          make html
+
+      - name: Deploy docs to gh-pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./thingset-zephyr-sdk/docs/build/html/
+          enable_jekyll: false
+          allow_empty_commit: false
+          force_orphan: true
+          publish_branch: gh-pages
