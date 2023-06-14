@@ -11,4 +11,21 @@ config THINGSET_SERIAL_RX_BUF_SIZE
     range 64 2048
     default 512
 
+config THINGSET_SERIAL_USE_CRC
+    bool "Use CRC-32 incoming and outgoing messages"
+    select CRC
+    default y
+    help
+      A CRC is appended to all outgoing messages. If incoming messages contain a CRC, it is
+      validated and messages are discarded if the CRC is invalid.
+
+      If incoming messages don't contain a CRC, they are still accepted in order to allow simple
+      communication with humans.
+
+config THINGSET_SERIAL_ENFORCE_CRC
+    bool "Enforce CRC-32 for all incoming messages"
+    depends on THINGSET_SERIAL_USE_CRC
+    help
+      If enabled, incoming messages without CRC are not accepted.
+
 endif # THINGSET_SERIAL

@@ -7,13 +7,14 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/printk.h>
+#include <zephyr/sys/crc.h>
 
 #include <thingset.h>
 #include <thingset/sdk.h>
 #include <thingset/serial.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 LOG_MODULE_REGISTER(thingset_serial, CONFIG_LOG_DEFAULT_LEVEL);
@@ -48,6 +49,15 @@ int thingset_serial_tx(const uint8_t *buf, size_t len)
     for (int i = 0; i < len; i++) {
         uart_poll_out(uart_dev, buf[i]);
     }
+
+#ifdef CONFIG_THINGSET_SERIAL_USE_CRC
+    uint32_t crc = crc32_ieee(buf, len);
+    uint8_t crc_str[11];
+    snprintf(crc_str, sizeof(crc_str), " %08X#", crc);
+    for (int i = 0; i < 10; i++) {
+        uart_poll_out(uart_dev, crc_str[i]);
+    }
+#endif
 
     uart_poll_out(uart_dev, '\r');
     uart_poll_out(uart_dev, '\n');
@@ -86,6 +96,27 @@ static void serial_process_msg_handler(struct k_work *work)
     if (rx_buf_pos > 0) {
         LOG_DBG("Received Request (%d bytes): %s", rx_buf_pos, rx_buf);
 
+#ifdef CONFIG_THINGSET_SERIAL_USE_CRC
+        if (rx_buf[rx_buf_pos - 1] == '#' && rx_buf_pos > 10) {
+            /* message with checksum */
+            rx_buf[--rx_buf_pos] = '\0';
+            uint32_t crc_rx = strtoul(&rx_buf[rx_buf_pos - 8], NULL, 16);
+            rx_buf_pos -= 9; /* strip CRC and white space */
+            uint32_t crc_calc = crc32_ieee(rx_buf, rx_buf_pos);
+            if (crc_rx != crc_calc) {
+                LOG_WRN("Discarded message with bad CRC, expected %08X", crc_calc);
+                goto out;
+            }
+            LOG_DBG("crc_rx: %08X, crc_calc: %08X", crc_rx, crc_calc);
+        }
+#endif /* CONFIG_THINGSET_SERIAL_USE_CRC */
+#ifdef CONFIG_THINGSET_SERIAL_ENFORCE_CRC
+        else {
+            LOG_WRN("Discarded message without CRC");
+            goto out;
+        }
+#endif /* CONFIG_THINGSET_SERIAL_ENFORCE_CRC */
+
         if (rx_callback == NULL) {
             struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
             k_sem_take(&tx_buf->lock, K_FOREVER);
@@ -103,7 +134,8 @@ static void serial_process_msg_handler(struct k_work *work)
         }
     }
 
-    // release buffer and start waiting for new commands
+out:
+    /* release buffer and start waiting for new commands */
     rx_buf_pos = 0;
     k_sem_give(&rx_buf_lock);
 }
