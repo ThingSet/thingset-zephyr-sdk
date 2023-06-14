@@ -69,7 +69,7 @@ int thingset_storage_load()
         err = eeprom_read(eeprom_dev, EEPROM_HEADER_SIZE, sbuf->data, len);
 
         if (crc32_ieee(sbuf->data, len) == crc) {
-            int status = thingset_import_data(&ts, sbuf->data, sbuf->size, THINGSET_WRITE_MASK,
+            int status = thingset_import_data(&ts, sbuf->data, len, THINGSET_WRITE_MASK,
                                               THINGSET_BIN_IDS_VALUES);
             if (status == 0) {
                 LOG_DBG("EEPROM read and data successfully updated");
