@@ -89,6 +89,8 @@ int thingset_storage_load()
         goto out;
     }
 
+    LOG_HEXDUMP_DBG(sbuf->data, num_bytes, "data to be imported");
+
     uint16_t version = *((uint16_t *)&sbuf->data[0]);
     if (version == CONFIG_THINGSET_STORAGE_DATA_VERSION) {
         int status =
@@ -132,8 +134,11 @@ int thingset_storage_save()
     int len =
         thingset_export_subsets(&ts, sbuf->data + NVS_HEADER_SIZE, sbuf->size - NVS_HEADER_SIZE,
                                 SUBSET_NVM, THINGSET_BIN_IDS_VALUES);
+
+    LOG_HEXDUMP_DBG(sbuf->data, len + NVS_HEADER_SIZE, "data to be saved");
+
     if (len > 0) {
-        int ret = nvs_write(&fs, THINGSET_DATA_ID, &sbuf->data, len + NVS_HEADER_SIZE);
+        int ret = nvs_write(&fs, THINGSET_DATA_ID, sbuf->data, len + NVS_HEADER_SIZE);
         if (ret == len + NVS_HEADER_SIZE) {
             LOG_DBG("NVS data successfully stored");
         }
