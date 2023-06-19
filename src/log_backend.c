@@ -21,14 +21,23 @@ static uint8_t output_buf[CONFIG_THINGSET_LOG_BACKEND_BUF_SIZE];
 static uint32_t log_timestamp;
 static uint8_t log_msg[CONFIG_THINGSET_LOG_BACKEND_BUF_SIZE];
 static uint8_t log_module[32];
-uint8_t log_level;
+static uint8_t log_level;
+static bool pub_logs_enable;
+static uint8_t max_level;
 
 THINGSET_ADD_GROUP(ID_ROOT, ID_LOG, "Log", THINGSET_NO_CALLBACK);
-THINGSET_ADD_ITEM_UINT32(ID_LOG, 0xE0, "rUptime_s", &log_timestamp, THINGSET_ANY_R, 0);
+#ifdef CONFIG_THINGSET_LOG_BACKEND_USE_UPTIME
+THINGSET_ADD_ITEM_UINT32(ID_LOG, 0xE0, "t_s", &log_timestamp, THINGSET_ANY_R, 0);
+#endif
 THINGSET_ADD_ITEM_STRING(ID_LOG, 0xE1, "rMessage", log_msg, sizeof(log_msg), THINGSET_ANY_R, 0);
 THINGSET_ADD_ITEM_STRING(ID_LOG, 0xE2, "oModule", log_module, sizeof(log_module), THINGSET_ANY_R,
                          0);
 THINGSET_ADD_ITEM_UINT8(ID_LOG, 0xE3, "oLevel", &log_level, THINGSET_ANY_R, 0);
+
+THINGSET_ADD_GROUP(ID_REPORTING, 0x130, "Log", THINGSET_NO_CALLBACK);
+THINGSET_ADD_GROUP(0x130, 0x131, "_", THINGSET_NO_CALLBACK);
+THINGSET_ADD_ITEM_BOOL(0x131, 0x132, "sEnable", &pub_logs_enable, THINGSET_ANY_RW, SUBSET_NVM);
+THINGSET_ADD_ITEM_UINT8(0x131, 0x133, "sMaxLevel", &max_level, THINGSET_ANY_RW, SUBSET_NVM);
 
 static int line_out(uint8_t *data, size_t len, void *ctx)
 {

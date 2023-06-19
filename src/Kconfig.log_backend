@@ -17,4 +17,13 @@ config THINGSET_LOG_BACKEND_BUF_SIZE
       Maximum message size that can be transmitted over the ThingSet log message item.
       Two buffers of this size have to be allocated in RAM.
 
+config THINGSET_LOG_BACKEND_USE_UPTIME
+    bool "Use logger timestamp as absolute UNIX timestamp"
+    help
+      ThingSet timestamp items "t_s" must use absolute UNIX timestamps. However, the logger
+      timestamp is the uptime of the MCU.
+
+      Enable this option only for testing, as processed ThingSet data might end up in a database
+      with a wrong timestamp.
+
 endif # THINGSET_LOG_BACKEND
