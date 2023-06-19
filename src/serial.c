@@ -83,12 +83,12 @@ static void serial_regular_report_handler(struct k_work *work)
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
     static int64_t pub_time;
 
-    thingset_serial_pub_report(SUBSET_LIVE_PATH);
+    if (pub_live_data_enable) {
+        thingset_serial_pub_report(SUBSET_LIVE_PATH);
+    }
 
     pub_time += 1000 * pub_live_data_period;
-    if (pub_live_data_enable) {
-        thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(pub_time));
-    }
+    thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(pub_time));
 }
 
 static void serial_process_msg_handler(struct k_work *work)
