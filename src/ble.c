@@ -97,6 +97,7 @@ static struct k_sem tx_buf_lock;
 static thingset_sdk_rx_callback_t rx_callback;
 
 static struct k_work_delayable processing_work;
+static struct k_work_delayable reporting_work;
 
 static void thingset_ble_ccc_change(const struct bt_gatt_attr *attr, uint16_t value)
 {
@@ -239,6 +240,19 @@ void thingset_ble_pub_report(const char *path)
     k_sem_give(&tx_buf->lock);
 }
 
+static void ble_regular_report_handler(struct k_work *work)
+{
+    struct k_work_delayable *dwork = k_work_delayable_from_work(work);
+    static int64_t pub_time;
+
+    if (pub_live_data_enable) {
+        thingset_ble_pub_report(SUBSET_LIVE_PATH);
+    }
+
+    pub_time += 1000 * pub_live_data_period;
+    thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(pub_time));
+}
+
 static void ble_process_msg_handler(struct k_work *work)
 {
     if (rx_buf_pos > 0) {
@@ -275,6 +289,7 @@ static int thingset_ble_init()
     k_sem_init(&tx_buf_lock, 1, 1);
 
     k_work_init_delayable(&processing_work, ble_process_msg_handler);
+    k_work_init_delayable(&reporting_work, ble_regular_report_handler);
 
     int err = bt_enable(NULL);
     if (err) {
@@ -288,6 +303,8 @@ static int thingset_ble_init()
         return err;
     }
     LOG_INF("Waiting for Bluetooth connections...");
+
+    thingset_sdk_reschedule_work(&reporting_work, K_NO_WAIT);
 
     return 0;
 }
