@@ -30,6 +30,8 @@ LOG_MODULE_REGISTER(thingset_sdk, CONFIG_LOG_DEFAULT_LEVEL);
 char node_id[17];
 uint8_t eui64[8];
 
+char node_name[] = CONFIG_THINGSET_NODE_NAME;
+
 /* buffer should be word-aligned e.g. for hardware CRC calculations */
 static uint8_t buf_data[CONFIG_THINGSET_SHARED_TX_BUF_SIZE] __aligned(sizeof(int));
 
@@ -58,6 +60,9 @@ uint32_t pub_reports_period = CONFIG_THINGSET_PUB_REPORTS_PERIOD_DEFAULT;
 struct thingset_context ts;
 
 THINGSET_ADD_ITEM_STRING(ID_ROOT, 0x1D, "pNodeID", node_id, sizeof(node_id),
+                         THINGSET_ANY_R | THINGSET_MFR_W, SUBSET_NVM);
+
+THINGSET_ADD_ITEM_STRING(ID_ROOT, 0x1E, "pNodeName", node_name, sizeof(node_name),
                          THINGSET_ANY_R | THINGSET_MFR_W, SUBSET_NVM);
 
 THINGSET_ADD_SUBSET(ID_ROOT, ID_EVENT, SUBSET_EVENT_PATH, SUBSET_EVENT, THINGSET_ANY_RW);

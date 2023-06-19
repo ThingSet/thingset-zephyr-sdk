@@ -48,6 +48,13 @@ config THINGSET_GENERATE_NODE_ID
     select HWINFO
     default y
 
+config THINGSET_NODE_NAME
+    string "Default ThingSet node name"
+    default "ThingSet Node"
+    help
+      This node name is used for the pNodeName item and should be a description of
+      the device understandable by humans, e.g. the device type.
+
 config THINGSET_SHARED_TX_BUF_SIZE
     int "Shared TX buffer size"
     range 256 2048
