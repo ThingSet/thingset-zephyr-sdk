@@ -92,7 +92,7 @@ static char rx_buf[CONFIG_THINGSET_BLE_RX_BUF_SIZE];
 static volatile size_t rx_buf_pos = 0;
 
 /* binary semaphore used as mutex in ISR context */
-static struct k_sem tx_buf_lock;
+static struct k_sem rx_buf_lock;
 
 static thingset_sdk_rx_callback_t rx_callback;
 
@@ -116,7 +116,7 @@ static ssize_t thingset_ble_rx(struct bt_conn *conn, const struct bt_gatt_attr *
     static bool escape = false;
 
     bool finished = true;
-    if (buf != NULL && k_sem_take(&tx_buf_lock, K_NO_WAIT) == 0) {
+    if (buf != NULL && k_sem_take(&rx_buf_lock, K_NO_WAIT) == 0) {
         for (int i = 0; i < len; i++) {
             uint8_t c = *((uint8_t *)buf + i);
             if (escape) {
@@ -141,7 +141,7 @@ static ssize_t thingset_ble_rx(struct bt_conn *conn, const struct bt_gatt_attr *
                 else {
                     finished = true;
                     rx_buf[rx_buf_pos] = '\0';
-                    /* start processing the request and keep the tx_buf_lock */
+                    /* start processing the request and keep the rx_buf_lock */
                     thingset_sdk_reschedule_work(&processing_work, K_NO_WAIT);
                     return len;
                 }
@@ -152,7 +152,7 @@ static ssize_t thingset_ble_rx(struct bt_conn *conn, const struct bt_gatt_attr *
             rx_buf[rx_buf_pos++] = c;
         }
     }
-    k_sem_give(&tx_buf_lock);
+    k_sem_give(&rx_buf_lock);
 
     return len;
 }
@@ -276,7 +276,7 @@ static void ble_process_msg_handler(struct k_work *work)
 
     // release buffer and start waiting for new commands
     rx_buf_pos = 0;
-    k_sem_give(&tx_buf_lock);
+    k_sem_give(&rx_buf_lock);
 }
 
 void thingset_ble_set_rx_callback(thingset_sdk_rx_callback_t rx_cb)
@@ -286,7 +286,7 @@ void thingset_ble_set_rx_callback(thingset_sdk_rx_callback_t rx_cb)
 
 static int thingset_ble_init()
 {
-    k_sem_init(&tx_buf_lock, 1, 1);
+    k_sem_init(&rx_buf_lock, 1, 1);
 
     k_work_init_delayable(&processing_work, ble_process_msg_handler);
     k_work_init_delayable(&reporting_work, ble_regular_report_handler);
