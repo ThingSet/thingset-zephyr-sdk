@@ -34,13 +34,13 @@ void flash_led()
 
 void serial_rx_callback(const uint8_t *buf, size_t len)
 {
-    thingset_ble_tx(buf, len);
+    thingset_ble_send(buf, len);
     flash_led();
 }
 
 void ble_rx_callback(const uint8_t *buf, size_t len)
 {
-    thingset_serial_tx(buf, len);
+    thingset_serial_send(buf, len);
     flash_led();
 }
 

@@ -14,17 +14,24 @@
 extern "C" {
 #endif
 
-void thingset_serial_pub_report(const char *path);
-
 /**
- * Send ThingSet message (response or statement) to serial client.
+ * Send ThingSet report to serial client.
  *
- * @param buf Buffer with ThingSet payload
- * @param len Length of payload inside the buffer
+ * @param path Path to subset or group that should be reported
  *
  * @returns 0 for success or negative errno in case of error
  */
-int thingset_serial_tx(const uint8_t *buf, size_t len);
+int thingset_serial_send_report(const char *path);
+
+/**
+ * Send ThingSet message (response or report) to serial client.
+ *
+ * @param buf Buffer with ThingSet message
+ * @param len Length of message
+ *
+ * @returns 0 for success or negative errno in case of error
+ */
+int thingset_serial_send(const uint8_t *buf, size_t len);
 
 /**
  * Set custom callback for received data.

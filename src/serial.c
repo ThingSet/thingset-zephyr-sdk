@@ -40,7 +40,7 @@ static thingset_sdk_rx_callback_t rx_callback;
 static struct k_work_delayable reporting_work;
 static struct k_work_delayable processing_work;
 
-int thingset_serial_tx(const uint8_t *buf, size_t len)
+int thingset_serial_send(const uint8_t *buf, size_t len)
 {
     if (!device_is_ready(uart_dev)) {
         return -ENODEV;
@@ -65,7 +65,7 @@ int thingset_serial_tx(const uint8_t *buf, size_t len)
     return 0;
 }
 
-void thingset_serial_pub_report(const char *path)
+int thingset_serial_send_report(const char *path)
 {
     struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
     k_sem_take(&tx_buf->lock, K_FOREVER);
@@ -73,9 +73,10 @@ void thingset_serial_pub_report(const char *path)
     int len =
         thingset_report_path(&ts, tx_buf->data, tx_buf->size, path, THINGSET_TXT_NAMES_VALUES);
 
-    thingset_serial_tx(tx_buf->data, len);
+    int ret = thingset_serial_send(tx_buf->data, len);
 
     k_sem_give(&tx_buf->lock);
+    return ret;
 }
 
 static void serial_regular_report_handler(struct k_work *work)
@@ -84,7 +85,7 @@ static void serial_regular_report_handler(struct k_work *work)
     static int64_t pub_time;
 
     if (pub_live_data_enable) {
-        thingset_serial_pub_report(SUBSET_LIVE_PATH);
+        thingset_serial_send_report(SUBSET_LIVE_PATH);
     }
 
     pub_time += 1000 * pub_live_data_period;
@@ -124,7 +125,7 @@ static void serial_process_msg_handler(struct k_work *work)
             int len = thingset_process_message(&ts, (uint8_t *)rx_buf, rx_buf_pos, tx_buf->data,
                                                tx_buf->size);
 
-            thingset_serial_tx(tx_buf->data, len);
+            thingset_serial_send(tx_buf->data, len);
 
             k_sem_give(&tx_buf->lock);
         }

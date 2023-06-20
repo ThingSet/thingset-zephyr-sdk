@@ -185,7 +185,7 @@ static void thingset_ble_disconn(struct bt_conn *conn, uint8_t reason)
     }
 }
 
-int thingset_ble_tx(const uint8_t *buf, size_t len)
+int thingset_ble_send(const uint8_t *buf, size_t len)
 {
     if (ble_conn && notify_resp) {
         /* Max. notification: ATT_MTU - 3 */
@@ -228,16 +228,17 @@ int thingset_ble_tx(const uint8_t *buf, size_t len)
     }
 }
 
-void thingset_ble_pub_report(const char *path)
+int thingset_ble_send_report(const char *path)
 {
     struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
     k_sem_take(&tx_buf->lock, K_FOREVER);
 
     int len =
         thingset_report_path(&ts, tx_buf->data, tx_buf->size, path, THINGSET_TXT_NAMES_VALUES);
-    thingset_ble_tx(tx_buf->data, len);
+    int ret = thingset_ble_send(tx_buf->data, len);
 
     k_sem_give(&tx_buf->lock);
+    return ret;
 }
 
 static void ble_regular_report_handler(struct k_work *work)
@@ -246,7 +247,7 @@ static void ble_regular_report_handler(struct k_work *work)
     static int64_t pub_time;
 
     if (pub_live_data_enable) {
-        thingset_ble_pub_report(SUBSET_LIVE_PATH);
+        thingset_ble_send_report(SUBSET_LIVE_PATH);
     }
 
     pub_time += 1000 * pub_live_data_period;
@@ -265,7 +266,7 @@ static void ble_process_msg_handler(struct k_work *work)
             int len = thingset_process_message(&ts, (uint8_t *)rx_buf, rx_buf_pos, tx_buf->data,
                                                tx_buf->size);
 
-            thingset_ble_tx(tx_buf->data, len);
+            thingset_ble_send(tx_buf->data, len);
             k_sem_give(&tx_buf->lock);
         }
         else {

@@ -142,26 +142,26 @@ struct thingset_can
 };
 
 /**
- * Wait for incoming ThingSet messages
+ * Wait for incoming ThingSet message (usually requests)
  *
  * @param ts_can Pointer to the thingset_can context.
- * @param rx_buf Buffer to store the response from the node.
- * @param rx_buf_size Size of the buffer to store the response.
+ * @param rx_buf Buffer to store the message.
+ * @param rx_buf_size Size of the buffer to store the message.
  * @param source_addr Pointer to store the node address the data was received from.
- * @param timeout Timeout to wait for a response from the node.
+ * @param timeout Timeout to wait for a message from the node.
  *
- * @returns length of response or negative errno in case of error
+ * @returns length of message or negative errno in case of error
  */
 int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buf, size_t rx_buf_size,
                          uint8_t *source_addr, k_timeout_t timeout);
 
 /**
- * Send ThingSet messages to other node
+ * Send ThingSet message to other node
  *
  * @param ts_can Pointer to the thingset_can context.
- * @param tx_buf Buffer containing the request.
- * @param tx_len Length of the request.
- * @param target_addr Target node address (8-bit value) to send the data to.
+ * @param tx_buf Buffer containing the message.
+ * @param tx_len Length of the message.
+ * @param target_addr Target node address (8-bit value) to send the message to.
  *
  * @returns 0 for success or negative errno in case of error
  */
@@ -172,10 +172,8 @@ int thingset_can_send(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_le
  * Automatically process incoming ThingSet requests
  *
  * This function waits for incoming ThingSet requests, processes the request and sends the response
- * back to the node.
- *
- * The function returns after each sent response, so it must be called in a continuous loop from a
- * thread to keep listening.
+ * back to the node. It will never return (except in case of fatal errors) and should run in a
+ * dedicated thread.
  *
  * @param ts_can Pointer to the thingset_can context.
  */

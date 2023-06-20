@@ -103,10 +103,10 @@ static void process(const struct log_backend *const backend, union log_msg_gener
 
     /* ToDo: Implement rate limit to avoid congestion */
 #ifdef CONFIG_THINGSET_SERIAL
-    thingset_serial_pub_report("Log");
+    thingset_serial_send_report("Log");
 #endif
 #ifdef CONFIG_THINGSET_BLE
-    thingset_ble_pub_report("Log");
+    thingset_ble_send_report("Log");
 #endif
 }
 

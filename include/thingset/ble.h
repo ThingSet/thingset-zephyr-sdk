@@ -14,17 +14,24 @@ extern "C" {
 #include <thingset.h>
 #include <thingset/sdk.h>
 
-void thingset_ble_pub_report(const char *path);
-
 /**
- * Send ThingSet message (response or statement) to BLE client.
+ * Send ThingSet report to Bluetooth Central.
  *
- * @param buf Buffer with ThingSet payload (w/o SLIP characters)
- * @param len Length of payload inside the buffer
+ * @param path Path to subset or group that should be reported
  *
  * @returns 0 for success or negative errno in case of error
  */
-int thingset_ble_tx(const uint8_t *buf, size_t len);
+int thingset_ble_send_report(const char *path);
+
+/**
+ * Send ThingSet message (response or report) to Bluetooth Central.
+ *
+ * @param buf Buffer with ThingSet message (w/o SLIP characters)
+ * @param len Length of message
+ *
+ * @returns 0 for success or negative errno in case of error
+ */
+int thingset_ble_send(const uint8_t *buf, size_t len);
 
 /**
  * Set custom callback for received data.
