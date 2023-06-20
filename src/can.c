@@ -285,6 +285,7 @@ int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t
 
     rx_len = 0;
     do {
+        /* isotp_recv not suitable because it does not indicate if the buffer was too small */
         rem_len = isotp_recv_net(&ts_can->recv_ctx, &netbuf, timeout);
         if (rem_len < 0) {
             LOG_ERR("ISO-TP receiving error: %d", rem_len);
@@ -297,7 +298,7 @@ int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t
         net_buf_unref(netbuf);
     } while (rem_len);
 
-    // we need to unbind the receive ctx so that flow control frames are received in the send ctx
+    /* we need to unbind the receive ctx so that flow control frames are received in the send ctx */
     isotp_unbind(&ts_can->recv_ctx);
 
     if (rx_len > rx_buf_size) {
@@ -308,6 +309,9 @@ int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t
         *source_addr = THINGSET_CAN_SOURCE_GET(ts_can->recv_ctx.rx_addr.ext_id);
         LOG_DBG("ISO-TP received %d bytes from addr %d", rx_len, *source_addr);
         return rx_len;
+    }
+    else if (rem_len == ISOTP_RECV_TIMEOUT) {
+        return -EAGAIN;
     }
     else {
         return -EIO;
@@ -341,7 +345,7 @@ int thingset_can_send(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_le
     }
 }
 
-void thingset_can_process(struct thingset_can *ts_can)
+int thingset_can_process(struct thingset_can *ts_can, k_timeout_t timeout)
 {
     struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
     uint8_t rx_buffer[600]; /* large enough to receive a 512 byte flash page for DFU */
@@ -349,46 +353,45 @@ void thingset_can_process(struct thingset_can *ts_can)
     int tx_len, rx_len;
     int err;
 
-    while (1) {
-        rx_len =
-            thingset_can_receive(ts_can, rx_buffer, sizeof(rx_buffer), &external_addr, K_FOREVER);
+    rx_len = thingset_can_receive(ts_can, rx_buffer, sizeof(rx_buffer), &external_addr, timeout);
+    if (rx_len == -EAGAIN) {
+        return -EAGAIN;
+    }
 
-        k_sem_take(&sbuf->lock, K_FOREVER);
+    k_sem_take(&sbuf->lock, K_FOREVER);
 
-        if (rx_len > 0) {
-            tx_len = thingset_process_message(&ts, rx_buffer, rx_len, sbuf->data, sbuf->size);
-        }
-        else if (rx_len == -ENOMEM) {
-            sbuf->data[0] = THINGSET_ERR_REQUEST_TOO_LARGE;
-            tx_len = 1;
-        }
-        else {
-            sbuf->data[0] = THINGSET_ERR_INTERNAL_SERVER_ERR;
-            tx_len = 1;
-        }
+    if (rx_len > 0) {
+        tx_len = thingset_process_message(&ts, rx_buffer, rx_len, sbuf->data, sbuf->size);
+    }
+    else if (rx_len == -ENOMEM) {
+        sbuf->data[0] = THINGSET_ERR_REQUEST_TOO_LARGE;
+        tx_len = 1;
+    }
+    else {
+        sbuf->data[0] = THINGSET_ERR_INTERNAL_SERVER_ERR;
+        tx_len = 1;
+    }
 
 #ifdef CONFIG_BOARD_NATIVE_POSIX
-        /*
-         * The native_posix board with virtual CAN interfaces runs with almost infinite speed
-         * compared to MCUs attached to an actual CAN bus.
-         *
-         * Below delay gives the requesting side some more time to switch between sending and
-         * receiving mode.
-         */
-        k_sleep(K_MSEC(1));
+    /*
+     * The native_posix board with virtual CAN interfaces runs with almost infinite speed
+     * compared to MCUs attached to an actual CAN bus.
+     *
+     * Below delay gives the requesting side some more time to switch between sending and
+     * receiving mode.
+     */
+    k_sleep(K_MSEC(1));
 #endif
 
-        if (tx_len > 0) {
-            err = thingset_can_send(ts_can, sbuf->data, tx_len, external_addr);
-            if (err == -ENODEV) {
-                LOG_ERR("CAN processing stopped because device not ready");
-                return;
-            }
-            else {
-                k_sleep(K_MSEC(1000));
-            }
+    if (tx_len > 0) {
+        err = thingset_can_send(ts_can, sbuf->data, tx_len, external_addr);
+        if (err == -ENODEV) {
+            LOG_ERR("CAN processing stopped because device not ready");
+            k_sem_give(&sbuf->lock);
+            return err;
         }
-
-        k_sem_give(&sbuf->lock);
     }
+
+    k_sem_give(&sbuf->lock);
+    return 0;
 }

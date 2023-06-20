@@ -18,7 +18,9 @@ static void thingset_can_thread()
 {
     thingset_can_init(&ts_can, can_dev);
 
-    thingset_can_process(&ts_can);
+    while (true) {
+        thingset_can_process(&ts_can, K_FOREVER);
+    }
 }
 
 K_THREAD_DEFINE(thingset_can, CONFIG_THINGSET_CAN_THREAD_STACK_SIZE, thingset_can_thread, NULL,

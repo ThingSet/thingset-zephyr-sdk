@@ -169,15 +169,23 @@ int thingset_can_send(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_le
                       uint8_t target_addr);
 
 /**
- * Automatically process incoming ThingSet requests
+ * Process incoming ThingSet requests
  *
  * This function waits for incoming ThingSet requests, processes the request and sends the response
- * back to the node. It will never return (except in case of fatal errors) and should run in a
- * dedicated thread.
+ * back to the node.
+ *
+ * The function returns after each sent response or after the timeout, so it must be called in a
+ * continuous loop from a thread to keep listening to requests.
+ *
+ * A short timeout can be used to process multiple instances consecutively from the same thread.
  *
  * @param ts_can Pointer to the thingset_can context.
+ * @param timeout Timeout to wait for a message from the node.
+ *
+ * @retval 0 for success
+ * @retval -EAGAIN in case of timeout
  */
-void thingset_can_process(struct thingset_can *ts_can);
+int thingset_can_process(struct thingset_can *ts_can, k_timeout_t timeout);
 
 /**
  * Initialize a ThingSet CAN instance
