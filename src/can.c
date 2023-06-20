@@ -35,15 +35,9 @@ static const struct can_filter addr_claim_filter = {
     .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
 };
 
-static struct can_filter addr_discovery_filter = {
-    .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS),
-    .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_TARGET_MASK | THINGSET_CAN_TARGET_MASK,
-    .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
-};
-
-const struct isotp_fc_opts fc_opts = {
-    .bs = 8,    // block size
-    .stmin = 1, // minimum separation time = 100 ms
+static const struct isotp_fc_opts fc_opts = {
+    .bs = 8,    /* block size */
+    .stmin = 1, /* minimum separation time = 100 ms */
 };
 
 static void thingset_can_addr_claim_tx_cb(const struct device *dev, int error, void *user_data)
@@ -241,7 +235,12 @@ int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev)
     ts_can->tx_addr.use_ext_addr = 0;
     ts_can->tx_addr.use_fixed_addr = 1;
 
-    addr_discovery_filter.id |= THINGSET_CAN_TARGET_SET(ts_can->node_addr);
+    struct can_filter addr_discovery_filter = {
+        .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS)
+              | THINGSET_CAN_TARGET_SET(ts_can->node_addr),
+        .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_TARGET_MASK | THINGSET_CAN_TARGET_MASK,
+        .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
+    };
     filter_id = can_add_rx_filter(ts_can->dev, thingset_can_addr_discovery_rx_cb, ts_can,
                                   &addr_discovery_filter);
     if (filter_id < 0) {
@@ -345,7 +344,7 @@ int thingset_can_send(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_le
 void thingset_can_process(struct thingset_can *ts_can)
 {
     struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
-    static uint8_t rx_buffer[600]; // large enough to receive a 512 byte flash page for DFU
+    uint8_t rx_buffer[600]; /* large enough to receive a 512 byte flash page for DFU */
     uint8_t external_addr;
     int tx_len, rx_len;
     int err;
