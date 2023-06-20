@@ -152,7 +152,7 @@ static void thingset_can_report_tx_handler(struct k_work *work)
     k_work_reschedule(dwork, K_TIMEOUT_ABS_MS(ts_can->next_pub_time));
 }
 
-int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev)
+int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev)
 {
     struct can_frame tx_frame = {
         .flags = CAN_FRAME_IDE,
@@ -261,8 +261,8 @@ int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev)
     return 0;
 }
 
-int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t rx_buf_size,
-                         uint8_t *source_addr, k_timeout_t timeout)
+int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t rx_buf_size,
+                              uint8_t *source_addr, k_timeout_t timeout)
 {
     int ret, rem_len, rx_len;
     struct net_buf *netbuf;
@@ -318,8 +318,8 @@ int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t
     }
 }
 
-int thingset_can_send(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
-                      uint8_t target_addr)
+int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
+                           uint8_t target_addr)
 {
     if (!device_is_ready(ts_can->dev)) {
         return -ENODEV;
@@ -345,15 +345,15 @@ int thingset_can_send(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_le
     }
 }
 
-int thingset_can_process(struct thingset_can *ts_can, k_timeout_t timeout)
+int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout)
 {
     struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
-    uint8_t rx_buffer[600]; /* large enough to receive a 512 byte flash page for DFU */
     uint8_t external_addr;
     int tx_len, rx_len;
     int err;
 
-    rx_len = thingset_can_receive(ts_can, rx_buffer, sizeof(rx_buffer), &external_addr, timeout);
+    rx_len = thingset_can_receive_inst(ts_can, ts_can->rx_buffer, sizeof(ts_can->rx_buffer),
+                                       &external_addr, timeout);
     if (rx_len == -EAGAIN) {
         return -EAGAIN;
     }
@@ -361,7 +361,7 @@ int thingset_can_process(struct thingset_can *ts_can, k_timeout_t timeout)
     k_sem_take(&sbuf->lock, K_FOREVER);
 
     if (rx_len > 0) {
-        tx_len = thingset_process_message(&ts, rx_buffer, rx_len, sbuf->data, sbuf->size);
+        tx_len = thingset_process_message(&ts, ts_can->rx_buffer, rx_len, sbuf->data, sbuf->size);
     }
     else if (rx_len == -ENOMEM) {
         sbuf->data[0] = THINGSET_ERR_REQUEST_TOO_LARGE;
@@ -384,7 +384,7 @@ int thingset_can_process(struct thingset_can *ts_can, k_timeout_t timeout)
 #endif
 
     if (tx_len > 0) {
-        err = thingset_can_send(ts_can, sbuf->data, tx_len, external_addr);
+        err = thingset_can_send_inst(ts_can, sbuf->data, tx_len, external_addr);
         if (err == -ENODEV) {
             LOG_ERR("CAN processing stopped because device not ready");
             k_sem_give(&sbuf->lock);
@@ -395,3 +395,27 @@ int thingset_can_process(struct thingset_can *ts_can, k_timeout_t timeout)
     k_sem_give(&sbuf->lock);
     return 0;
 }
+
+#ifndef CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES
+
+static const struct device *can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
+static struct thingset_can ts_can_single;
+
+int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr)
+{
+    return thingset_can_send_inst(&ts_can_single, tx_buf, tx_len, target_addr);
+}
+
+static void thingset_can_thread()
+{
+    thingset_can_init_inst(&ts_can_single, can_dev);
+
+    while (true) {
+        thingset_can_process_inst(&ts_can_single, K_FOREVER);
+    }
+}
+
+K_THREAD_DEFINE(thingset_can, CONFIG_THINGSET_CAN_THREAD_STACK_SIZE, thingset_can_thread, NULL,
+                NULL, NULL, CONFIG_THINGSET_CAN_THREAD_PRIORITY, 0, 0);
+
+#endif /* !CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES */

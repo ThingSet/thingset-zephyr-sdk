@@ -9,18 +9,39 @@ menuconfig THINGSET_CAN
 
 if THINGSET_CAN
 
+config THINGSET_CAN_RX_BUF_SIZE
+    int "ThingSet CAN RX buffer size"
+    range 64 2048
+    default 600
+    help
+      Default value large enough to receive a 512 byte flash page for DFU.
+
+config THINGSET_CAN_MULTIPLE_INSTANCES
+    bool "Support for multiple ThingSet CAN instances"
+    help
+      If enabled, the CAN message processing does not happen in the
+      background anymore. Instead, each instance has to be initialized
+      for a dedicated CAN device and and messages have to be processed
+      manually in application threads.
+
 config THINGSET_CAN_THREAD_STACK_SIZE
     int "ThingSet CAN thread stack size"
+    depends on !THINGSET_CAN_MULTIPLE_INSTANCES
     default 2048
     help
       Stack size of thread for processing ThingSet messages transmitted
       via CAN ISO-TP.
 
+      Only available for single-instance implementation.
+
 config THINGSET_CAN_THREAD_PRIORITY
     int "ThingSet CAN thread priority"
+    depends on !THINGSET_CAN_MULTIPLE_INSTANCES
     default 2
     help
       Priority of thread for processing ThingSet messages transmitted
       via CAN ISO-TP.
+
+      Only available for single-instance implementation.
 
 endif # THINGSET_CAN

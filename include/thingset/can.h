@@ -136,10 +136,13 @@ struct thingset_can
     struct isotp_msg_id rx_addr;
     struct isotp_msg_id tx_addr;
     struct k_event events;
+    uint8_t rx_buffer[CONFIG_THINGSET_CAN_RX_BUF_SIZE];
     int64_t next_pub_time;
     uint8_t node_addr;
     bool pub_enable;
 };
+
+#ifdef CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES
 
 /**
  * Wait for incoming ThingSet message (usually requests)
@@ -152,8 +155,8 @@ struct thingset_can
  *
  * @returns length of message or negative errno in case of error
  */
-int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buf, size_t rx_buf_size,
-                         uint8_t *source_addr, k_timeout_t timeout);
+int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buf, size_t rx_buf_size,
+                              uint8_t *source_addr, k_timeout_t timeout);
 
 /**
  * Send ThingSet message to other node
@@ -165,8 +168,8 @@ int thingset_can_receive(struct thingset_can *ts_can, uint8_t *rx_buf, size_t rx
  *
  * @returns 0 for success or negative errno in case of error
  */
-int thingset_can_send(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
-                      uint8_t target_addr);
+int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
+                           uint8_t target_addr);
 
 /**
  * Process incoming ThingSet requests
@@ -185,7 +188,7 @@ int thingset_can_send(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_le
  * @retval 0 for success
  * @retval -EAGAIN in case of timeout
  */
-int thingset_can_process(struct thingset_can *ts_can, k_timeout_t timeout);
+int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout);
 
 /**
  * Initialize a ThingSet CAN instance
@@ -195,7 +198,22 @@ int thingset_can_process(struct thingset_can *ts_can, k_timeout_t timeout);
  *
  * @returns 0 for success or negative errno in case of error
  */
-int thingset_can_init(struct thingset_can *ts_can, const struct device *can_dev);
+int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev);
+
+#else /* !CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES */
+
+/**
+ * Send ThingSet message to other node
+ *
+ * @param tx_buf Buffer containing the message.
+ * @param tx_len Length of the message.
+ * @param target_addr Target node address (8-bit value) to send the message to.
+ *
+ * @returns 0 for success or negative errno in case of error
+ */
+int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr);
+
+#endif /* CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES */
 
 #ifdef __cplusplus
 }

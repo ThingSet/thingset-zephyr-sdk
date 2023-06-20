@@ -9,4 +9,3 @@ project(thingset_sample_counter)
 target_include_directories(app PRIVATE src)
 
 target_sources(app PRIVATE src/main.c)
-zephyr_sources_ifdef(CONFIG_THINGSET_CAN src/can.c)
