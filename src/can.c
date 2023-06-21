@@ -152,115 +152,6 @@ static void thingset_can_report_tx_handler(struct k_work *work)
     k_work_reschedule(dwork, K_TIMEOUT_ABS_MS(ts_can->next_pub_time));
 }
 
-int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev)
-{
-    struct can_frame tx_frame = {
-        .flags = CAN_FRAME_IDE,
-    };
-    int filter_id;
-    int err;
-
-    if (!device_is_ready(can_dev)) {
-        LOG_ERR("CAN device not ready");
-        return -ENODEV;
-    }
-
-    ts_can->dev = can_dev;
-    ts_can->node_addr = 1; // initial address, will be changed if already used on the bus
-    k_event_init(&ts_can->events);
-
-    can_start(ts_can->dev);
-
-    filter_id =
-        can_add_rx_filter(ts_can->dev, thingset_can_addr_claim_rx_cb, ts_can, &addr_claim_filter);
-    if (filter_id < 0) {
-        LOG_ERR("Unable to add addr_claim filter: %d", filter_id);
-        return filter_id;
-    }
-
-    while (1) {
-        k_event_set_masked(&ts_can->events, 0, EVENT_ADDRESS_ALREADY_USED);
-
-        /* send out address discovery frame */
-        uint8_t rand = sys_rand32_get() & 0xFF;
-        tx_frame.id = THINGSET_CAN_PRIO_NETWORK_MGMT | THINGSET_CAN_TYPE_NETWORK
-                      | THINGSET_CAN_RAND_SET(rand) | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
-                      | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS);
-        tx_frame.dlc = 0;
-        err = can_send(ts_can->dev, &tx_frame, K_MSEC(10), NULL, NULL);
-        if (err != 0) {
-            k_sleep(K_MSEC(100));
-            continue;
-        }
-
-        /* wait 500 ms for address claim message from other node */
-        uint32_t event =
-            k_event_wait(&ts_can->events, EVENT_ADDRESS_ALREADY_USED, false, K_MSEC(500));
-        if (event & EVENT_ADDRESS_ALREADY_USED) {
-            /* try again with new random node_addr between 0x01 and 0xFD */
-            ts_can->node_addr = 1 + sys_rand32_get() % THINGSET_CAN_ADDR_MAX;
-            LOG_WRN("Node addr already in use, trying 0x%.2X", ts_can->node_addr);
-        }
-        else {
-            struct can_bus_err_cnt err_cnt_before;
-            can_get_state(ts_can->dev, NULL, &err_cnt_before);
-
-            err = thingset_can_send_addr_claim_msg(ts_can, K_MSEC(10), NULL);
-            if (err != 0) {
-                k_sleep(K_MSEC(100));
-                continue;
-            }
-
-            struct can_bus_err_cnt err_cnt_after;
-            can_get_state(ts_can->dev, NULL, &err_cnt_after);
-
-            if (err_cnt_after.tx_err_cnt <= err_cnt_before.tx_err_cnt) {
-                /* address claiming is finished */
-                k_event_post(&ts_can->events, EVENT_ADDRESS_CLAIMING_FINISHED);
-                LOG_INF("Using CAN node address 0x%.2X", ts_can->node_addr);
-                break;
-            }
-
-            /* Continue the loop in the very unlikely case of a collision because two nodes with
-             * different EUI-64 tried to claim the same node address at exactly the same time.
-             */
-        }
-    }
-
-    ts_can->rx_addr.ide = 1;
-    ts_can->rx_addr.use_ext_addr = 0;   /* Normal ISO-TP addressing (using only CAN ID) */
-    ts_can->rx_addr.use_fixed_addr = 1; /* enable SAE J1939 compatible addressing */
-
-    ts_can->tx_addr.ide = 1;
-    ts_can->tx_addr.use_ext_addr = 0;
-    ts_can->tx_addr.use_fixed_addr = 1;
-
-    struct can_filter addr_discovery_filter = {
-        .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS)
-              | THINGSET_CAN_TARGET_SET(ts_can->node_addr),
-        .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_TARGET_MASK | THINGSET_CAN_TARGET_MASK,
-        .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
-    };
-    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_addr_discovery_rx_cb, ts_can,
-                                  &addr_discovery_filter);
-    if (filter_id < 0) {
-        LOG_ERR("Unable to add addr_discovery filter: %d", filter_id);
-        return filter_id;
-    }
-
-    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_report_rx_cb, ts_can, &report_filter);
-    if (filter_id < 0) {
-        LOG_ERR("Unable to add report filter: %d", filter_id);
-        return filter_id;
-    }
-
-    k_work_init_delayable(&ts_can->pub_work, thingset_can_report_tx_handler);
-
-    k_work_reschedule(&ts_can->pub_work, K_NO_WAIT);
-
-    return 0;
-}
-
 int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t rx_buf_size,
                               uint8_t *source_addr, k_timeout_t timeout)
 {
@@ -393,6 +284,115 @@ int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout)
     }
 
     k_sem_give(&sbuf->lock);
+    return 0;
+}
+
+int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev)
+{
+    struct can_frame tx_frame = {
+        .flags = CAN_FRAME_IDE,
+    };
+    int filter_id;
+    int err;
+
+    if (!device_is_ready(can_dev)) {
+        LOG_ERR("CAN device not ready");
+        return -ENODEV;
+    }
+
+    ts_can->dev = can_dev;
+    ts_can->node_addr = 1; // initial address, will be changed if already used on the bus
+    k_event_init(&ts_can->events);
+
+    can_start(ts_can->dev);
+
+    filter_id =
+        can_add_rx_filter(ts_can->dev, thingset_can_addr_claim_rx_cb, ts_can, &addr_claim_filter);
+    if (filter_id < 0) {
+        LOG_ERR("Unable to add addr_claim filter: %d", filter_id);
+        return filter_id;
+    }
+
+    while (1) {
+        k_event_set_masked(&ts_can->events, 0, EVENT_ADDRESS_ALREADY_USED);
+
+        /* send out address discovery frame */
+        uint8_t rand = sys_rand32_get() & 0xFF;
+        tx_frame.id = THINGSET_CAN_PRIO_NETWORK_MGMT | THINGSET_CAN_TYPE_NETWORK
+                      | THINGSET_CAN_RAND_SET(rand) | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
+                      | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS);
+        tx_frame.dlc = 0;
+        err = can_send(ts_can->dev, &tx_frame, K_MSEC(10), NULL, NULL);
+        if (err != 0) {
+            k_sleep(K_MSEC(100));
+            continue;
+        }
+
+        /* wait 500 ms for address claim message from other node */
+        uint32_t event =
+            k_event_wait(&ts_can->events, EVENT_ADDRESS_ALREADY_USED, false, K_MSEC(500));
+        if (event & EVENT_ADDRESS_ALREADY_USED) {
+            /* try again with new random node_addr between 0x01 and 0xFD */
+            ts_can->node_addr = 1 + sys_rand32_get() % THINGSET_CAN_ADDR_MAX;
+            LOG_WRN("Node addr already in use, trying 0x%.2X", ts_can->node_addr);
+        }
+        else {
+            struct can_bus_err_cnt err_cnt_before;
+            can_get_state(ts_can->dev, NULL, &err_cnt_before);
+
+            err = thingset_can_send_addr_claim_msg(ts_can, K_MSEC(10), NULL);
+            if (err != 0) {
+                k_sleep(K_MSEC(100));
+                continue;
+            }
+
+            struct can_bus_err_cnt err_cnt_after;
+            can_get_state(ts_can->dev, NULL, &err_cnt_after);
+
+            if (err_cnt_after.tx_err_cnt <= err_cnt_before.tx_err_cnt) {
+                /* address claiming is finished */
+                k_event_post(&ts_can->events, EVENT_ADDRESS_CLAIMING_FINISHED);
+                LOG_INF("Using CAN node address 0x%.2X", ts_can->node_addr);
+                break;
+            }
+
+            /* Continue the loop in the very unlikely case of a collision because two nodes with
+             * different EUI-64 tried to claim the same node address at exactly the same time.
+             */
+        }
+    }
+
+    ts_can->rx_addr.ide = 1;
+    ts_can->rx_addr.use_ext_addr = 0;   /* Normal ISO-TP addressing (using only CAN ID) */
+    ts_can->rx_addr.use_fixed_addr = 1; /* enable SAE J1939 compatible addressing */
+
+    ts_can->tx_addr.ide = 1;
+    ts_can->tx_addr.use_ext_addr = 0;
+    ts_can->tx_addr.use_fixed_addr = 1;
+
+    struct can_filter addr_discovery_filter = {
+        .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS)
+              | THINGSET_CAN_TARGET_SET(ts_can->node_addr),
+        .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_TARGET_MASK | THINGSET_CAN_TARGET_MASK,
+        .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
+    };
+    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_addr_discovery_rx_cb, ts_can,
+                                  &addr_discovery_filter);
+    if (filter_id < 0) {
+        LOG_ERR("Unable to add addr_discovery filter: %d", filter_id);
+        return filter_id;
+    }
+
+    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_report_rx_cb, ts_can, &report_filter);
+    if (filter_id < 0) {
+        LOG_ERR("Unable to add report filter: %d", filter_id);
+        return filter_id;
+    }
+
+    k_work_init_delayable(&ts_can->pub_work, thingset_can_report_tx_handler);
+
+    k_work_reschedule(&ts_can->pub_work, K_NO_WAIT);
+
     return 0;
 }
 
