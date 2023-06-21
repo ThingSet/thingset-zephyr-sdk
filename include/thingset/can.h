@@ -141,7 +141,8 @@ typedef void (*thingset_can_report_rx_callback_t)(uint16_t data_id, const uint8_
 struct thingset_can
 {
     const struct device *dev;
-    struct k_work_delayable pub_work;
+    struct k_work_delayable reporting_work;
+    struct k_work_delayable addr_claim_work;
     struct isotp_recv_ctx recv_ctx;
     struct isotp_send_ctx send_ctx;
     struct isotp_msg_id rx_addr;

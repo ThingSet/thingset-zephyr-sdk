@@ -20,8 +20,9 @@ LOG_MODULE_REGISTER(thingset_can, CONFIG_CAN_LOG_LEVEL);
 
 extern uint8_t eui64[8];
 
-#define EVENT_ADDRESS_CLAIMING_FINISHED 0x01
-#define EVENT_ADDRESS_ALREADY_USED      0x02
+#define EVENT_ADDRESS_CLAIM_MSG_SENT    0x01
+#define EVENT_ADDRESS_CLAIMING_FINISHED 0x02
+#define EVENT_ADDRESS_ALREADY_USED      0x03
 
 static const struct can_filter report_filter = {
     .id = THINGSET_CAN_TYPE_REPORT,
@@ -42,14 +43,21 @@ static const struct isotp_fc_opts fc_opts = {
 
 static void thingset_can_addr_claim_tx_cb(const struct device *dev, int error, void *user_data)
 {
-    if (error != 0) {
+    struct thingset_can *ts_can = user_data;
+
+    if (error == 0) {
+        k_event_post(&ts_can->events, EVENT_ADDRESS_CLAIM_MSG_SENT);
+    }
+    else {
         LOG_ERR("Address claim failed with %d", error);
     }
 }
 
-static int thingset_can_send_addr_claim_msg(const struct thingset_can *ts_can, k_timeout_t timeout,
-                                            can_tx_callback_t cb)
+static void thingset_can_addr_claim_tx_handler(struct k_work *work)
 {
+    struct k_work_delayable *dwork = k_work_delayable_from_work(work);
+    struct thingset_can *ts_can = CONTAINER_OF(dwork, struct thingset_can, addr_claim_work);
+
     struct can_frame tx_frame = {
         .flags = CAN_FRAME_IDE,
     };
@@ -59,19 +67,21 @@ static int thingset_can_send_addr_claim_msg(const struct thingset_can *ts_can, k
     tx_frame.dlc = sizeof(eui64);
     memcpy(tx_frame.data, eui64, sizeof(eui64));
 
-    return can_send(ts_can->dev, &tx_frame, timeout, cb, NULL);
+    int err = can_send(ts_can->dev, &tx_frame, K_MSEC(100), thingset_can_addr_claim_tx_cb, ts_can);
+    if (err != 0) {
+        LOG_ERR("Address claim failed with %d", err);
+    }
 }
 
 static void thingset_can_addr_discovery_rx_cb(const struct device *dev, struct can_frame *frame,
                                               void *user_data)
 {
-    const struct thingset_can *ts_can = user_data;
+    struct thingset_can *ts_can = user_data;
 
     LOG_INF("Received address discovery frame with ID %X (rand %.2X)", frame->id,
             THINGSET_CAN_RAND_GET(frame->id));
 
-    /* ToDo: offload from ISR (even though we use short timeout and non-blocking method */
-    thingset_can_send_addr_claim_msg(ts_can, K_MSEC(1), thingset_can_addr_claim_tx_cb);
+    thingset_sdk_reschedule_work(&ts_can->addr_claim_work, K_NO_WAIT);
 }
 
 static void thingset_can_addr_claim_rx_cb(const struct device *dev, struct can_frame *frame,
@@ -92,11 +102,6 @@ static void thingset_can_addr_claim_rx_cb(const struct device *dev, struct can_f
     /* Optimization: store in internal database to exclude from potentially available addresses */
 }
 
-static void thingset_can_pub_tx_cb(const struct device *dev, int error, void *user_data)
-{
-    // Do nothing. Publication messages are fire and forget.
-}
-
 static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame *frame,
                                       void *user_data)
 {
@@ -107,10 +112,15 @@ static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame
     ts_can->report_rx_cb(data_id, frame->data, can_dlc_to_bytes(frame->dlc), source_addr);
 }
 
+static void thingset_can_report_tx_cb(const struct device *dev, int error, void *user_data)
+{
+    /* Do nothing: Reports are fire and forget. */
+}
+
 static void thingset_can_report_tx_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
-    struct thingset_can *ts_can = CONTAINER_OF(dwork, struct thingset_can, pub_work);
+    struct thingset_can *ts_can = CONTAINER_OF(dwork, struct thingset_can, reporting_work);
     int data_len = 0;
 
     struct can_frame frame = {
@@ -126,7 +136,7 @@ static void thingset_can_report_tx_handler(struct k_work *work)
                        | THINGSET_CAN_DATA_ID_SET(obj->id)
                        | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
             frame.dlc = data_len;
-            if (can_send(ts_can->dev, &frame, K_MSEC(10), thingset_can_pub_tx_cb, NULL) != 0) {
+            if (can_send(ts_can->dev, &frame, K_MSEC(10), thingset_can_report_tx_cb, NULL) != 0) {
                 LOG_DBG("Error sending CAN frame with ID %x", frame.id);
             }
         }
@@ -139,7 +149,7 @@ static void thingset_can_report_tx_handler(struct k_work *work)
         ts_can->next_pub_time = k_uptime_get() + 1000 * pub_live_data_period;
     }
 
-    k_work_reschedule(dwork, K_TIMEOUT_ABS_MS(ts_can->next_pub_time));
+    thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(ts_can->next_pub_time));
 }
 
 int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t rx_buf_size,
@@ -290,6 +300,9 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         return -ENODEV;
     }
 
+    k_work_init_delayable(&ts_can->reporting_work, thingset_can_report_tx_handler);
+    k_work_init_delayable(&ts_can->addr_claim_work, thingset_can_addr_claim_tx_handler);
+
     ts_can->dev = can_dev;
     ts_can->node_addr = 1; // initial address, will be changed if already used on the bus
     k_event_init(&ts_can->events);
@@ -304,7 +317,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     }
 
     while (1) {
-        k_event_set_masked(&ts_can->events, 0, EVENT_ADDRESS_ALREADY_USED);
+        k_event_clear(&ts_can->events, EVENT_ADDRESS_ALREADY_USED);
 
         /* send out address discovery frame */
         uint8_t rand = sys_rand32_get() & 0xFF;
@@ -330,8 +343,10 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
             struct can_bus_err_cnt err_cnt_before;
             can_get_state(ts_can->dev, NULL, &err_cnt_before);
 
-            err = thingset_can_send_addr_claim_msg(ts_can, K_MSEC(10), NULL);
-            if (err != 0) {
+            thingset_sdk_reschedule_work(&ts_can->addr_claim_work, K_NO_WAIT);
+
+            event = k_event_wait(&ts_can->events, EVENT_ADDRESS_CLAIM_MSG_SENT, false, K_MSEC(100));
+            if (!(event & EVENT_ADDRESS_CLAIM_MSG_SENT)) {
                 k_sleep(K_MSEC(100));
                 continue;
             }
@@ -373,9 +388,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         return filter_id;
     }
 
-    k_work_init_delayable(&ts_can->pub_work, thingset_can_report_tx_handler);
-
-    k_work_reschedule(&ts_can->pub_work, K_NO_WAIT);
+    thingset_sdk_reschedule_work(&ts_can->reporting_work, K_NO_WAIT);
 
     return 0;
 }
@@ -411,8 +424,7 @@ int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr)
 
 int thingset_can_set_report_rx_callback(thingset_can_report_rx_callback_t rx_cb)
 {
-    return thingset_can_set_report_rx_callback_inst(&ts_can_single,
-                                                    thingset_can_report_rx_callback_t rx_cb);
+    return thingset_can_set_report_rx_callback_inst(&ts_can_single, rx_cb);
 }
 
 static void thingset_can_thread()
