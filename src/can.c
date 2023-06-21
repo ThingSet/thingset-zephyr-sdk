@@ -104,17 +104,7 @@ static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame
     uint16_t data_id = THINGSET_CAN_DATA_ID_GET(frame->id);
     uint8_t source_addr = THINGSET_CAN_SOURCE_GET(frame->id);
 
-    if (data_id >= 0x8000 && source_addr < ts_can->node_addr) {
-        // control message
-        uint8_t buf[4 + 8];
-        buf[0] = 0xA1; // CBOR: map with 1 element
-        buf[1] = 0x19; // CBOR: uint16 follows
-        buf[2] = data_id >> 8;
-        buf[3] = data_id;
-        memcpy(&buf[4], frame->data, 8);
-        thingset_import_data(&ts, buf, 4 + frame->dlc, THINGSET_WRITE_MASK,
-                             THINGSET_BIN_IDS_VALUES);
-    }
+    ts_can->report_rx_cb(data_id, frame->data, can_dlc_to_bytes(frame->dlc), source_addr);
 }
 
 static void thingset_can_report_tx_handler(struct k_work *work)
@@ -383,15 +373,28 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         return filter_id;
     }
 
-    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_report_rx_cb, ts_can, &report_filter);
+    k_work_init_delayable(&ts_can->pub_work, thingset_can_report_tx_handler);
+
+    k_work_reschedule(&ts_can->pub_work, K_NO_WAIT);
+
+    return 0;
+}
+
+int thingset_can_set_report_rx_callback_inst(struct thingset_can *ts_can,
+                                             thingset_can_report_rx_callback_t rx_cb)
+{
+    if (rx_cb == NULL) {
+        return -EINVAL;
+    }
+
+    ts_can->report_rx_cb = rx_cb;
+
+    int filter_id =
+        can_add_rx_filter(ts_can->dev, thingset_can_report_rx_cb, ts_can, &report_filter);
     if (filter_id < 0) {
         LOG_ERR("Unable to add report filter: %d", filter_id);
         return filter_id;
     }
-
-    k_work_init_delayable(&ts_can->pub_work, thingset_can_report_tx_handler);
-
-    k_work_reschedule(&ts_can->pub_work, K_NO_WAIT);
 
     return 0;
 }
@@ -404,6 +407,12 @@ static struct thingset_can ts_can_single;
 int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr)
 {
     return thingset_can_send_inst(&ts_can_single, tx_buf, tx_len, target_addr);
+}
+
+int thingset_can_set_report_rx_callback(thingset_can_report_rx_callback_t rx_cb)
+{
+    return thingset_can_set_report_rx_callback_inst(&ts_can_single,
+                                                    thingset_can_report_rx_callback_t rx_cb);
 }
 
 static void thingset_can_thread()

@@ -125,6 +125,17 @@ extern "C" {
 #define THINGSET_CAN_CHANNEL(id) ((id & THINGSET_CAN_TYPE_MASK) == THINGSET_CAN_TYPE_CHANNEL)
 
 /**
+ * Callback typedef for received ThingSet report via CAN
+ *
+ * @param data_id ThingSet data object ID
+ * @param value Buffer containing the CBOR raw data of the value
+ * @param value_len Length of the value in the buffer
+ * @param source_addr Node address the report was received from
+ */
+typedef void (*thingset_can_report_rx_callback_t)(uint16_t data_id, const uint8_t *value,
+                                                  size_t value_len, uint8_t source_addr);
+
+/**
  * ThingSet CAN context storing all information required for one instance.
  */
 struct thingset_can
@@ -136,6 +147,7 @@ struct thingset_can
     struct isotp_msg_id rx_addr;
     struct isotp_msg_id tx_addr;
     struct k_event events;
+    thingset_can_report_rx_callback_t report_rx_cb;
     uint8_t rx_buffer[CONFIG_THINGSET_CAN_RX_BUF_SIZE];
     int64_t next_pub_time;
     uint8_t node_addr;
@@ -191,6 +203,19 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
 int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout);
 
 /**
+ * Set callback for received reports from other nodes
+ *
+ * The callback can be used to subscribe to reports from other nodes, e.g. for control purposes.
+ *
+ * If not set, reports from other nodes are ignored on the bus.
+ *
+ * @param ts_can Pointer to the thingset_can context.
+ * @param rx_cb Callback function.
+ */
+int thingset_can_set_report_rx_callback_inst(struct thingset_can *ts_can,
+                                             thingset_can_report_rx_callback_t rx_cb);
+
+/**
  * Initialize a ThingSet CAN instance
  *
  * @param ts_can Pointer to the thingset_can context.
@@ -212,6 +237,18 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
  * @returns 0 for success or negative errno in case of error
  */
 int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr);
+
+/**
+ * Set callback for received reports from other nodes
+ *
+ * The callback can be used to subscribe to reports from other nodes, e.g. for control purposes.
+ *
+ * If not set, reports from other nodes are ignored on the bus.
+ *
+ * @param ts_can Pointer to the thingset_can context.
+ * @param rx_cb Callback function.
+ */
+int thingset_can_set_report_rx_callback(thingset_can_report_rx_callback_t rx_cb);
 
 #endif /* CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES */
 
