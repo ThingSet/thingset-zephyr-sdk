@@ -51,7 +51,7 @@ int main(void)
 
     if (!device_is_ready(led.port)) {
         /* ignore LED if not available */
-        return;
+        return 0;
     }
 
     /* blink LED once to indicate start-up of the board */
