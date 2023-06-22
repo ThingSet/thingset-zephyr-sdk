@@ -109,7 +109,7 @@ int thingset_storage_save()
     k_sem_take(&sbuf->lock, K_FOREVER);
 
     int len = thingset_export_subsets(&ts, sbuf->data + EEPROM_HEADER_SIZE,
-                                      sbuf->size - EEPROM_HEADER_SIZE, SUBSET_NVM,
+                                      sbuf->size - EEPROM_HEADER_SIZE, TS_SUBSET_NVM,
                                       THINGSET_BIN_IDS_VALUES);
     if (len > 0) {
         uint32_t crc = crc32_ieee(sbuf->data + EEPROM_HEADER_SIZE, len);

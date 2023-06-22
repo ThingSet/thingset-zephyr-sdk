@@ -13,8 +13,8 @@ Below options define the general publication settings:
 * :kconfig:option:`CONFIG_THINGSET_PUB_EVENTS_DEFAULT`
 * :kconfig:option:`CONFIG_THINGSET_PUB_LIVE_DATA_DEFAULT`
 * :kconfig:option:`CONFIG_THINGSET_PUB_LIVE_DATA_PERIOD_DEFAULT`
-* :kconfig:option:`CONFIG_THINGSET_PUB_REPORTS_DEFAULT`
-* :kconfig:option:`CONFIG_THINGSET_PUB_REPORTS_PERIOD_DEFAULT`
+* :kconfig:option:`CONFIG_THINGSET_PUB_SUMMARY_DEFAULT`
+* :kconfig:option:`CONFIG_THINGSET_PUB_SUMMARY_PERIOD_DEFAULT`
 
 Common options for the SDK:
 

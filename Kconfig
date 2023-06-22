@@ -31,12 +31,12 @@ config THINGSET_PUB_LIVE_DATA_PERIOD_DEFAULT
     depends on THINGSET
     default 1
 
-config THINGSET_PUB_REPORTS_DEFAULT
+config THINGSET_PUB_SUMMARY_DEFAULT
     bool "Enable publication of reports by default"
     depends on THINGSET
     default y
 
-config THINGSET_PUB_REPORTS_PERIOD_DEFAULT
+config THINGSET_PUB_SUMMARY_PERIOD_DEFAULT
     int "Default period for publication of reports"
     depends on THINGSET
     default 900

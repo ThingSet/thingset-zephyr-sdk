@@ -29,7 +29,7 @@ config THINGSET_STORAGE_CHANGE
     bool "Store data upon change to ThingSet stored items"
     default y
     help
-      If enabled, a callback is invoked once a data object which is part of the SUBSET_NVM is
+      If enabled, a callback is invoked once a data object which is part of the TS_SUBSET_NVM is
       changed.
 
 config THINGSET_STORAGE_REGULAR
