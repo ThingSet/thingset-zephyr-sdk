@@ -83,7 +83,6 @@ int thingset_storage_load()
             LOG_ERR("EEPROM data CRC invalid, expected 0x%x and data_len %d", crc, len);
             err = -EINVAL;
         }
-        k_sem_give(&sbuf->lock);
     }
     else if (version == 0xFFFF && len == 0xFFFF && crc == 0xFFFFFFFF) {
         LOG_DBG("EEPROM empty");
@@ -92,6 +91,8 @@ int thingset_storage_load()
         LOG_WRN("EEPROM data ignored due to version mismatch: %d", version);
         err = -EINVAL;
     }
+
+    k_sem_give(&sbuf->lock);
 
     return err;
 }
