@@ -15,45 +15,81 @@
 extern "C" {
 #endif
 
-/*
- * ID ranges for this firmware:
+/**
+ * @file
+ * The following table gives an overview of the IDs used by the ThingSet protocol and SDK and
+ * the ranges freely available for the application.
  *
- * 0x01 - 0x0F: groups defined by the application
- * 0x10 - 0x1F: reserved for ThingSet
- * 0x20 - 0x2F: groups defined by ThingSet SDK
- * 0x30 - 0x37: subsets defined by ThingSet SDK
- * 0x38 - 0x3F: subsets defined by the application
- * 0x40 - 0xFF: items of groups (starting e.g. with 0x40 for group 0x04)
- * 0x100 - 0x1FF: items for _pub group
+ * | ID range      | Defined in    | Purpose                                           |
+ * |:-------------:|:-------------:|---------------------------------------------------|
+ * | 0x01 - 0x0F   | Application   | Application-specific groups or items              |
+ * | 0x10 - 0x1F   | ThingSet core | Part of the core ThingSet specification           |
+ * | 0x20 - 0x2F   | ThingSet SDK  | Groups for Thingset SDK subsystems                |
+ * | 0x30 - 0x37   | ThingSet SDK  | Subsets defined by ThingSet SDK                   |
+ * | 0x38 - 0x3F   | Application   | Subsets defined by the application                |
+ * | 0x40 - 0x1FF  | Application   | Available for custom application-specific objects |
+ * | 0x200 - 0x2FF | ThingSet SDK  | Sub-objects of above groups and related overlays  |
+ * | 0x300 - 0x37F | ThingSet SDK  | Sub-objects of _Reporting overlay                 |
  */
 
-/*
- * Groups / first layer data object IDs
- */
-#define ID_ROOT 0x00
+/* IDs from ThingSet node library */
+#define TS_ID_ROOT        THINGSET_ID_ROOT
+#define TS_ID_TIME        THINGSET_ID_TIME
+#define TS_ID_IDS         THINGSET_ID_IDS
+#define TS_ID_PATHS       THINGSET_ID_PATHS
+#define TS_ID_METADATAURL THINGSET_ID_METADATAURL
+#define TS_ID_NODEID      THINGSET_ID_NODEID
+#define TS_ID_NODENAME    0x1E
 
-#define ID_LORAWAN   0x27
-#define ID_WIFI      0x28
-#define ID_DFU       0x2D
-#define ID_LOG       0x2E
-#define ID_REPORTING 0x2F
+/* LoRaWAN group items */
+#define TS_ID_LORAWAN           0x27
+#define TS_ID_LORAWAN_DEV_EUI   0x270
+#define TS_ID_LORAWAN_JOIN_EUI  0x271
+#define TS_ID_LORAWAN_APP_KEY   0x272
+#define TS_ID_LORAWAN_DEV_NONCE 0x273
 
-#define ID_EVENT   0x30
-#define ID_LIVE    0x31
-#define ID_SUMMARY 0x32
+/* WiFi group items */
+#define TS_ID_WIFI      0x28
+#define TS_ID_WIFI_SSID 0x280
+#define TS_ID_WIFI_PSK  0x281
+#define TS_ID_WIFI_IP   0x282
 
-#define SUBSET_EVENT_PATH   "e"
-#define SUBSET_LIVE_PATH    "mLive"
-#define SUBSET_SUMMARY_PATH "mSummary"
+/* Device Firmware Upgrade group items */
+#define TS_ID_DFU 0x2D
 
-/*
- * Subset definitions for reports and stored data
- */
-#define SUBSET_NVM     (1U << 0) // data that should be stored in EEPROM
-#define SUBSET_LIVE    (1U << 1) // live data for high bandwidth interfaces (e.g. UART, BLE)
-#define SUBSET_SUMMARY (1U << 2) // summarized data for low bandwidth interfaces (e.g. LoRaWAN)
-#define SUBSET_EVENT   (1U << 3) // data only published on events (e.g. received meter reading)
-#define SUBSET_CTRL    (1U << 4) // control data sent and received via CAN
+/* Log group items */
+#define TS_ID_LOG               0x2E
+#define TS_ID_LOG_TIME          0x2E0
+#define TS_ID_LOG_MESSAGE       0x2E1
+#define TS_ID_LOG_MODULE        0x2E2
+#define TS_ID_LOG_LEVEL         0x2E3
+#define TS_ID_REP_LOG           0x2E9
+#define TS_ID_REP_LOG_SELF      0x2EA
+#define TS_ID_REP_LOG_ENABLE    0x2EB
+#define TS_ID_REP_LOG_MAX_LEVEL 0x2EC
+
+/* _Reporting overlay top-level object */
+#define TS_ID_REPORTING 0x2F
+
+/* Subsets defined by SDK */
+#define TS_NAME_SUBSET_LIVE   "mLive"
+#define TS_ID_SUBSET_LIVE     0x31
+#define TS_ID_REP_LIVE        0x310
+#define TS_ID_REP_LIVE_ENABLE 0x311
+#define TS_ID_REP_LIVE_PERIOD 0x312
+
+#define TS_NAME_SUBSET_SUMMARY   "mSummary"
+#define TS_ID_SUBSET_SUMMARY     0x32
+#define TS_ID_REP_SUMMARY        0x320
+#define TS_ID_REP_SUMMARY_ENABLE 0x321
+#define TS_ID_REP_SUMMARY_PERIOD 0x322
+
+/** Data that should be stored in EEPROM or Flash */
+#define TS_SUBSET_NVM (1U << 0)
+/** Live data for high bandwidth interfaces (e.g. UART, BLE) */
+#define TS_SUBSET_LIVE (1U << 1)
+/** Summarized data for low bandwidth interfaces like LoRaWAN */
+#define TS_SUBSET_SUMMARY (1U << 2)
 
 /*
  * The storage has to be initialized first, so that the configuration can be read by the SDK
@@ -68,8 +104,8 @@ extern bool pub_events_enable;
 extern bool pub_live_data_enable;
 extern uint32_t pub_live_data_period;
 
-extern bool pub_reports_enable;
-extern uint32_t pub_reports_period;
+extern bool pub_summary_enable;
+extern uint32_t pub_summary_period;
 
 extern struct thingset_context ts;
 

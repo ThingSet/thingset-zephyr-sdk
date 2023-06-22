@@ -26,16 +26,16 @@ static struct net_if *iface;
 
 static struct k_work_delayable wifi_connect_work;
 
-THINGSET_ADD_GROUP(ID_ROOT, ID_WIFI, "WiFi", THINGSET_NO_CALLBACK);
+THINGSET_ADD_GROUP(TS_ID_ROOT, TS_ID_WIFI, "WiFi", THINGSET_NO_CALLBACK);
 
-THINGSET_ADD_ITEM_STRING(ID_WIFI, 0x80, "sSSID", wifi_ssid, sizeof(wifi_ssid), THINGSET_ANY_RW,
-                         SUBSET_NVM);
+THINGSET_ADD_ITEM_STRING(TS_ID_WIFI, TS_ID_WIFI_SSID, "sSSID", wifi_ssid, sizeof(wifi_ssid),
+                         THINGSET_ANY_RW, TS_SUBSET_NVM);
 
-THINGSET_ADD_ITEM_STRING(ID_WIFI, 0x81, "sPSK", wifi_psk, sizeof(wifi_psk), THINGSET_ANY_RW,
-                         SUBSET_NVM);
+THINGSET_ADD_ITEM_STRING(TS_ID_WIFI, TS_ID_WIFI_PSK, "sPSK", wifi_psk, sizeof(wifi_psk),
+                         THINGSET_ANY_RW, TS_SUBSET_NVM);
 
-THINGSET_ADD_ITEM_STRING(ID_WIFI, 0x82, "rIP", ipv4_addr, sizeof(ipv4_addr), THINGSET_ANY_RW,
-                         SUBSET_NVM);
+THINGSET_ADD_ITEM_STRING(TS_ID_WIFI, TS_ID_WIFI_IP, "rIP", ipv4_addr, sizeof(ipv4_addr),
+                         THINGSET_ANY_RW, TS_SUBSET_NVM);
 
 static void wifi_connect_handler(struct k_work *work)
 {

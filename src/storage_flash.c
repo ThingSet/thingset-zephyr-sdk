@@ -133,7 +133,7 @@ int thingset_storage_save()
 
     int len =
         thingset_export_subsets(&ts, sbuf->data + NVS_HEADER_SIZE, sbuf->size - NVS_HEADER_SIZE,
-                                SUBSET_NVM, THINGSET_BIN_IDS_VALUES);
+                                TS_SUBSET_NVM, THINGSET_BIN_IDS_VALUES);
 
     LOG_HEXDUMP_DBG(sbuf->data, len + NVS_HEADER_SIZE, "data to be saved");
 

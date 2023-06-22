@@ -128,7 +128,7 @@ static void thingset_can_report_tx_handler(struct k_work *work)
     };
 
     struct thingset_data_object *obj = NULL;
-    while ((obj = thingset_iterate_subsets(&ts, SUBSET_LIVE, obj)) != NULL) {
+    while ((obj = thingset_iterate_subsets(&ts, TS_SUBSET_LIVE, obj)) != NULL) {
         data_len = thingset_export_item(&ts, frame.data, sizeof(frame.data), obj,
                                         THINGSET_BIN_VALUES_ONLY);
         if (data_len > 0) {

@@ -261,7 +261,7 @@ static void ble_regular_report_handler(struct k_work *work)
     static int64_t pub_time;
 
     if (pub_live_data_enable) {
-        thingset_ble_send_report(SUBSET_LIVE_PATH);
+        thingset_ble_send_report(TS_NAME_SUBSET_LIVE);
     }
 
     pub_time += 1000 * pub_live_data_period;

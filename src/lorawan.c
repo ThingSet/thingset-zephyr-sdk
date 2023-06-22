@@ -29,18 +29,19 @@ char lorawan_join_eui[8 * 2 + 1] = "0000000000000000";
 char lorawan_app_key[16 * 2 + 1] = "";
 uint32_t lorawan_dev_nonce;
 
-THINGSET_ADD_GROUP(ID_ROOT, ID_LORAWAN, "LoRaWAN", THINGSET_NO_CALLBACK);
+THINGSET_ADD_GROUP(TS_ID_ROOT, TS_ID_LORAWAN, "LoRaWAN", THINGSET_NO_CALLBACK);
 
-THINGSET_ADD_ITEM_STRING(ID_LORAWAN, 0x70, "cDevEUI", node_id, sizeof(node_id), THINGSET_ANY_RW, 0);
+THINGSET_ADD_ITEM_STRING(TS_ID_LORAWAN, TS_ID_LORAWAN_DEV_EUI, "cDevEUI", node_id, sizeof(node_id),
+                         THINGSET_ANY_RW, 0);
 
-THINGSET_ADD_ITEM_STRING(ID_LORAWAN, 0x71, "pJoinEUI", lorawan_join_eui, sizeof(lorawan_join_eui),
-                         THINGSET_ANY_RW, SUBSET_NVM);
+THINGSET_ADD_ITEM_STRING(TS_ID_LORAWAN, TS_ID_LORAWAN_JOIN_EUI, "pJoinEUI", lorawan_join_eui,
+                         sizeof(lorawan_join_eui), THINGSET_ANY_RW, TS_SUBSET_NVM);
 
-THINGSET_ADD_ITEM_STRING(ID_LORAWAN, 0x72, "pAppKey", lorawan_app_key, sizeof(lorawan_app_key),
-                         THINGSET_ANY_RW, SUBSET_NVM);
+THINGSET_ADD_ITEM_STRING(TS_ID_LORAWAN, TS_ID_LORAWAN_APP_KEY, "pAppKey", lorawan_app_key,
+                         sizeof(lorawan_app_key), THINGSET_ANY_RW, TS_SUBSET_NVM);
 
-THINGSET_ADD_ITEM_UINT32(ID_LORAWAN, 0x73, "pDevNonce", &lorawan_dev_nonce, THINGSET_ANY_RW,
-                         SUBSET_NVM);
+THINGSET_ADD_ITEM_UINT32(TS_ID_LORAWAN, TS_ID_LORAWAN_DEV_NONCE, "pDevNonce", &lorawan_dev_nonce,
+                         THINGSET_ANY_RW, TS_SUBSET_NVM);
 
 static void downlink_callback(uint8_t port, bool data_pending, int16_t rssi, int8_t snr,
                               uint8_t len, const uint8_t *data)
@@ -134,11 +135,11 @@ void lorawan_thread(void)
             connected = true;
         }
 
-        int len = thingset_export_subsets(&ts, tx_buf, sizeof(tx_buf), SUBSET_SUMMARY,
+        int len = thingset_export_subsets(&ts, tx_buf, sizeof(tx_buf), TS_SUBSET_SUMMARY,
                                           THINGSET_BIN_IDS_VALUES);
 
         /* use port 0x80 + data object ID for ID/value map */
-        ret = lorawan_send(0x80 + ID_SUMMARY, tx_buf, len, LORAWAN_MSG_UNCONFIRMED);
+        ret = lorawan_send(0x80 + TS_ID_SUBSET_SUMMARY, tx_buf, len, LORAWAN_MSG_UNCONFIRMED);
         if (ret < 0) {
             LOG_ERR("Sending message failed: %d", ret);
         }
@@ -146,7 +147,7 @@ void lorawan_thread(void)
             LOG_HEXDUMP_INF(tx_buf, len, "Message sent: ");
         }
 
-        k_sleep(K_MSEC(pub_reports_period * 1000));
+        k_sleep(K_MSEC(pub_summary_period * 1000));
     }
 }
 
