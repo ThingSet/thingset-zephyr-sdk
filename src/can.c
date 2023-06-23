@@ -143,10 +143,10 @@ static void thingset_can_report_tx_handler(struct k_work *work)
         obj++; /* continue with object behind current one */
     }
 
-    ts_can->next_pub_time += 1000 * pub_live_data_period;
+    ts_can->next_pub_time += 1000 * live_reporting_period;
     if (ts_can->next_pub_time <= k_uptime_get()) {
         /* ensure proper initialization of t_start */
-        ts_can->next_pub_time = k_uptime_get() + 1000 * pub_live_data_period;
+        ts_can->next_pub_time = k_uptime_get() + 1000 * live_reporting_period;
     }
 
     thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(ts_can->next_pub_time));

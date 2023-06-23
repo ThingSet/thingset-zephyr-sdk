@@ -16,29 +16,38 @@ rsource "src/Kconfig.storage"
 
 menu "General Publication Settings"
 
-config THINGSET_PUB_EVENTS_DEFAULT
-    bool "Enable event-based publication by default"
-    depends on THINGSET
+config THINGSET_SUBSET_LIVE_METRICS
+    bool "Use mLive subset (for regular reporting)"
+    default y
+    help
+      The live metrics subset is meant for data that is published very frequently
+      with intervals in the range of a few seconds.
+
+config THINGSET_REPORTING_LIVE_ENABLE_PRESET
+    bool "Enable regular reporting of live metrics by default"
+    depends on THINGSET_SUBSET_LIVE_METRICS
     default y
 
-config THINGSET_PUB_LIVE_DATA_DEFAULT
-    bool "Enable live data publication by default"
-    depends on THINGSET
-    default y
-
-config THINGSET_PUB_LIVE_DATA_PERIOD_DEFAULT
-    int "Default period for live data publication"
-    depends on THINGSET
+config THINGSET_REPORTING_LIVE_PERIOD_PRESET
+    int "Default period (s) for live metrics reporting"
+    depends on THINGSET_SUBSET_LIVE_METRICS
     default 1
 
-config THINGSET_PUB_SUMMARY_DEFAULT
-    bool "Enable publication of reports by default"
-    depends on THINGSET
+config THINGSET_SUBSET_SUMMARY_METRICS
+    bool "Use mSummary subset (for infrequent reporting)"
+    default y if THINGSET_LORAWAN
+    help
+      The summary metrics subset is meant for data that should be published
+      seldomly, e.g. LoRaWAN messages.
+
+config THINGSET_REPORTING_SUMMARY_ENABLE_PRESET
+    bool "Enable regular reporting of summary metrics by default"
+    depends on THINGSET_SUBSET_SUMMARY_METRICS
     default y
 
-config THINGSET_PUB_SUMMARY_PERIOD_DEFAULT
-    int "Default period for publication of reports"
-    depends on THINGSET
+config THINGSET_REPORTING_SUMMARY_PERIOD_PRESET
+    int "Default period (s) for summary metrics reporting"
+    depends on THINGSET_SUBSET_SUMMARY_METRICS
     default 900
 
 endmenu # General Publication Settings
