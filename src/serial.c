@@ -130,8 +130,9 @@ static void serial_process_msg_handler(struct k_work *work)
 
             int len = thingset_process_message(&ts, (uint8_t *)rx_buf, rx_buf_pos, tx_buf->data,
                                                tx_buf->size);
-
-            thingset_serial_send(tx_buf->data, len);
+            if (len > 0) {
+                thingset_serial_send(tx_buf->data, len);
+            }
 
             k_sem_give(&tx_buf->lock);
         }
