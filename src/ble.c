@@ -23,28 +23,29 @@
 
 LOG_MODULE_REGISTER(thingset_ble, CONFIG_LOG_DEFAULT_LEVEL);
 
-/* ThingSet Custom Service: xxxxyyyy-5a19-4887-9c6a-14ad27bfc06d */
+/* ThingSet Custom Service: xxxxyyyy-5423-4887-9c6a-14ad27bfc06d */
 #define BT_UUID_THINGSET_SERVICE_VAL \
-    BT_UUID_128_ENCODE(0x00000001, 0x5a19, 0x4887, 0x9c6a, 0x14ad27bfc06d)
+    BT_UUID_128_ENCODE(0x00000001, 0x5423, 0x4887, 0x9c6a, 0x14ad27bfc06d)
 
-#define BT_UUID_THINGSET_REQUEST_VAL \
-    BT_UUID_128_ENCODE(0x00000002, 0x5a19, 0x4887, 0x9c6a, 0x14ad27bfc06d)
+#define BT_UUID_THINGSET_DOWNLINK_VAL \
+    BT_UUID_128_ENCODE(0x00000002, 0x5423, 0x4887, 0x9c6a, 0x14ad27bfc06d)
 
-#define BT_UUID_THINGSET_RESPONSE_VAL \
-    BT_UUID_128_ENCODE(0x00000003, 0x5a19, 0x4887, 0x9c6a, 0x14ad27bfc06d)
+#define BT_UUID_THINGSET_UPLINK_VAL \
+    BT_UUID_128_ENCODE(0x00000003, 0x5423, 0x4887, 0x9c6a, 0x14ad27bfc06d)
 
 #define BT_UUID_THINGSET_SERVICE  BT_UUID_DECLARE_128(BT_UUID_THINGSET_SERVICE_VAL)
-#define BT_UUID_THINGSET_REQUEST  BT_UUID_DECLARE_128(BT_UUID_THINGSET_REQUEST_VAL)
-#define BT_UUID_THINGSET_RESPONSE BT_UUID_DECLARE_128(BT_UUID_THINGSET_RESPONSE_VAL)
+#define BT_UUID_THINGSET_DOWNLINK BT_UUID_DECLARE_128(BT_UUID_THINGSET_DOWNLINK_VAL)
+#define BT_UUID_THINGSET_UPLINK   BT_UUID_DECLARE_128(BT_UUID_THINGSET_UPLINK_VAL)
 
 #define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-/* SLIP protocol (RFC 1055) special characters */
-#define SLIP_END     (0xC0)
-#define SLIP_ESC     (0xDB)
-#define SLIP_ESC_END (0xDC)
-#define SLIP_ESC_ESC (0xDD)
+#define MSG_END      (0x0A)
+#define MSG_SKIP     (0x0D)
+#define MSG_ESC      (0xCE)
+#define MSG_ESC_END  (0xCA)
+#define MSG_ESC_SKIP (0xCD)
+#define MSG_ESC_ESC  (0xCF)
 
 static ssize_t thingset_ble_rx(struct bt_conn *conn, const struct bt_gatt_attr *attr,
                                const void *buf, uint16_t len, uint16_t offset, uint8_t flags);
@@ -71,11 +72,11 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 
 /* UART Service Declaration, order of parameters matters! */
 BT_GATT_SERVICE_DEFINE(thingset_svc, BT_GATT_PRIMARY_SERVICE(BT_UUID_THINGSET_SERVICE),
-                       BT_GATT_CHARACTERISTIC(BT_UUID_THINGSET_REQUEST,
+                       BT_GATT_CHARACTERISTIC(BT_UUID_THINGSET_DOWNLINK,
                                               BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
                                               BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, NULL,
                                               thingset_ble_rx, NULL),
-                       BT_GATT_CHARACTERISTIC(BT_UUID_THINGSET_RESPONSE, BT_GATT_CHRC_NOTIFY,
+                       BT_GATT_CHARACTERISTIC(BT_UUID_THINGSET_UPLINK, BT_GATT_CHRC_NOTIFY,
                                               BT_GATT_PERM_READ, NULL, NULL, NULL),
                        BT_GATT_CCC(thingset_ble_ccc_change,
                                    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE), );
@@ -110,7 +111,7 @@ static void thingset_ble_ccc_change(const struct bt_gatt_attr *attr, uint16_t va
 }
 
 /*
- * Receives data from BLE interface and decodes it using RFC 1055 SLIP protocol
+ * Receives data from BLE interface and decodes it similar to RFC 1055 SLIP protocol
  */
 static ssize_t thingset_ble_rx(struct bt_conn *conn, const struct bt_gatt_attr *attr,
                                const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
@@ -123,22 +124,28 @@ static ssize_t thingset_ble_rx(struct bt_conn *conn, const struct bt_gatt_attr *
         for (int i = 0; i < len; i++) {
             uint8_t c = *((uint8_t *)buf + i);
             if (escape) {
-                if (c == SLIP_ESC_END) {
-                    c = SLIP_END;
+                if (c == MSG_ESC_END) {
+                    c = MSG_END;
                 }
-                else if (c == SLIP_ESC_ESC) {
-                    c = SLIP_ESC;
+                else if (c == MSG_ESC_ESC) {
+                    c = MSG_ESC;
+                }
+                else if (c == MSG_ESC_SKIP) {
+                    c = MSG_SKIP;
                 }
                 /* else: protocol violation, pass character as is */
                 escape = false;
             }
-            else if (c == SLIP_ESC) {
+            else if (c == MSG_ESC) {
                 escape = true;
                 continue;
             }
-            else if (c == SLIP_END) {
+            else if (c == MSG_SKIP) {
+                continue;
+            }
+            else if (c == MSG_END) {
                 if (finished) {
-                    /* previous run finished and SLIP_END was used as new start byte */
+                    /* previous run finished and MSG_END was used as new start byte */
                     continue;
                 }
                 else {
@@ -209,20 +216,24 @@ int thingset_ble_send(const uint8_t *buf, size_t len)
 
         /* even max. possible size of 251 bytes should be OK to allocate on stack */
         uint8_t chunk[max_mtu];
-        chunk[0] = SLIP_END;
+        chunk[0] = MSG_END;
 
         int pos_buf = 0;
         int pos_chunk = 1;
         bool finished = false;
         while (!finished) {
             while (pos_chunk < max_mtu && pos_buf < len) {
-                if (buf[pos_buf] == SLIP_END) {
-                    chunk[pos_chunk++] = SLIP_ESC;
-                    chunk[pos_chunk++] = SLIP_ESC_END;
+                if (buf[pos_buf] == MSG_END) {
+                    chunk[pos_chunk++] = MSG_ESC;
+                    chunk[pos_chunk++] = MSG_ESC_END;
                 }
-                else if (buf[pos_buf] == SLIP_ESC) {
-                    chunk[pos_chunk++] = SLIP_ESC;
-                    chunk[pos_chunk++] = SLIP_ESC_ESC;
+                else if (buf[pos_buf] == MSG_SKIP) {
+                    chunk[pos_chunk++] = MSG_ESC;
+                    chunk[pos_chunk++] = MSG_ESC_SKIP;
+                }
+                else if (buf[pos_buf] == MSG_ESC) {
+                    chunk[pos_chunk++] = MSG_ESC;
+                    chunk[pos_chunk++] = MSG_ESC_ESC;
                 }
                 else {
                     chunk[pos_chunk++] = buf[pos_buf];
@@ -230,7 +241,7 @@ int thingset_ble_send(const uint8_t *buf, size_t len)
                 pos_buf++;
             }
             if (pos_chunk < max_mtu - 1 && pos_buf >= len) {
-                chunk[pos_chunk++] = SLIP_END;
+                chunk[pos_chunk++] = MSG_END;
                 finished = true;
             }
             bt_gatt_notify(ble_conn, attr_ccc_req, chunk, pos_chunk);
