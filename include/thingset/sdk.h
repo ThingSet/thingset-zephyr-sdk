@@ -101,11 +101,11 @@ extern "C" {
 
 extern bool pub_events_enable;
 
-extern bool pub_live_data_enable;
-extern uint32_t pub_live_data_period;
+extern bool live_reporting_enable;
+extern uint32_t live_reporting_period;
 
-extern bool pub_summary_enable;
-extern uint32_t pub_summary_period;
+extern bool summary_reporting_enable;
+extern uint32_t summary_reporting_period;
 
 extern struct thingset_context ts;
 

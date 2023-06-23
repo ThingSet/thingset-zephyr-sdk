@@ -10,11 +10,12 @@ The ThingSet SDK itself has to be enabled for all subsystems and interfaces:
 
 Below options define the general publication settings:
 
-* :kconfig:option:`CONFIG_THINGSET_PUB_EVENTS_DEFAULT`
-* :kconfig:option:`CONFIG_THINGSET_PUB_LIVE_DATA_DEFAULT`
-* :kconfig:option:`CONFIG_THINGSET_PUB_LIVE_DATA_PERIOD_DEFAULT`
-* :kconfig:option:`CONFIG_THINGSET_PUB_SUMMARY_DEFAULT`
-* :kconfig:option:`CONFIG_THINGSET_PUB_SUMMARY_PERIOD_DEFAULT`
+* :kconfig:option:`CONFIG_THINGSET_SUBSET_LIVE_METRICS`
+* :kconfig:option:`CONFIG_THINGSET_REPORTING_LIVE_ENABLE_PRESET`
+* :kconfig:option:`CONFIG_THINGSET_REPORTING_LIVE_PERIOD_PRESET`
+* :kconfig:option:`CONFIG_THINGSET_SUBSET_SUMMARY_METRICS`
+* :kconfig:option:`CONFIG_THINGSET_REPORTING_SUMMARY_ENABLE_PRESET`
+* :kconfig:option:`CONFIG_THINGSET_REPORTING_SUMMARY_PERIOD_PRESET`
 
 Common options for the SDK:
 

@@ -147,7 +147,7 @@ void lorawan_thread(void)
             LOG_HEXDUMP_INF(tx_buf, len, "Message sent: ");
         }
 
-        k_sleep(K_MSEC(pub_summary_period * 1000));
+        k_sleep(K_MSEC(summary_reporting_period * 1000));
     }
 }
 

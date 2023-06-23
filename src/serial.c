@@ -37,8 +37,10 @@ static struct k_sem rx_buf_lock;
 
 static thingset_sdk_rx_callback_t rx_callback;
 
-static struct k_work_delayable reporting_work;
 static struct k_work_delayable processing_work;
+#ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
+static struct k_work_delayable reporting_work;
+#endif
 
 int thingset_serial_send(const uint8_t *buf, size_t len)
 {
@@ -79,18 +81,22 @@ int thingset_serial_send_report(const char *path)
     return ret;
 }
 
+#ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
+
 static void serial_regular_report_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
     static int64_t pub_time;
 
-    if (pub_live_data_enable) {
+    if (live_reporting_enable) {
         thingset_serial_send_report(TS_NAME_SUBSET_LIVE);
     }
 
-    pub_time += 1000 * pub_live_data_period;
+    pub_time += 1000 * live_reporting_period;
     thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(pub_time));
 }
+
+#endif
 
 static void serial_process_msg_handler(struct k_work *work)
 {
@@ -218,14 +224,19 @@ static int thingset_serial_init()
     k_sem_init(&rx_buf_lock, 1, 1);
 
     k_work_init_delayable(&processing_work, serial_process_msg_handler);
+
+#ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
     k_work_init_delayable(&reporting_work, serial_regular_report_handler);
+#endif
 
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
     uart_irq_callback_user_data_set(uart_dev, serial_rx_cb, NULL);
     uart_irq_rx_enable(uart_dev);
 #endif
 
+#ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
     thingset_sdk_reschedule_work(&reporting_work, K_NO_WAIT);
+#endif
 
     return 0;
 }
