@@ -6,6 +6,7 @@ menuconfig THINGSET_LOG_BACKEND
     depends on LOG
     depends on LOG_MODE_DEFERRED
     select LOG_OUTPUT
+    select THINGSET_JSON_STRING_ESCAPING
 
 if THINGSET_LOG_BACKEND
 
