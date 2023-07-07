@@ -414,7 +414,13 @@ int thingset_can_set_report_rx_callback_inst(struct thingset_can *ts_can,
 
 #ifndef CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES
 
-static const struct device *can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
+#if DT_NODE_EXISTS(DT_CHOSEN(thingset_can))
+#define CAN_DEVICE_NODE DT_CHOSEN(thingset_can)
+#else
+#define CAN_DEVICE_NODE DT_CHOSEN(zephyr_canbus)
+#endif
+
+static const struct device *can_dev = DEVICE_DT_GET(CAN_DEVICE_NODE);
 static struct thingset_can ts_can_single;
 
 int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr)
