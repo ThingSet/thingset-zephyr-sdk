@@ -3,6 +3,7 @@
 
 target_sources(app PRIVATE sdk.c)
 
+target_sources_ifdef(CONFIG_THINGSET_AUTH app PRIVATE auth.c)
 target_sources_ifdef(CONFIG_THINGSET_BLE app PRIVATE ble.c)
 target_sources_ifdef(CONFIG_THINGSET_CAN app PRIVATE can.c)
 target_sources_ifdef(CONFIG_THINGSET_LOG_BACKEND app PRIVATE log_backend.c)

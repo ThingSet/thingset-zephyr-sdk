@@ -27,6 +27,6 @@ manifest:
           - picolibc
     - name: thingset-node-c
       remote: thingset
-      revision: 48a32e5d24bd39a0c91a244dfd94366d3f2de5ba
+      revision: 961bb0ba4c2087499c9ce4ac91173dcce03e5b7a
       path: modules/thingset-node-c
       import: true

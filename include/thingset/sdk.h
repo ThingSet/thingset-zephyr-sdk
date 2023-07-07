@@ -41,6 +41,10 @@ extern "C" {
 #define TS_ID_NODEID      THINGSET_ID_NODEID
 #define TS_ID_NODENAME    0x1E
 
+/* Authentication */
+#define TS_ID_AUTH       0x20
+#define TS_ID_AUTH_TOKEN 0x200
+
 /* LoRaWAN group items */
 #define TS_ID_LORAWAN           0x27
 #define TS_ID_LORAWAN_DEV_EUI   0x270
