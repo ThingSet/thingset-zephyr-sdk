@@ -16,7 +16,7 @@
 
 #include <stdio.h>
 
-LOG_MODULE_REGISTER(thingset_storage_eeprom, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(thingset_storage_eeprom, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 /*
  * EEPROM header bytes:

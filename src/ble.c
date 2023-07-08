@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 
-LOG_MODULE_REGISTER(thingset_ble, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(thingset_ble, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 /* ThingSet Custom Service: xxxxyyyy-5423-4887-9c6a-14ad27bfc06d */
 #define BT_UUID_THINGSET_SERVICE_VAL \

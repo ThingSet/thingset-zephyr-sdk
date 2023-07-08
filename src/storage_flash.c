@@ -17,7 +17,7 @@
 
 #include <stdio.h>
 
-LOG_MODULE_REGISTER(thingset_storage_nvs, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(thingset_storage_nvs, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 /*
  * NVS header bytes:

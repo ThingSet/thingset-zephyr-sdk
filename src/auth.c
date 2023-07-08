@@ -9,7 +9,7 @@
 #include <thingset.h>
 #include <thingset/sdk.h>
 
-LOG_MODULE_REGISTER(thingset_auth, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(thingset_auth, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 static char auth_token[CONFIG_THINGSET_AUTH_TOKEN_MAX_SIZE];
 

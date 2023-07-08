@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-LOG_MODULE_REGISTER(thingset_serial, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(thingset_serial, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 #if DT_NODE_EXISTS(DT_CHOSEN(thingset_serial))
 #define UART_DEVICE_NODE DT_CHOSEN(thingset_serial)

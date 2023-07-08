@@ -18,7 +18,7 @@
 #include <thingset/sdk.h>
 #include <thingset/storage.h>
 
-LOG_MODULE_REGISTER(thingset_sdk, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(thingset_sdk, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 /*
  * The ThingSet node ID is an EUI-64 stored as upper-case hex string. It is also used as the
