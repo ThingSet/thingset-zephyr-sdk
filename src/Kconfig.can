@@ -4,8 +4,9 @@
 menuconfig THINGSET_CAN
     bool "CAN interface"
     depends on CAN
-    depends on EVENTS
+    depends on ENTROPY_GENERATOR
     depends on ISOTP
+    select EVENTS
 
 if THINGSET_CAN
 
