@@ -12,5 +12,4 @@ target_sources_ifdef(CONFIG_THINGSET_SERIAL app PRIVATE serial.c)
 target_sources_ifdef(CONFIG_THINGSET_SHELL app PRIVATE shell.c)
 target_sources_ifdef(CONFIG_THINGSET_STORAGE_EEPROM app PRIVATE storage_eeprom.c)
 target_sources_ifdef(CONFIG_THINGSET_STORAGE_FLASH app PRIVATE storage_flash.c)
-
-target_sources_ifdef(CONFIG_WIFI app PRIVATE wifi.c)
+target_sources_ifdef(CONFIG_THINGSET_WIFI app PRIVATE wifi.c)

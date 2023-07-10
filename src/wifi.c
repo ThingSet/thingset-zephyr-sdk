@@ -14,7 +14,7 @@
 
 #include <stdio.h>
 
-LOG_MODULE_REGISTER(thingset_wifi, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(thingset_wifi, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 char wifi_ssid[32] = "";
 char wifi_psk[32] = "";
@@ -26,15 +26,13 @@ static struct net_if *iface;
 
 static struct k_work_delayable wifi_connect_work;
 
-THINGSET_ADD_GROUP(TS_ID_ROOT, TS_ID_WIFI, "WiFi", THINGSET_NO_CALLBACK);
-
-THINGSET_ADD_ITEM_STRING(TS_ID_WIFI, TS_ID_WIFI_SSID, "sSSID", wifi_ssid, sizeof(wifi_ssid),
+THINGSET_ADD_ITEM_STRING(TS_ID_NET, TS_ID_NET_WIFI_SSID, "sWiFiSSID", wifi_ssid, sizeof(wifi_ssid),
                          THINGSET_ANY_RW, TS_SUBSET_NVM);
 
-THINGSET_ADD_ITEM_STRING(TS_ID_WIFI, TS_ID_WIFI_PSK, "sPSK", wifi_psk, sizeof(wifi_psk),
+THINGSET_ADD_ITEM_STRING(TS_ID_NET, TS_ID_NET_WIFI_PSK, "sWiFiPSK", wifi_psk, sizeof(wifi_psk),
                          THINGSET_ANY_RW, TS_SUBSET_NVM);
 
-THINGSET_ADD_ITEM_STRING(TS_ID_WIFI, TS_ID_WIFI_IP, "rIP", ipv4_addr, sizeof(ipv4_addr),
+THINGSET_ADD_ITEM_STRING(TS_ID_NET, TS_ID_NET_IPV4, "rIPV4", ipv4_addr, sizeof(ipv4_addr),
                          THINGSET_ANY_RW, TS_SUBSET_NVM);
 
 static void wifi_connect_handler(struct k_work *work)
