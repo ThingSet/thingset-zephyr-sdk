@@ -20,6 +20,26 @@ west build -b olimex_lora_stm32wl_devkit samples/counter -- -DOVERLAY_CONFIG=lor
 west build -b native_posix samples/counter -t run -- -DOVERLAY_CONFIG=can.conf
 ```
 
+## Testing with WebSocket
+
+Start net-setup from Zephyr net-tools:
+
+```
+sudo ../tools/net-tools/net-setup.sh
+```
+
+Afterwards run the nativ_posix board with websocket support from another shell:
+
+```
+west build -b native_posix samples/counter -t run -- -DOVERLAY_CONFIG=native_websocket.conf
+```
+
+Check socket connections
+
+```
+ss -t -a -n | grep -E 'State|192.0.2.1'
+```
+
 ## License
 
 This software is released under the [Apache-2.0 License](LICENSE).
