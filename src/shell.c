@@ -7,6 +7,7 @@
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/shell/shell.h>
+#include <zephyr/shell/shell_uart.h>
 
 #include <thingset.h>
 #include <thingset/sdk.h>
@@ -55,6 +56,7 @@ SHELL_CMD_ARG_REGISTER(thingset, NULL, "ThingSet request", cmd_thingset, 1, 10);
 static void shell_regular_report_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
+    const struct shell *sh = shell_backend_uart_get_ptr();
     static int64_t pub_time;
 
     if (live_reporting_enable) {
@@ -64,7 +66,7 @@ static void shell_regular_report_handler(struct k_work *work)
         int len = thingset_report_path(&ts, tx_buf->data, tx_buf->size, TS_NAME_SUBSET_LIVE,
                                        THINGSET_TXT_NAMES_VALUES);
         if (len > 0) {
-            printf("%.*s\n", tx_buf->size, tx_buf->data);
+            shell_print(sh, "%.*s", tx_buf->size, tx_buf->data);
         }
 
         k_sem_give(&tx_buf->lock);
