@@ -104,6 +104,9 @@ extern "C" {
 #define THINGSET_INIT_PRIORITY_SDK     40
 #define THINGSET_INIT_PRIORITY_DEFAULT 60
 
+extern char node_id[17];
+extern uint8_t eui64[8];
+
 extern bool pub_events_enable;
 
 extern bool live_reporting_enable;

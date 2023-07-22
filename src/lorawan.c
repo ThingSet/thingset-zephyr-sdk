@@ -22,9 +22,6 @@ BUILD_ASSERT(DT_NODE_HAS_STATUS(LORA_RADIO_NODE, okay), "No LoRa radio specified
 
 static uint8_t tx_buf[51];
 
-extern char node_id[17];
-extern uint8_t eui64[8];
-
 char lorawan_join_eui[8 * 2 + 1] = "0000000000000000";
 char lorawan_app_key[16 * 2 + 1] = "";
 uint32_t lorawan_dev_nonce;
