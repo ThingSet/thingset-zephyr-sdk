@@ -16,7 +16,7 @@
 #include <thingset/can.h>
 #include <thingset/sdk.h>
 
-LOG_MODULE_REGISTER(thingset_can, CONFIG_CAN_LOG_LEVEL);
+LOG_MODULE_REGISTER(thingset_can, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 extern uint8_t eui64[8];
 
@@ -263,16 +263,13 @@ int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout)
         tx_len = 1;
     }
 
-#ifdef CONFIG_BOARD_NATIVE_POSIX
     /*
-     * The native_posix board with virtual CAN interfaces runs with almost infinite speed
-     * compared to MCUs attached to an actual CAN bus.
-     *
      * Below delay gives the requesting side some more time to switch between sending and
      * receiving mode.
+     *
+     * ToDo: Improve Zephyr ISO-TP implementation to support sending and receiving simultaneously.
      */
-    k_sleep(K_MSEC(1));
-#endif
+    k_sleep(K_MSEC(CONFIG_THINGSET_CAN_RESPONSE_DELAY));
 
     if (tx_len > 0) {
         err = thingset_can_send_inst(ts_can, sbuf->data, tx_len, external_addr);

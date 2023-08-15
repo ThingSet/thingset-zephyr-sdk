@@ -25,6 +25,18 @@ config THINGSET_CAN_MULTIPLE_INSTANCES
       for a dedicated CAN device and and messages have to be processed
       manually in application threads.
 
+config THINGSET_CAN_RESPONSE_DELAY
+    int "ThingSet CAN response delay"
+    range 0 100
+    default 10
+    help
+      Wait for the specified delay in milliseconds before sending out a
+      response after a request was received.
+
+      This delay gives the requesting side some more time to switch between
+      sending and receiving mode, as the Zephyr ISO-TP implementation does
+      not allow to use the same ID for listening and sending simultaneously.
+
 config THINGSET_CAN_THREAD_STACK_SIZE
     int "ThingSet CAN thread stack size"
     depends on !THINGSET_CAN_MULTIPLE_INSTANCES
