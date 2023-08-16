@@ -60,6 +60,7 @@ extern "C" {
 #define TS_ID_NET_IPV6           0x283
 #define TS_ID_NET_WEBSOCKET_IPV4 0x284
 #define TS_ID_NET_WEBSOCKET_PORT 0x285
+#define TS_ID_NET_CAN_NODE_ADDR  0x286
 
 /* Device Firmware Upgrade group items */
 #define TS_ID_DFU 0x2D

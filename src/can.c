@@ -15,6 +15,7 @@
 #include <thingset.h>
 #include <thingset/can.h>
 #include <thingset/sdk.h>
+#include <thingset/storage.h>
 
 LOG_MODULE_REGISTER(thingset_can, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
@@ -301,7 +302,12 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     k_work_init_delayable(&ts_can->addr_claim_work, thingset_can_addr_claim_tx_handler);
 
     ts_can->dev = can_dev;
-    ts_can->node_addr = 1; // initial address, will be changed if already used on the bus
+
+    /* set initial address (will be changed if already used on the bus) */
+    if (ts_can->node_addr < 1 || ts_can->node_addr > THINGSET_CAN_ADDR_MAX) {
+        ts_can->node_addr = 1;
+    }
+
     k_event_init(&ts_can->events);
 
     can_start(ts_can->dev);
@@ -364,6 +370,11 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         }
     }
 
+#if CONFIG_THINGSET_STORAGE
+    /* save node address as init value for next boot-up */
+    thingset_storage_save_queued();
+#endif
+
     ts_can->rx_addr.ide = 1;
     ts_can->rx_addr.use_ext_addr = 0;   /* Normal ISO-TP addressing (using only CAN ID) */
     ts_can->rx_addr.use_fixed_addr = 1; /* enable SAE J1939 compatible addressing */
@@ -393,6 +404,10 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 int thingset_can_set_report_rx_callback_inst(struct thingset_can *ts_can,
                                              thingset_can_report_rx_callback_t rx_cb)
 {
+    if (!device_is_ready(ts_can->dev)) {
+        return -ENODEV;
+    }
+
     if (rx_cb == NULL) {
         return -EINVAL;
     }
@@ -418,7 +433,14 @@ int thingset_can_set_report_rx_callback_inst(struct thingset_can *ts_can,
 #endif
 
 static const struct device *can_dev = DEVICE_DT_GET(CAN_DEVICE_NODE);
-static struct thingset_can ts_can_single;
+
+static struct thingset_can ts_can_single = {
+    .dev = DEVICE_DT_GET(CAN_DEVICE_NODE),
+    .node_addr = 1, /* initialize with valid default address */
+};
+
+THINGSET_ADD_ITEM_UINT8(TS_ID_NET, TS_ID_NET_CAN_NODE_ADDR, "pCANNodeAddr",
+                        &ts_can_single.node_addr, THINGSET_ANY_RW, TS_SUBSET_NVM);
 
 int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr)
 {

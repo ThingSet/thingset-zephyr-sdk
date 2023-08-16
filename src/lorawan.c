@@ -29,7 +29,7 @@ uint32_t lorawan_dev_nonce;
 THINGSET_ADD_GROUP(TS_ID_ROOT, TS_ID_LORAWAN, "LoRaWAN", THINGSET_NO_CALLBACK);
 
 THINGSET_ADD_ITEM_STRING(TS_ID_LORAWAN, TS_ID_LORAWAN_DEV_EUI, "cDevEUI", node_id, sizeof(node_id),
-                         THINGSET_ANY_RW, 0);
+                         THINGSET_ANY_R, 0);
 
 THINGSET_ADD_ITEM_STRING(TS_ID_LORAWAN, TS_ID_LORAWAN_JOIN_EUI, "pJoinEUI", lorawan_join_eui,
                          sizeof(lorawan_join_eui), THINGSET_ANY_RW, TS_SUBSET_NVM);
