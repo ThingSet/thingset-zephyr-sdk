@@ -7,14 +7,19 @@ config THINGSET_WEBSOCKET
 
 if THINGSET_WEBSOCKET
 
-config THINGSET_WEBSOCKET_SERVER_IPV4
-    string "Default WebSocket server IPv4 address"
+config THINGSET_WEBSOCKET_SERVER_HOST
+    string "Default WebSocket server host name"
     help
-      This default IP address can be changed via ThingSet.
+      This default host name can be changed via ThingSet.
 
 config THINGSET_WEBSOCKET_SERVER_PORT
     int "Default WebSocket server port"
     default 80
+    help
+      This default port can be changed via ThingSet.
+
+config THINGSET_WEBSOCKET_AUTH_TOKEN
+    string "Default WebSocket server port"
     help
       This default port can be changed via ThingSet.
 

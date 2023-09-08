@@ -53,14 +53,16 @@ extern "C" {
 #define TS_ID_LORAWAN_DEV_NONCE 0x273
 
 /* Networking group items */
-#define TS_ID_NET                0x28
-#define TS_ID_NET_WIFI_SSID      0x280
-#define TS_ID_NET_WIFI_PSK       0x281
-#define TS_ID_NET_IPV4           0x282
-#define TS_ID_NET_IPV6           0x283
-#define TS_ID_NET_WEBSOCKET_IPV4 0x284
-#define TS_ID_NET_WEBSOCKET_PORT 0x285
-#define TS_ID_NET_CAN_NODE_ADDR  0x286
+#define TS_ID_NET                      0x28
+#define TS_ID_NET_WIFI_SSID            0x280
+#define TS_ID_NET_WIFI_PSK             0x281
+#define TS_ID_NET_IPV4                 0x282
+#define TS_ID_NET_IPV6                 0x283
+#define TS_ID_NET_WEBSOCKET_HOST       0x284
+#define TS_ID_NET_WEBSOCKET_PORT       0x285
+#define TS_ID_NET_WEBSOCKET_USE_TLS    0x286
+#define TS_ID_NET_WEBSOCKET_AUTH_TOKEN 0x287
+#define TS_ID_NET_CAN_NODE_ADDR        0x28C
 
 /* Device Firmware Upgrade group items */
 #define TS_ID_DFU 0x2D

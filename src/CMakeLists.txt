@@ -14,3 +14,9 @@ target_sources_ifdef(CONFIG_THINGSET_STORAGE_EEPROM app PRIVATE storage_eeprom.c
 target_sources_ifdef(CONFIG_THINGSET_STORAGE_FLASH app PRIVATE storage_flash.c)
 target_sources_ifdef(CONFIG_THINGSET_WEBSOCKET app PRIVATE websocket.c)
 target_sources_ifdef(CONFIG_THINGSET_WIFI app PRIVATE wifi.c)
+
+generate_inc_file_for_target(
+    app
+    certs/isrgrootx1.der
+    certs/isrgrootx1.der.inc
+    )

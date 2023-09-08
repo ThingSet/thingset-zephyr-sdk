@@ -20,18 +20,39 @@ west build -b olimex_lora_stm32wl_devkit samples/counter -- -DOVERLAY_CONFIG=lor
 west build -b native_posix samples/counter -t run -- -DOVERLAY_CONFIG=can.conf
 ```
 
-## Testing with WebSocket
+## Testing WebSocket with native_posix
 
-Start net-setup from Zephyr net-tools:
+Start net-setup from Zephyr net-tools to create `zeth` interface:
 
 ```
 sudo ../tools/net-tools/net-setup.sh
 ```
 
+Forward packets from the the `zeth` interface to the internet via wifi/ethernet interface (replace
+`wifi0` with the actual interface name):
+
+```
+sudo sysctl net.ipv4.ip_forward=1
+sudo iptables -t nat -A POSTROUTING -o wifi0 -j MASQUERADE
+sudo iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+sudo iptables -A FORWARD -i zeth -o wifi0 -j ACCEPT
+```
+
 Afterwards run the nativ_posix board with websocket support from another shell:
 
 ```
-west build -b native_posix samples/counter -t run -- -DOVERLAY_CONFIG=native_websocket.conf
+west build -b native_posix samples/counter -- -DOVERLAY_CONFIG="native_websocket.conf storage_flash.conf"
+./build/zephyr/zephyr.exe -flash=samples/counter/virtual-flash.bin
+```
+
+The `virtual-flash.bin` file is used to store custom data like server hostnames and credentials.
+
+Update server details via ThingSet:
+
+```
+picocom /dev/pts/123            # replace 123 with printed number
+select thingset
+=Networking {\"sWebsocketHost\":\"your-server.com\",\"sWebsocketPort\":443,\"sWebsocketAuthToken\":\"your-token\"}
 ```
 
 Check socket connections
