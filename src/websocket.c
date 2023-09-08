@@ -22,10 +22,18 @@
 
 LOG_MODULE_REGISTER(thingset_websocket, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
+#define CA_CERTIFICATE_TAG 1
+
+static const unsigned char ca_certificate[] = {
+#include "certs/isrgrootx1.der.inc"
+};
+
 static uint8_t rx_buf[CONFIG_THINGSET_WEBSOCKET_RX_BUF_SIZE];
 
-static char server_addr4[16] = CONFIG_THINGSET_WEBSOCKET_SERVER_IPV4;
+static char server_host[64] = CONFIG_THINGSET_WEBSOCKET_SERVER_HOST;
 static uint16_t server_port = CONFIG_THINGSET_WEBSOCKET_SERVER_PORT;
+static bool use_tls = IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS);
+static char auth_token[32] = CONFIG_THINGSET_WEBSOCKET_AUTH_TOKEN;
 static char server_path[23]; /* "/node/" + pNodeID (16 bytes) + '\0' */
 
 static int websock = -1;
@@ -34,33 +42,76 @@ static int websock = -1;
 static struct k_work_delayable reporting_work;
 #endif
 
-THINGSET_ADD_ITEM_STRING(TS_ID_NET, TS_ID_NET_WEBSOCKET_IPV4, "sWebsocketIP", server_addr4,
-                         sizeof(server_addr4), THINGSET_ANY_RW, TS_SUBSET_NVM);
+THINGSET_ADD_ITEM_STRING(TS_ID_NET, TS_ID_NET_WEBSOCKET_HOST, "sWebsocketHost", server_host,
+                         sizeof(server_host), THINGSET_ANY_RW, TS_SUBSET_NVM);
 
 THINGSET_ADD_ITEM_UINT16(TS_ID_NET, TS_ID_NET_WEBSOCKET_PORT, "sWebsocketPort", &server_port,
                          THINGSET_ANY_RW, TS_SUBSET_NVM);
 
-static int connect_server(sa_family_t family, int *sock, struct sockaddr *addr, socklen_t addr_len)
+THINGSET_ADD_ITEM_BOOL(TS_ID_NET, TS_ID_NET_WEBSOCKET_USE_TLS, "sWebsocketTLS", &use_tls,
+                       THINGSET_ANY_RW, TS_SUBSET_NVM);
+
+THINGSET_ADD_ITEM_STRING(TS_ID_NET, TS_ID_NET_WEBSOCKET_AUTH_TOKEN, "sWebsocketAuthToken",
+                         auth_token, sizeof(auth_token), THINGSET_ANY_RW, TS_SUBSET_NVM);
+
+static int connect_server(int *sock, sa_family_t family, const char *host, uint16_t port)
 {
     const char *family_str = family == AF_INET ? "IPv4" : "IPv6";
+    static struct addrinfo hints;
+    struct addrinfo *addr;
     int ret = 0;
+    char port_str[6];
 
-    memset(addr, 0, addr_len);
+    sprintf(port_str, "%u", port);
 
-    net_sin(addr)->sin_family = AF_INET;
-    net_sin(addr)->sin_port = htons(server_port);
-    inet_pton(family, server_addr4, &net_sin(addr)->sin_addr);
+    hints.ai_family = family;
+    hints.ai_socktype = SOCK_STREAM;
+    ret = getaddrinfo(host, port_str, &hints, &addr);
+    if (ret != 0) {
+        LOG_ERR("Unable to resolve %s for %s, ret:%d, errno:%d", family_str, host, ret, errno);
+        return ret;
+    }
+    else {
+        struct sockaddr_in *sa_in = (struct sockaddr_in *)addr->ai_addr;
+        char addr_str[INET_ADDRSTRLEN];
+        zsock_inet_ntop(AF_INET, &sa_in->sin_addr, addr_str, sizeof(addr_str));
+        LOG_INF("Resolved %s: %s", family_str, addr_str);
+    }
 
-    *sock = socket(family, SOCK_STREAM, IPPROTO_TCP);
+    if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS) && use_tls) {
+        sec_tag_t sec_tag_list[] = {
+            CA_CERTIFICATE_TAG,
+        };
+
+        *sock = socket(addr->ai_family, addr->ai_socktype, IPPROTO_TLS_1_2);
+        if (*sock >= 0) {
+            ret = setsockopt(*sock, SOL_TLS, TLS_SEC_TAG_LIST, sec_tag_list, sizeof(sec_tag_list));
+            if (ret < 0) {
+                LOG_ERR("Failed to set secure option (%d)", -errno);
+                ret = -errno;
+                goto fail;
+            }
+
+            ret = setsockopt(*sock, SOL_TLS, TLS_HOSTNAME, host, strlen(host) + 1);
+            if (ret < 0) {
+                LOG_ERR("Failed to set TLS_HOSTNAME option (%d)", -errno);
+                ret = -errno;
+                goto fail;
+            }
+        }
+    }
+    else {
+        *sock = socket(addr->ai_family, addr->ai_socktype, IPPROTO_TCP);
+    }
 
     if (*sock < 0) {
-        LOG_ERR("Failed to create %s HTTP socket (%d)", family_str, -errno);
+        LOG_ERR("Failed to create TCP socket (%d)", -errno);
         return -errno;
     }
 
-    ret = connect(*sock, addr, addr_len);
+    ret = connect(*sock, addr->ai_addr, addr->ai_addrlen);
     if (ret < 0) {
-        LOG_ERR("Cannot connect to %s remote (%d)", family_str, -errno);
+        LOG_ERR("Failed to connect to socket (%d)", -errno);
         ret = -errno;
         goto fail;
     }
@@ -187,8 +238,8 @@ static void websocket_shutdown(int sig)
 
 static void websocket_thread(void)
 {
+    char auth_header[64];
     int32_t timeout = 3 * MSEC_PER_SEC;
-    struct sockaddr_in addr4;
     int sock = -1;
     int ret;
 
@@ -205,19 +256,35 @@ static void websocket_thread(void)
     thingset_sdk_reschedule_work(&reporting_work, K_NO_WAIT);
 #endif
 
+    if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
+        ret = tls_credential_add(CA_CERTIFICATE_TAG, TLS_CREDENTIAL_CA_CERTIFICATE, ca_certificate,
+                                 sizeof(ca_certificate));
+        if (ret < 0) {
+            LOG_ERR("Failed to register public certificate: %d", ret);
+            return;
+        }
+    }
+
     snprintf(server_path, sizeof(server_path), "/node/%s", node_id);
+
+    snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s\r\n", auth_token);
+
+    const char *extra_headers[] = { auth_header, NULL };
+
+    LOG_INF("Establishing WebSocket connection to %s:%d", server_host, server_port);
 
     while (true) {
 
-        ret = connect_server(AF_INET, &sock, (struct sockaddr *)&addr4, sizeof(addr4));
+        ret = connect_server(&sock, AF_INET, server_host, server_port);
         if (ret < 0 || sock < 0) {
             k_sleep(K_SECONDS(10));
             continue;
         }
 
         struct websocket_request req = { 0 };
-        req.host = server_addr4;
+        req.host = server_host;
         req.url = server_path;
+        req.optional_headers = extra_headers;
         req.cb = connect_cb;
         /* tmp_buf only used for connecting, so we can re-use our rx buffer */
         req.tmp_buf = rx_buf;
@@ -225,10 +292,10 @@ static void websocket_thread(void)
 
         websock = websocket_connect(sock, &req, timeout, NULL);
         if (websock >= 0) {
-            LOG_INF("Connected to %s:%d", server_addr4, server_port);
+            LOG_INF("WebSocket connection established.");
         }
         else {
-            LOG_ERR("Cannot connect to %s:%d", server_addr4, server_port);
+            LOG_ERR("Failed to connect to WebSocket (%d)", websock);
             close(sock);
             k_sleep(K_SECONDS(10));
             continue;
