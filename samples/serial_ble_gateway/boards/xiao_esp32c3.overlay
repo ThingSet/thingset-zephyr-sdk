@@ -6,8 +6,6 @@
 
 / {
 	chosen {
-		zephyr,console = &usb_serial;
-		zephyr,shell-uart = &usb_serial;
 		thingset,serial = &uart0;
 	};
 
@@ -21,8 +19,4 @@
 	aliases {
 		led0 = &red_led_1;
 	};
-};
-
-&usb_serial {
-	status = "okay";
 };

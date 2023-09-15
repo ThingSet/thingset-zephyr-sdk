@@ -46,6 +46,7 @@ jobs:
           west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=can.conf
           west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=log_backend.conf
           west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=native_websocket.conf
+          west build -p -b xiao_esp32c3 samples/serial_ble_gateway
 
       - name: Build documentation
         working-directory: thingset-zephyr-sdk
