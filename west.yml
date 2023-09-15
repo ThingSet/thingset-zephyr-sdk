@@ -11,7 +11,7 @@ manifest:
       url-base: https://github.com/LibreSolar
   projects:
     - name: zephyr
-      remote: zephyrproject
+      remote: libresolar
       revision: v3.4-branch
       import:
         name-allowlist:
