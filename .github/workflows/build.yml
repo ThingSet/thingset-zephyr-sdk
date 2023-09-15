@@ -37,7 +37,7 @@ jobs:
         working-directory: thingset-zephyr-sdk
         run: |
           west build -p -b olimex_lora_stm32wl_devkit samples/counter -- -DOVERLAY_CONFIG=lorawan.conf
-          west build -p -b esp32c3_devkitm samples/counter
+          west build -p -b esp32c3_devkitm samples/counter -- -DOVERLAY_CONFIG=ble.conf
           west build -p -b esp32c3_devkitm samples/counter -- -DOVERLAY_CONFIG=wifi_websocket.conf
           west build -p -b native_posix samples/counter
           west build -p -b nucleo_l073rz samples/counter -- -DOVERLAY_CONFIG=serial.conf
