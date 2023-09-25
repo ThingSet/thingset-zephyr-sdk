@@ -118,6 +118,19 @@ static void thingset_can_report_tx_cb(const struct device *dev, int error, void 
     /* Do nothing: Reports are fire and forget. */
 }
 
+static void thingset_can_report_send(struct thingset_can *ts_can, struct can_frame *frame, int data_len, const thingset_object_id_t id)
+{
+    if (data_len > 0) {
+        frame->id = THINGSET_CAN_TYPE_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
+                    | THINGSET_CAN_DATA_ID_SET(id)
+                    | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
+        frame->dlc = data_len;
+        if (can_send(ts_can->dev, frame, K_MSEC(10), thingset_can_report_tx_cb, NULL) != 0) {
+            LOG_DBG("Error sending CAN frame with ID %x", frame->id);
+        }
+    }
+}
+
 static void thingset_can_report_tx_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
@@ -130,16 +143,30 @@ static void thingset_can_report_tx_handler(struct k_work *work)
 
     struct thingset_data_object *obj = NULL;
     while ((obj = thingset_iterate_subsets(&ts, TS_SUBSET_LIVE, obj)) != NULL) {
-        data_len = thingset_export_item(&ts, frame.data, sizeof(frame.data), obj,
-                                        THINGSET_BIN_VALUES_ONLY);
-        if (data_len > 0) {
-            frame.id = THINGSET_CAN_TYPE_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
-                       | THINGSET_CAN_DATA_ID_SET(obj->id)
-                       | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
-            frame.dlc = data_len;
-            if (can_send(ts_can->dev, &frame, K_MSEC(10), thingset_can_report_tx_cb, NULL) != 0) {
-                LOG_DBG("Error sending CAN frame with ID %x", frame.id);
+        if (obj->type == THINGSET_TYPE_ARRAY) {
+            /* send each array element as a separate message */
+            struct thingset_array_element array_element;
+            for (uint16_t i = 0; i < obj->data.array->num_elements; i++) {
+                array_element.array = obj->data.array;
+                array_element.index = i;
+                union thingset_data_pointer data = { .array_element = &array_element };
+                struct thingset_data_object element_obj = {
+                    .access = obj->access,
+                    .name = obj->name,
+                    .parent_id = obj->parent_id,
+                    .id = obj->id,
+                    .type = THINGSET_TYPE_ARRAY_ELEMENT,
+                    .data = data,
+                };
+                data_len = thingset_export_item(&ts, frame.data, sizeof(frame.data), &element_obj,
+                                                THINGSET_BIN_VALUES_ONLY);
+                k_sleep(K_MSEC(1)); /* if we don't do this, at least on native so far, we seem to skip every other element */
+                thingset_can_report_send(ts_can, &frame, data_len, element_obj.id);                
             }
+        } else {
+            data_len = thingset_export_item(&ts, frame.data, sizeof(frame.data), obj,
+                                            THINGSET_BIN_VALUES_ONLY);
+            thingset_can_report_send(ts_can, &frame, data_len, obj->id);
         }
         obj++; /* continue with object behind current one */
     }
