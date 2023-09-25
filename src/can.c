@@ -161,7 +161,7 @@ static void thingset_can_report_tx_handler(struct k_work *work)
                 data_len = thingset_export_item(&ts, frame.data, sizeof(frame.data), &element_obj,
                                                 THINGSET_BIN_VALUES_ONLY);
                 k_sleep(K_MSEC(1)); /* if we don't do this, at least on native so far, we seem to skip every other element */
-                thingset_can_report_send(ts_can, &frame, data_len, element_obj.id);                
+                thingset_can_report_send(ts_can, &frame, data_len, element_obj.id);
             }
         } else {
             data_len = thingset_export_item(&ts, frame.data, sizeof(frame.data), obj,
