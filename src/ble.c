@@ -21,6 +21,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "packetizer.h"
+
 LOG_MODULE_REGISTER(thingset_ble, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 /* ThingSet Custom Service: xxxxyyyy-5423-4887-9c6a-14ad27bfc06d */
@@ -39,13 +41,6 @@ LOG_MODULE_REGISTER(thingset_ble, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 #define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
-
-#define MSG_END      (0x0A)
-#define MSG_SKIP     (0x0D)
-#define MSG_ESC      (0xCE)
-#define MSG_ESC_END  (0xCA)
-#define MSG_ESC_SKIP (0xCD)
-#define MSG_ESC_ESC  (0xCF)
 
 static ssize_t thingset_ble_rx(struct bt_conn *conn, const struct bt_gatt_attr *attr,
                                const void *buf, uint16_t len, uint16_t offset, uint8_t flags);
@@ -119,55 +114,22 @@ static ssize_t thingset_ble_rx(struct bt_conn *conn, const struct bt_gatt_attr *
     /* store across multiple packages whether we had an escape char */
     static bool escape = false;
 
-    bool finished = true;
     if (k_sem_take(&rx_buf_lock, K_NO_WAIT) == 0) {
-        for (int i = 0; i < len; i++) {
-            uint8_t c = *((uint8_t *)buf + i);
-            if (escape) {
-                if (c == MSG_ESC_END) {
-                    c = MSG_END;
-                }
-                else if (c == MSG_ESC_ESC) {
-                    c = MSG_ESC;
-                }
-                else if (c == MSG_ESC_SKIP) {
-                    c = MSG_SKIP;
-                }
-                /* else: protocol violation, pass character as is */
-                escape = false;
-            }
-            else if (c == MSG_ESC) {
-                escape = true;
-                continue;
-            }
-            else if (c == MSG_SKIP) {
-                continue;
-            }
-            else if (c == MSG_END) {
-                if (finished) {
-                    /* previous run finished and MSG_END was used as new start byte */
-                    continue;
-                }
-                else {
-                    finished = true;
-                    if (discard_buffer) {
-                        rx_buf_pos = 0;
-                        discard_buffer = false;
-                        k_sem_give(&rx_buf_lock);
-                        return len;
-                    }
-                    else {
-                        rx_buf[rx_buf_pos] = '\0';
-                        /* start processing the request and keep the rx_buf_lock */
-                        thingset_sdk_reschedule_work(&processing_work, K_NO_WAIT);
-                        return len;
-                    }
-                }
+        bool finished = reassemble((uint8_t *)buf, len, rx_buf, CONFIG_THINGSET_BLE_RX_BUF_SIZE,
+                                   &rx_buf_pos, &escape);
+        if (finished) {
+            if (discard_buffer) {
+                rx_buf_pos = 0;
+                discard_buffer = false;
+                k_sem_give(&rx_buf_lock);
+                return len;
             }
             else {
-                finished = false;
+                rx_buf[rx_buf_pos] = '\0';
+                /* start processing the request and keep the rx_buf_lock */
+                thingset_sdk_reschedule_work(&processing_work, K_NO_WAIT);
+                return len;
             }
-            rx_buf[rx_buf_pos++] = c;
         }
         k_sem_give(&rx_buf_lock);
     }
@@ -216,36 +178,11 @@ int thingset_ble_send(const uint8_t *buf, size_t len)
 
         /* even max. possible size of 251 bytes should be OK to allocate on stack */
         uint8_t chunk[max_mtu];
-        chunk[0] = MSG_END;
 
         int pos_buf = 0;
-        int pos_chunk = 1;
-        bool finished = false;
-        while (!finished) {
-            while (pos_chunk < max_mtu && pos_buf < len) {
-                if (buf[pos_buf] == MSG_END) {
-                    chunk[pos_chunk++] = MSG_ESC;
-                    chunk[pos_chunk++] = MSG_ESC_END;
-                }
-                else if (buf[pos_buf] == MSG_SKIP) {
-                    chunk[pos_chunk++] = MSG_ESC;
-                    chunk[pos_chunk++] = MSG_ESC_SKIP;
-                }
-                else if (buf[pos_buf] == MSG_ESC) {
-                    chunk[pos_chunk++] = MSG_ESC;
-                    chunk[pos_chunk++] = MSG_ESC_ESC;
-                }
-                else {
-                    chunk[pos_chunk++] = buf[pos_buf];
-                }
-                pos_buf++;
-            }
-            if (pos_chunk < max_mtu - 1 && pos_buf >= len) {
-                chunk[pos_chunk++] = MSG_END;
-                finished = true;
-            }
-            bt_gatt_notify(ble_conn, attr_ccc_req, chunk, pos_chunk);
-            pos_chunk = 0;
+        int chunk_len;
+        while ((chunk_len = packetize(buf, len, chunk, max_mtu, &pos_buf)) != 0) {
+            bt_gatt_notify(ble_conn, attr_ccc_req, chunk, chunk_len);
         }
 
         return 0;

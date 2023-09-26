@@ -17,6 +17,55 @@ config THINGSET_CAN_RX_BUF_SIZE
     help
       Default value large enough to receive a 512 byte flash page for DFU.
 
+config THINGSET_CAN_PACKETIZED_REPORTS_TX
+  bool "Support for transmission of packetized reports over CAN"
+  help
+    If enabled, values larger than a single CAN message payload
+    (8 bytes in classical CAN; 64 in CAN-FD) can be transmitted via CAN
+    reports.
+
+config THINGSET_CAN_PACKETIZED_REPORTS_RX
+  bool "Support for reception of packetized reports over CAN"
+  help
+    If enabled, values larger than a single CAN message payload
+    (8 bytes in classical CAN; 64 in CAN-FD) can be received via CAN
+    reports.
+
+config THINGSET_CAN_RX_BUF_PER_SENDER_SIZE
+    int "ThingSet CAN RX buffer size for reassembly of packetized reports"
+    depends on THINGSET_CAN_PACKETIZED_REPORTS_RX
+    range 32 512
+    default 64
+    help
+      Default value enough to receive at least a 10-element array via broadcast.
+
+config THINGSET_CAN_NUM_RX_BUFFERS
+    int "ThingSet CAN number of RX buffers for reassembly of packetized reports"
+    depends on THINGSET_CAN_PACKETIZED_REPORTS_RX
+    range 1 64
+    default 8
+    help
+      Maximum number of unique senders anticipated on the CAN bus.
+
+config THINGSET_CAN_NUM_RX_BUFFER_BUCKETS
+    int "ThingSet CAN number of buckets into which RX buffers are divided"
+    depends on THINGSET_CAN_PACKETIZED_REPORTS_RX
+    range 1 16
+    default 8
+    help
+      This is the number of entries in the hashtable used to efficiently look
+      up current buffers. The hash function is simply a modulo operation, so
+      for maximum efficiency a power-of-2 value should be used.
+
+config THINGSET_CAN_PACKETIZED_REPORTS_FRAME_TX_INTERVAL
+  int "ThingSet CAN maximum time to wait to send a frame in a packetized report"
+  depends on THINGSET_CAN_PACKETIZED_REPORTS_TX
+  range 0 100
+  default 30
+  help
+    Timeout in milliseconds to wait for a frame of a packetized report to
+    successfully send.
+
 config THINGSET_CAN_MULTIPLE_INSTANCES
     bool "Support for multiple ThingSet CAN instances"
     help
