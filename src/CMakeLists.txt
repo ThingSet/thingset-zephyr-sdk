@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 target_sources(app PRIVATE sdk.c)
+target_sources(app PRIVATE packetizer.c)
 
 target_sources_ifdef(CONFIG_THINGSET_AUTH app PRIVATE auth.c)
 target_sources_ifdef(CONFIG_THINGSET_BLE app PRIVATE ble.c)
