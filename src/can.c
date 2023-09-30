@@ -528,7 +528,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     struct can_filter addr_discovery_filter = {
         .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS)
               | THINGSET_CAN_TARGET_SET(ts_can->node_addr),
-        .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_TARGET_MASK | THINGSET_CAN_TARGET_MASK,
+        .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_SOURCE_MASK | THINGSET_CAN_TARGET_MASK,
         .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
     };
     filter_id = can_add_rx_filter(ts_can->dev, thingset_can_addr_discovery_rx_cb, ts_can,
