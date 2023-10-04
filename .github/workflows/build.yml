@@ -15,10 +15,13 @@ jobs:
           path: thingset-zephyr-sdk
           fetch-depth: 0 # necessary to get tags
 
-      - name: Trailing whitespace check
+      - name: Coding style check
         working-directory: thingset-zephyr-sdk
         run: |
-          git diff --check `git rev-list HEAD | tail -n 1`..
+          apt-get update
+          apt-get install -y clang-format-12 colordiff
+          git status
+          bash scripts/check-style.sh
 
       - name: Initialize west workspace
         working-directory: thingset-zephyr-sdk
