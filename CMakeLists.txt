@@ -4,6 +4,8 @@
 # This CMake file is picked by the Zephyr build system because it is defined
 # as the module CMake entry point (see zephyr/module.yml).
 
-add_subdirectory_ifdef(CONFIG_THINGSET_SDK src)
+if (CONFIG_ISOTP_FAST OR CONFIG_THINGSET_SDK)
+    add_subdirectory(src)
+endif()
 
 zephyr_include_directories(include)
