@@ -603,9 +603,20 @@ int thingset_can_set_report_rx_callback(thingset_can_report_rx_callback_t rx_cb)
     return thingset_can_set_report_rx_callback_inst(&ts_can_single, rx_cb);
 }
 
+struct thingset_can *thingset_can_get_inst()
+{
+    return &ts_can_single;
+}
+
 static void thingset_can_thread()
 {
-    thingset_can_init_inst(&ts_can_single, can_dev);
+    int err;
+
+    err = thingset_can_init_inst(&ts_can_single, can_dev);
+    if (err != 0) {
+        LOG_ERR("Failed to init ThingSet CAN: %d", err);
+        return;
+    }
 
     while (true) {
         thingset_can_process_inst(&ts_can_single, K_FOREVER);

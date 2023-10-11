@@ -156,7 +156,6 @@ struct thingset_can
     uint8_t rx_buffer[CONFIG_THINGSET_CAN_RX_BUF_SIZE];
     int64_t next_pub_time;
     uint8_t node_addr;
-    bool pub_enable;
 };
 
 #ifdef CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES
@@ -254,6 +253,13 @@ int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr);
  * @param rx_cb Callback function.
  */
 int thingset_can_set_report_rx_callback(thingset_can_report_rx_callback_t rx_cb);
+
+/**
+ * Get ThingSet CAN instance
+ *
+ * @returns Pointer to internal ThingSet CAN instance
+ */
+struct thingset_can *thingset_can_get_inst();
 
 #endif /* CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES */
 
