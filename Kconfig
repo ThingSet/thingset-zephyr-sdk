@@ -69,8 +69,11 @@ config THINGSET_NODE_NAME
 
 config THINGSET_SHARED_TX_BUF_SIZE
     int "Shared TX buffer size"
-    range 256 2048
+    range 256 10240
     default 1024
+    help
+      This buffer is used to create ThingSet responses for the different interfaces. It has to be
+      large enough to fit the largest expected response.
 
 config THINGSET_SDK_THREAD_STACK_SIZE
 	int "Common thread stack size"
