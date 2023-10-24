@@ -1,7 +1,0 @@
-# SPDX-License-Identifier: Apache-2.0
-
-tests:
-  thingset_sdk.thingset_isotp_fast:
-    integration_platforms:
-      - native_posix_64
-    extra_args: EXTRA_CFLAGS=-Wno-error

@@ -469,7 +469,6 @@ void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, isotp_fast_ms
 
 void isotp_fast_recv_error_callback(int8_t error, isotp_fast_msg_id sender_addr, void *arg)
 {
-    struct thingset_can *ts_can = arg;
     LOG_ERR("RX error %d", error);
 }
 

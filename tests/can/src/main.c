@@ -26,7 +26,6 @@ static void report_rx_callback(uint16_t data_id, const uint8_t *value, size_t va
 
 ZTEST(thingset_can, test_receive_report_from_node)
 {
-
     struct can_frame report_frame = {
         .id = 0x1E000002, /* node with address 0x02 */
         .flags = CAN_FRAME_IDE,
@@ -64,7 +63,11 @@ ZTEST(thingset_can, test_send_request_to_node)
     err = can_add_rx_filter(can_dev, &request_rx_cb, NULL, &other_node_filter);
     zassert_false(err < 0, "adding rx filter failed: %d", err);
 
+#ifdef CONFIG_ISOTP_FAST
+    thingset_can_send(req_buf, sizeof(req_buf), 0xCC, NULL, NULL, TEST_RECEIVE_TIMEOUT);
+#else
     thingset_can_send(req_buf, sizeof(req_buf), 0xCC);
+#endif
 
     err = k_sem_take(&request_tx_sem, TEST_RECEIVE_TIMEOUT);
     zassert_equal(err, 0, "receive timeout");
