@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <stdlib.h>
+
 #include <zephyr/ztest.h>
 
 #include <thingset.h>
@@ -17,6 +19,27 @@ static const struct device *can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 
 static struct k_sem report_rx_sem;
 static struct k_sem request_tx_sem;
+static struct k_sem response_rx_sem;
+
+uint8_t *response;
+size_t response_len;
+int response_code;
+
+static void isotp_fast_recv_cb(struct net_buf *buffer, int rem_len, isotp_fast_can_id rx_can_id,
+                               void *arg)
+{
+    response = malloc(buffer->len);
+    memcpy(response, buffer->data, buffer->len);
+    response_code = 0;
+    response_len = buffer->len;
+    k_sem_give(&response_rx_sem);
+}
+
+static void isotp_fast_sent_cb(int result, void *arg)
+{
+    response_code = result;
+    k_sem_give(&request_tx_sem);
+}
 
 static void report_rx_callback(uint16_t data_id, const uint8_t *value, size_t value_len,
                                uint8_t source_addr)
@@ -73,12 +96,43 @@ ZTEST(thingset_can, test_send_request_to_node)
     zassert_equal(err, 0, "receive timeout");
 }
 
+ZTEST(thingset_can, test_request_response)
+{
+    k_sem_reset(&request_tx_sem);
+    k_sem_reset(&response_rx_sem);
+
+    struct isotp_fast_ctx client_ctx;
+    struct isotp_fast_opts opts = {
+        .bs = 0,
+        .stmin = 0,
+        .flags = 0,
+    };
+    int err = isotp_fast_bind(&client_ctx, can_dev, 0x1800cc00, &opts, isotp_fast_recv_cb, NULL,
+                              NULL, isotp_fast_sent_cb);
+    zassert_equal(err, 0, "bind fail");
+
+    uint8_t msg[] = { 0x01, 0x1e };
+    err = isotp_fast_send(&client_ctx, msg, sizeof(msg), 0x01, NULL);
+    zassert_equal(err, 0, "send fail");
+    k_sem_take(&request_tx_sem, TEST_RECEIVE_TIMEOUT);
+
+    k_sem_take(&response_rx_sem, TEST_RECEIVE_TIMEOUT);
+    zassert_equal(response_code, 0, "receive fail");
+
+    zassert_equal(response_len, 3, "unexpected response length %d", response_len);
+    // not found; can't do more than that for now
+    zassert_equal(response[0], 0xa4, "unexpected response");
+    free(response);
+    isotp_fast_unbind(&client_ctx);
+}
+
 static void *thingset_can_setup(void)
 {
     int err;
 
     k_sem_init(&report_rx_sem, 0, 1);
     k_sem_init(&request_tx_sem, 0, 1);
+    k_sem_init(&response_rx_sem, 0, 1);
 
     thingset_init_global(&ts);
 
