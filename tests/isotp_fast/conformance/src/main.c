@@ -226,7 +226,11 @@ ZTEST(isotp_fast_conformance, test_receive_sf)
 
     get_sf(&ctx, DATA_SIZE_SF);
 
+#ifdef CONFIG_CAN_FD_MODE
+    single_frame.data[1]++;
+#else
     single_frame.data[0] = SF_PCI_BYTE_LEN_8;
+#endif
     send_frame_series(&single_frame, 1, rx_addr);
 
     get_sf_ignore(&ctx);
