@@ -7,9 +7,12 @@
 #ifndef THINGSET_CAN_H_
 #define THINGSET_CAN_H_
 
-#include "isotp_fast.h"
 #include <zephyr/canbus/isotp.h>
 #include <zephyr/device.h>
+
+#ifdef CONFIG_ISOTP_FAST
+#include "isotp_fast.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -204,9 +207,9 @@ int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buf, size
  * @param tx_len Length of the message.
  * @param target_addr Target node address (8-bit value) to send the message to.
  * @param rsp_callback If a response is expected, this callback will be invoked,
- * either when it arrives or if a timeout or some other error occurs.
+ *                     either when it arrives or if a timeout or some other error occurs.
  * @param callback_arg User data for the callback.
- * @param rsp_timeout Timeout to wait for a response.
+ * @param timeout Timeout to wait for a response.
  *
  * @returns 0 for success or negative errno in case of error
  */
