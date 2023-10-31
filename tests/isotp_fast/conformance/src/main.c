@@ -5,18 +5,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/*
- * @addtogroup t_can
- * @{
- * @defgroup t_can_isotp test_can_isotp
- * @brief TestPurpose: verify correctness of the iso tp implementation
- * @details
- * - Test Steps
- *   -#
- * - Expected Results
- *   -#
- * @}
- */
+#ifdef CONFIG_ISOTP_FAST_BLOCKING_RECEIVE
+#include "sync_recv.h"
+#else
+#include "async_recv.h"
+#endif
 
 void isotp_fast_sent_handler(int result, void *arg)
 {
@@ -118,9 +111,9 @@ static void send_frame_series(struct frame_desired *frames, size_t length, uint3
     for (i = 0; i < length; i++) {
         frame.dlc = can_bytes_to_dlc(desired->length);
         memcpy(frame.data, desired->data, desired->length);
-        // printk("> [%x] [%02d] ", frame.id, desired->length);
-        // print_hex(frame.data, desired->length);
-        // printk("\n");
+        printk("> [%x] [%02d] ", frame.id, desired->length);
+        print_hex(frame.data, desired->length);
+        printk("\n");
         ret = can_send(can_dev, &frame, K_MSEC(500), NULL, NULL);
         zassert_equal(ret, 0, "Sending msg %d failed (error %d).", i, ret);
         desired++;
@@ -195,7 +188,7 @@ static void prepare_cf_frames(struct frame_desired *frames, size_t frames_cnt, c
     }
 }
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_send_sf)
+ZTEST(isotp_fast_conformance, test_send_sf)
 {
     struct frame_desired des_frame;
 
@@ -216,7 +209,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_send_sf)
     check_frame_series(&des_frame, 1, &frame_msgq);
 }
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receive_sf)
+ZTEST(isotp_fast_conformance, test_receive_sf)
 {
     struct frame_desired single_frame;
 
@@ -239,7 +232,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receive_sf)
     get_sf_ignore(&ctx);
 }
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_send_sf_fixed)
+ZTEST(isotp_fast_conformance, test_send_sf_fixed)
 {
     int ret;
     struct frame_desired des_frame;
@@ -263,7 +256,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_send_sf_fixed)
     check_frame_series(&des_frame, 1, &frame_msgq);
 }
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receive_sf_fixed)
+ZTEST(isotp_fast_conformance, test_receive_sf_fixed)
 {
     struct frame_desired single_frame;
 
@@ -293,7 +286,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receive_sf_fixed)
     get_sf_ignore(&ctx);
 }
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_send_data)
+ZTEST(isotp_fast_conformance, test_send_data)
 {
     struct frame_desired fc_frame, ff_frame;
     const uint8_t *data_ptr = random_data;
@@ -327,7 +320,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_send_data)
 
 /* hiding this whole test to avoid compiler errors */
 #ifndef CONFIG_CAN_FD_MODE
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_send_data_blocks)
+ZTEST(isotp_fast_conformance, test_send_data_blocks)
 {
     const uint8_t *data_ptr = random_data;
     size_t remaining_length = DATA_SEND_LENGTH;
@@ -388,7 +381,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_send_data_blocks)
 }
 #endif /* CONFIG_CAN_FD_MODE */
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receive_data)
+ZTEST(isotp_fast_conformance, test_receive_data)
 {
     const uint8_t *data_ptr = random_data;
     size_t remaining_length = DATA_SEND_LENGTH;
@@ -419,7 +412,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receive_data)
     receive_test_data(&ctx, random_data, DATA_SEND_LENGTH, 0);
 }
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receive_data_blocks)
+ZTEST(isotp_fast_conformance, test_receive_data_blocks)
 {
     const uint8_t *data_ptr = random_data;
     size_t remaining_length = DATA_SEND_LENGTH;
@@ -475,7 +468,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receive_data_blocks)
     zassert_equal(ret, -EAGAIN, "Expected timeout but got %d", ret);
 }
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_send_timeouts)
+ZTEST(isotp_fast_conformance, test_send_timeouts)
 {
     int ret;
     uint32_t start_time, time_diff;
@@ -530,7 +523,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_send_timeouts)
     zassert_true(time_diff >= BS_TIMEOUT_LOWER_MS, "Timeout too early (%dms)", time_diff);
 }
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receive_timeouts)
+ZTEST(isotp_fast_conformance, test_receive_timeouts)
 {
     int ret;
     uint32_t start_time, time_diff;
@@ -554,7 +547,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receive_timeouts)
     zassert_true(time_diff <= BS_TIMEOUT_UPPER_MS, "Timeout too slow (%dms)", time_diff);
 }
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_stmin)
+ZTEST(isotp_fast_conformance, test_stmin)
 {
     int ret;
     struct frame_desired fc_frame, ff_frame;
@@ -609,7 +602,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_stmin)
     zassert_true(time_diff >= STMIN_VAL_2, "STmin too short (%dms)", time_diff);
 }
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receiver_fc_errors)
+ZTEST(isotp_fast_conformance, test_receiver_fc_errors)
 {
     int ret;
     struct frame_desired ff_frame, fc_frame;
@@ -650,7 +643,7 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_receiver_fc_errors)
     zassert_equal(ret, ISOTP_N_WRONG_SN, "Expected wrong SN but got %d", ret);
 }
 
-ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_sender_fc_errors)
+ZTEST(isotp_fast_conformance, test_sender_fc_errors)
 {
     int ret, i;
     struct frame_desired ff_frame, fc_frame;
@@ -710,6 +703,37 @@ ZTEST(ISOTP_FAST_CONFORMANCE_TEST_SUITE, test_sender_fc_errors)
     zassert_equal(ret, 0, "Send complete callback not called");
 }
 
+#ifdef CONFIG_CAN_FD_MODE
+ZTEST(isotp_fast_conformance, test_sf_length)
+{
+    int ret;
+    struct frame_desired des_frame;
+
+    des_frame.data[0] = (SF_PCI_TYPE << PCI_TYPE_POS) | 7;
+    memcpy(&des_frame.data[1], random_data, 7);
+    des_frame.length = 8;
+
+    /* mask to allow any priority and source address (SA) */
+    filter_id = add_rx_msgq(tx_addr, CAN_EXT_ID_MASK);
+    zassert_true((filter_id >= 0), "Negative filter number [%d]", filter_id);
+
+    ret = isotp_fast_send(&ctx, random_data, 7, rx_node_id, INT_TO_POINTER(ISOTP_N_OK));
+    zassert_equal(ret, 0, "Send returned %d", ret);
+
+    check_frame_series(&des_frame, 1, &frame_msgq);
+
+    des_frame.data[0] = (SF_PCI_TYPE << PCI_TYPE_POS);
+    des_frame.data[1] = 9;
+    memcpy(&des_frame.data[2], random_data, DATA_SIZE_SF);
+    des_frame.length = 9;
+
+    ret = isotp_fast_send(&ctx, random_data, 9, rx_node_id, INT_TO_POINTER(ISOTP_N_OK));
+    zassert_equal(ret, 0, "Send returned %d", ret);
+
+    check_frame_series(&des_frame, 1, &frame_msgq);
+}
+#endif
+
 void *isotp_fast_conformance_setup(void)
 {
     int ret;
@@ -753,5 +777,5 @@ void isotp_fast_conformance_after(void *)
     can_stop(can_dev);
 }
 
-ZTEST_SUITE(ISOTP_FAST_CONFORMANCE_TEST_SUITE, NULL, isotp_fast_conformance_setup,
+ZTEST_SUITE(isotp_fast_conformance, NULL, isotp_fast_conformance_setup,
             isotp_fast_conformance_before, isotp_fast_conformance_after, NULL);

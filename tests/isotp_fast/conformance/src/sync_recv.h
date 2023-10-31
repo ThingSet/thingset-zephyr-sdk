@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "../../conformance/src/main.h"
+#include "main.h"
 
 static int blocking_recv(uint8_t *buf, size_t size, k_timeout_t timeout)
 {
