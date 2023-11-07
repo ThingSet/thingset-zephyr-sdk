@@ -163,7 +163,7 @@ static void thingset_can_addr_claim_rx_cb(const struct device *dev, struct can_f
     LOG_INF("Received address claim from node 0x%.2X with EUI-64 "
             "%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x",
             THINGSET_CAN_SOURCE_GET(frame->id), data[0], data[1], data[2], data[3], data[4],
-            data[5], data[6], data[8]);
+            data[5], data[6], data[7]);
 
     if (ts_can->node_addr == THINGSET_CAN_SOURCE_GET(frame->id)) {
         k_event_post(&ts_can->events, EVENT_ADDRESS_ALREADY_USED);
