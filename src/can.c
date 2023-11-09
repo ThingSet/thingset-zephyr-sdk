@@ -329,7 +329,7 @@ void thingset_can_reset_request_response(struct thingset_can_request_response *r
 {
     rr->callback = NULL;
     rr->cb_arg = NULL;
-    rr->sender_addr = 0;
+    rr->can_id = 0;
     k_timer_stop(&rr->timer);
     k_sem_give(&rr->sem);
 }
@@ -419,9 +419,9 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
         k_timer_init(&ts_can->request_response.timer, thingset_can_request_response_timeout_handler,
                      NULL);
         k_timer_start(&ts_can->request_response.timer, timeout, timeout);
-        ts_can->request_response.sender_addr = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
-                                               | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
-                                               | THINGSET_CAN_SOURCE_SET(target_addr);
+        ts_can->request_response.can_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+                                          | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
+                                          | THINGSET_CAN_SOURCE_SET(target_addr);
     }
     int ret = isotp_fast_send(&ts_can->ctx, tx_buf, tx_len, target_addr, ts_can);
 
@@ -434,7 +434,7 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
     }
 }
 
-void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, isotp_fast_msg_id sender_addr,
+void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, isotp_fast_can_id can_id,
                               void *arg)
 {
     struct thingset_can *ts_can = arg;
@@ -446,11 +446,9 @@ void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, isotp_fast_ms
     if (rem_len == 0) {
         size_t len = net_buf_frags_len(buffer);
         net_buf_linearize(ts_can->rx_buffer, sizeof(ts_can->rx_buffer), buffer, 0, len);
-        if (ts_can->request_response.callback != NULL
-            && ts_can->request_response.sender_addr == sender_addr)
+        if (ts_can->request_response.callback != NULL && ts_can->request_response.can_id == can_id)
         {
-            ts_can->request_response.callback(ts_can->rx_buffer, len, 0,
-                                              (uint8_t)(sender_addr & 0xFF),
+            ts_can->request_response.callback(ts_can->rx_buffer, len, 0, (uint8_t)(can_id & 0xFF),
                                               ts_can->request_response.cb_arg);
             thingset_can_reset_request_response(&ts_can->request_response);
         }
@@ -459,7 +457,7 @@ void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, isotp_fast_ms
             int tx_len =
                 thingset_process_message(&ts, ts_can->rx_buffer, len, sbuf->data, sbuf->size);
             if (tx_len > 0) {
-                isotp_fast_node_id target_id = (uint8_t)(sender_addr & 0xFF);
+                isotp_fast_node_id target_id = (uint8_t)(can_id & 0xFF);
                 thingset_can_send_inst(ts_can, sbuf->data, tx_len, target_id, NULL, NULL,
                                        K_NO_WAIT);
             }
@@ -467,7 +465,7 @@ void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, isotp_fast_ms
     }
 }
 
-void isotp_fast_recv_error_callback(int8_t error, isotp_fast_msg_id sender_addr, void *arg)
+void isotp_fast_recv_error_callback(int8_t error, isotp_fast_can_id can_id, void *arg)
 {
     LOG_ERR("RX error %d", error);
 }
@@ -683,9 +681,9 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     }
 
 #ifdef CONFIG_ISOTP_FAST
-    isotp_fast_msg_id my_addr = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
-                                | THINGSET_CAN_TARGET_SET(ts_can->node_addr);
-    isotp_fast_bind(&ts_can->ctx, can_dev, my_addr, &fc_opts, isotp_fast_recv_callback, ts_can,
+    isotp_fast_can_id rx_can_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+                                  | THINGSET_CAN_TARGET_SET(ts_can->node_addr);
+    isotp_fast_bind(&ts_can->ctx, can_dev, rx_can_id, &fc_opts, isotp_fast_recv_callback, ts_can,
                     isotp_fast_recv_error_callback, isotp_fast_sent_callback);
 #endif
 

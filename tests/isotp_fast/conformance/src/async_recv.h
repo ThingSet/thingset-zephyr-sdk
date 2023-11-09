@@ -56,7 +56,7 @@ static int blocking_recv(uint8_t *buf, size_t size, k_timeout_t timeout)
     return rx_len;
 }
 
-void isotp_fast_recv_handler(struct net_buf *buffer, int rem_len, isotp_fast_msg_id sender_addr,
+void isotp_fast_recv_handler(struct net_buf *buffer, int rem_len, isotp_fast_can_id rx_can_id,
                              void *arg)
 {
     struct recv_msg msg = {
@@ -64,13 +64,13 @@ void isotp_fast_recv_handler(struct net_buf *buffer, int rem_len, isotp_fast_msg
         .rem_len = rem_len,
     };
     memcpy(&msg.data, buffer->data, MIN(sizeof(msg.data), buffer->len));
-    // printk("< [%x] [%02d] ", sender_addr, buffer->len);
+    // printk("< [%x] [%02d] ", rx_can_id, buffer->len);
     // print_hex(&msg.data[0], msg.len);
     // printk("[%d]\n", rem_len);
     k_msgq_put(&recv_msgq, &msg, K_NO_WAIT);
 }
 
-void isotp_fast_recv_error_handler(int8_t error, isotp_fast_msg_id sender_addr, void *arg)
+void isotp_fast_recv_error_handler(int8_t error, isotp_fast_can_id rx_can_id, void *arg)
 {
     // printk("Error %d received\n", error);
     recv_last_error = error;

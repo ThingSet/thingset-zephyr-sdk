@@ -15,9 +15,9 @@ static int blocking_recv(uint8_t *buf, size_t size, k_timeout_t timeout)
     return isotp_fast_recv(&ctx, sender, buf, size, timeout);
 }
 
-void isotp_fast_recv_handler(struct net_buf *buffer, int rem_len, isotp_fast_msg_id sender_addr,
+void isotp_fast_recv_handler(struct net_buf *buffer, int rem_len, isotp_fast_can_id can_id,
                              void *arg)
 {}
 
-void isotp_fast_recv_error_handler(int8_t error, isotp_fast_msg_id sender_addr, void *arg)
+void isotp_fast_recv_error_handler(int8_t error, isotp_fast_can_id can_id, void *arg)
 {}

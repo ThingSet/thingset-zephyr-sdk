@@ -48,16 +48,16 @@ static sys_slist_t isotp_send_ctx_list;
 /* list of currently in-flight receive contexts */
 static sys_slist_t isotp_recv_ctx_list;
 
-static int get_send_ctx(struct isotp_fast_ctx *ctx, isotp_fast_msg_id recipient_addr,
+static int get_send_ctx(struct isotp_fast_ctx *ctx, isotp_fast_can_id tx_can_id,
                         struct isotp_fast_send_ctx **sctx)
 {
-    isotp_fast_node_id recipient_id = isotp_fast_get_addr_recipient(recipient_addr);
+    isotp_fast_node_id target_addr = isotp_fast_get_target_addr(tx_can_id);
     struct isotp_fast_send_ctx *context;
 
     SYS_SLIST_FOR_EACH_CONTAINER(&isotp_send_ctx_list, context, node)
     {
-        if (isotp_fast_get_addr_recipient(context->recipient_addr) == recipient_id) {
-            LOG_DBG("Found existing send context for recipient %x", recipient_addr);
+        if (isotp_fast_get_target_addr(context->tx_can_id) == target_addr) {
+            LOG_DBG("Found existing send context for recipient %x", tx_can_id);
             *sctx = context;
             return 0;
         }
@@ -69,19 +69,19 @@ static int get_send_ctx(struct isotp_fast_ctx *ctx, isotp_fast_msg_id recipient_
     }
     *sctx = context;
     context->ctx = ctx;
-    context->recipient_addr = recipient_addr;
+    context->tx_can_id = tx_can_id;
     context->error = 0;
     k_work_init(&context->work, receive_work_handler);
     k_timer_init(&context->timer, receive_timeout_handler, NULL);
     sys_slist_append(&isotp_send_ctx_list, &context->node);
-    LOG_DBG("Created new send context for recipient %x", recipient_addr);
+    LOG_DBG("Created new send context for recipient %x", tx_can_id);
 
     return 0;
 }
 
 static inline void free_send_ctx(struct isotp_fast_send_ctx **ctx)
 {
-    LOG_DBG("Freeing send context for recipient %x", (*ctx)->recipient_addr);
+    LOG_DBG("Freeing send context for recipient %x", (*ctx)->tx_can_id);
     k_timer_stop(&(*ctx)->timer);
     sys_slist_find_and_remove(&isotp_send_ctx_list, &(*ctx)->node);
     k_mem_slab_free(&isotp_send_ctx_slab, (void **)ctx);
@@ -89,7 +89,7 @@ static inline void free_send_ctx(struct isotp_fast_send_ctx **ctx)
 
 static inline void free_recv_ctx(struct isotp_fast_recv_ctx **rctx)
 {
-    LOG_DBG("Freeing receive context %x", (*rctx)->sender_addr);
+    LOG_DBG("Freeing receive context %x", (*rctx)->rx_can_id);
     k_timer_stop(&(*rctx)->timer);
     sys_slist_find_and_remove(&isotp_recv_ctx_list, &(*rctx)->node);
     net_buf_unref((*rctx)->buffer);
@@ -110,16 +110,16 @@ static void free_recv_ctx_if_unowned(struct isotp_fast_recv_ctx **rctx)
     free_recv_ctx(rctx);
 }
 
-static int get_recv_ctx(struct isotp_fast_ctx *ctx, isotp_fast_msg_id sender_addr,
+static int get_recv_ctx(struct isotp_fast_ctx *ctx, isotp_fast_can_id rx_can_id,
                         struct isotp_fast_recv_ctx **rctx)
 {
-    isotp_fast_node_id sender_id = isotp_fast_get_addr_sender(sender_addr);
+    isotp_fast_node_id source_addr = isotp_fast_get_source_addr(rx_can_id);
     struct isotp_fast_recv_ctx *context;
 
     SYS_SLIST_FOR_EACH_CONTAINER(&isotp_recv_ctx_list, context, node)
     {
-        if (isotp_fast_get_addr_sender(context->sender_addr) == sender_id) {
-            LOG_DBG("Found existing receive context %x", sender_addr);
+        if (isotp_fast_get_source_addr(context->rx_can_id) == source_addr) {
+            LOG_DBG("Found existing receive context %x", rx_can_id);
             *rctx = context;
             context->frag = net_buf_alloc(&isotp_rx_pool, K_NO_WAIT);
             if (context->frag == NULL) {
@@ -149,7 +149,7 @@ static int get_recv_ctx(struct isotp_fast_ctx *ctx, isotp_fast_msg_id sender_add
     *rctx = context;
     context->ctx = ctx;
     context->state = ISOTP_RX_STATE_WAIT_FF_SF;
-    context->sender_addr = sender_addr;
+    context->rx_can_id = rx_can_id;
     context->error = 0;
 #ifdef ISOTP_FAST_RECEIVE_QUEUE
     k_msgq_init(&context->recv_queue, context->recv_queue_pool, sizeof(struct net_buf *),
@@ -159,7 +159,7 @@ static int get_recv_ctx(struct isotp_fast_ctx *ctx, isotp_fast_msg_id sender_add
     k_work_init(&context->work, receive_work_handler);
     k_timer_init(&context->timer, receive_timeout_handler, NULL);
     sys_slist_append(&isotp_recv_ctx_list, &context->node);
-    LOG_DBG("Created new receive context %x", sender_addr);
+    LOG_DBG("Created new receive context %x", rx_can_id);
 
     return 0;
 }
@@ -225,8 +225,8 @@ static void receive_send_fc(struct isotp_fast_recv_ctx *rctx, uint8_t fs)
     struct can_frame frame = {
         .flags =
             CAN_FRAME_IDE | ((rctx->ctx->opts->flags & ISOTP_MSG_FDF) != 0 ? CAN_FRAME_FDF : 0),
-        .id = (rctx->sender_addr & 0xFFFF0000) | ((rctx->sender_addr & 0xFF00) >> 8)
-              | ((rctx->sender_addr & 0xFF) << 8)
+        .id = (rctx->rx_can_id & 0xFFFF0000) | ((rctx->rx_can_id & 0xFF00) >> 8)
+              | ((rctx->rx_can_id & 0xFF) << 8)
     };
     uint8_t *data = frame.data;
     uint8_t payload_len;
@@ -254,11 +254,10 @@ static void notify_waiting_receiver(struct isotp_fast_recv_ctx *rctx)
     struct isotp_fast_recv_await_ctx *awaiter;
     SYS_SLIST_FOR_EACH_CONTAINER(&rctx->ctx->wait_recv_list, awaiter, node)
     {
-        if ((awaiter->sender.id & awaiter->sender.mask)
-            == (rctx->sender_addr & awaiter->sender.mask))
+        if ((awaiter->sender.id & awaiter->sender.mask) == (rctx->rx_can_id & awaiter->sender.mask))
         {
             LOG_DBG("Matched waiting receiver %x:%x to sender %x", awaiter->sender.id,
-                    awaiter->sender.mask, rctx->sender_addr);
+                    awaiter->sender.mask, rctx->rx_can_id);
             awaiter->rctx = rctx;
             rctx->pending = true;
             if (k_sem_count_get(&awaiter->sem) == 0) {
@@ -273,7 +272,7 @@ static void notify_waiting_receiver(struct isotp_fast_recv_ctx *rctx)
         }
     }
 
-    LOG_DBG("No matching receiver for sender %x", rctx->sender_addr);
+    LOG_DBG("No matching receiver for sender %x", rctx->rx_can_id);
 }
 #endif
 
@@ -285,7 +284,7 @@ static void receive_state_machine(struct isotp_fast_recv_ctx *rctx)
         int *p_rem_len = net_buf_user_data(frag);
         LOG_DBG("Remaining length %d (%d), enqueued %d", *p_rem_len, rctx->rem_len,
                 k_msgq_num_used_get(&rctx->recv_queue));
-        rctx->ctx->recv_callback(frag, *p_rem_len, rctx->sender_addr, rctx->ctx->recv_cb_arg);
+        rctx->ctx->recv_callback(frag, *p_rem_len, rctx->rx_can_id, rctx->ctx->recv_cb_arg);
         net_buf_unref(frag);
     }
 #endif
@@ -318,9 +317,6 @@ static void receive_state_machine(struct isotp_fast_recv_ctx *rctx)
 
             if (rctx->ctx->opts->bs) {
                 rctx->bs = rctx->ctx->opts->bs;
-                // ctx->ctx->recv_callback(ctx->buffer, ctx->rem_len, ctx->sender_addr,
-                // ctx->ctx->recv_cb_arg); LOG_INF("Dispatched chunk of length %d; remaining %d",
-                // ctx->buffer->len, ctx->rem_len);
             }
 
             rctx->wft = ISOTP_WFT_FIRST;
@@ -329,11 +325,6 @@ static void receive_state_machine(struct isotp_fast_recv_ctx *rctx)
         case ISOTP_RX_STATE_TRY_ALLOC:
             LOG_DBG("SM try to allocate");
             k_timer_stop(&rctx->timer);
-            // ret = receive_alloc_buffer(ctx);
-            // if (ret) {
-            //     LOG_DBG("SM allocation failed. Wait for free buffer");
-            //     break;
-            // }
 
 #ifdef CONFIG_ISOTP_FAST_BLOCKING_RECEIVE
             notify_waiting_receiver(rctx);
@@ -364,7 +355,7 @@ static void receive_state_machine(struct isotp_fast_recv_ctx *rctx)
             // LOG_DBG("SM ERR state. err nr: %d", ctx->error_nr);
             k_timer_stop(&rctx->timer);
             if (rctx->ctx->recv_error_callback) {
-                rctx->ctx->recv_error_callback(rctx->error, rctx->sender_addr,
+                rctx->ctx->recv_error_callback(rctx->error, rctx->rx_can_id,
                                                rctx->ctx->recv_cb_arg);
             }
 #ifdef CONFIG_ISOTP_FAST_BLOCKING_RECEIVE
@@ -382,7 +373,7 @@ static void receive_state_machine(struct isotp_fast_recv_ctx *rctx)
         case ISOTP_RX_STATE_RECYCLE:
 #ifndef ISOTP_FAST_RECEIVE_QUEUE
             LOG_DBG("Message complete; dispatching");
-            rctx->ctx->recv_callback(rctx->buffer, 0, rctx->sender_addr, rctx->ctx->recv_cb_arg);
+            rctx->ctx->recv_callback(rctx->buffer, 0, rctx->rx_can_id, rctx->ctx->recv_cb_arg);
 #endif
 #ifdef CONFIG_ISOTP_FAST_BLOCKING_RECEIVE
             notify_waiting_receiver(rctx);
@@ -493,7 +484,7 @@ static void process_cf(struct isotp_fast_recv_ctx *rctx, struct can_frame *frame
     if (rctx->ctx->opts->bs && !--rctx->bs) {
         LOG_DBG("Block is complete. Allocate new buffer");
         rctx->bs = rctx->ctx->opts->bs;
-        // rctx->ctx->recv_callback(rctx->buffer, rctx->rem_len, rctx->sender_addr,
+        // rctx->ctx->recv_callback(rctx->buffer, rctx->rem_len, rctx->rx_can_id,
         // rctx->ctx->recv_cb_arg);
         rctx->state = ISOTP_RX_STATE_TRY_ALLOC;
     }
@@ -550,9 +541,9 @@ static void receive_can_rx(struct isotp_fast_recv_ctx *rctx, struct can_frame *f
 }
 
 static inline void prepare_frame(struct can_frame *frame, struct isotp_fast_ctx *ctx,
-                                 isotp_fast_msg_id addr)
+                                 isotp_fast_can_id can_id)
 {
-    frame->id = addr;
+    frame->id = can_id;
     frame->flags = CAN_FRAME_IDE | ((ctx->opts->flags & ISOTP_MSG_FDF) != 0 ? CAN_FRAME_FDF : 0);
 }
 
@@ -630,13 +621,13 @@ static void can_rx_callback(const struct device *dev, struct can_frame *frame, v
 {
     struct isotp_fast_ctx *ctx = arg;
     int index = 0;
-    isotp_fast_msg_id sender_id =
+    isotp_fast_can_id can_id =
         (frame->id & 0xFFFF0000) | ((frame->id & 0xFF00) >> 8) | ((frame->id & 0xFF) << 8);
     if ((frame->data[index++] & ISOTP_PCI_TYPE_MASK) == ISOTP_PCI_TYPE_FC) {
         LOG_DBG("Got flow control frame from %x", frame->id);
         /* inbound flow control for a message we are currently transmitting */
         struct isotp_fast_send_ctx *sctx;
-        if (get_send_ctx(ctx, sender_id, &sctx) != 0) {
+        if (get_send_ctx(ctx, can_id, &sctx) != 0) {
             LOG_DBG("Ignoring flow control frame from %x", frame->id);
             return;
         }
@@ -679,7 +670,7 @@ static inline int send_ff(struct isotp_fast_send_ctx *sctx)
     int ret;
     uint16_t len = sctx->rem_len;
 
-    prepare_frame(&frame, sctx->ctx, sctx->recipient_addr);
+    prepare_frame(&frame, sctx->ctx, sctx->tx_can_id);
 
     if (len > 0xFFF) {
         frame.data[index++] = ISOTP_PCI_TYPE_FF;
@@ -715,7 +706,7 @@ static inline int send_cf(struct isotp_fast_send_ctx *sctx)
     int ret;
     uint16_t len;
 
-    prepare_frame(&frame, sctx->ctx, sctx->recipient_addr);
+    prepare_frame(&frame, sctx->ctx, sctx->tx_can_id);
 
     /*sn wraps around at 0xF automatically because it has a 4 bit size*/
     frame.data[index++] = ISOTP_PCI_TYPE_CF | sctx->sn;
@@ -831,17 +822,17 @@ static void send_timeout_handler(struct k_timer *timer)
     k_work_submit(&sctx->work);
 }
 
-static inline void prepare_filter(struct can_filter *filter, isotp_fast_msg_id my_addr,
+static inline void prepare_filter(struct can_filter *filter, isotp_fast_can_id rx_can_id,
                                   const struct isotp_fast_opts *opts)
 {
-    filter->id = my_addr;
+    filter->id = rx_can_id;
     filter->mask = ISOTP_FIXED_ADDR_RX_MASK;
     filter->flags = CAN_FILTER_DATA | CAN_FILTER_IDE
                     | ((opts->flags & ISOTP_MSG_FDF) != 0 ? CAN_FILTER_FDF : 0);
 }
 
 int isotp_fast_bind(struct isotp_fast_ctx *ctx, const struct device *can_dev,
-                    const isotp_fast_msg_id my_addr, const struct isotp_fast_opts *opts,
+                    const isotp_fast_can_id rx_can_id, const struct isotp_fast_opts *opts,
                     isotp_fast_recv_callback_t recv_callback, void *recv_cb_arg,
                     isotp_fast_recv_error_callback_t recv_error_callback,
                     isotp_fast_send_callback_t sent_callback)
@@ -858,10 +849,10 @@ int isotp_fast_bind(struct isotp_fast_ctx *ctx, const struct device *can_dev,
     ctx->recv_cb_arg = recv_cb_arg;
     ctx->recv_error_callback = recv_error_callback;
     ctx->sent_callback = sent_callback;
-    ctx->my_addr = my_addr;
+    ctx->rx_can_id = rx_can_id;
 
     struct can_filter filter;
-    prepare_filter(&filter, my_addr, opts);
+    prepare_filter(&filter, rx_can_id, opts);
     ctx->filter_id = can_add_rx_filter(ctx->can_dev, can_rx_callback, ctx, &filter);
 
     LOG_INF("Successfully bound to %x:%x", filter.id, filter.mask);
@@ -930,9 +921,9 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
         bool wait = true;
         SYS_SLIST_FOR_EACH_CONTAINER(&isotp_recv_ctx_list, rctx, node)
         {
-            if ((sender.id & sender.mask) == (rctx->sender_addr & sender.mask) && !rctx->pending) {
+            if ((sender.id & sender.mask) == (rctx->rx_can_id & sender.mask) && !rctx->pending) {
                 LOG_DBG("Matched await context %x:%x to sender %x", sender.id, sender.mask,
-                        rctx->sender_addr);
+                        rctx->rx_can_id);
                 actx->rctx = rctx;
                 rctx->pending = true;
                 wait = false;
@@ -1004,14 +995,14 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
 #endif /* CONFIG_ISOTP_FAST_BLOCKING_RECEIVE */
 
 int isotp_fast_send(struct isotp_fast_ctx *ctx, const uint8_t *data, size_t len,
-                    const isotp_fast_node_id their_id, void *cb_arg)
+                    const isotp_fast_node_id target_addr, void *cb_arg)
 {
-    const isotp_fast_msg_id recipient_addr = (ctx->my_addr & 0xFFFF0000)
-                                             | (isotp_fast_get_addr_recipient(ctx->my_addr))
-                                             | (their_id << ISOTP_FIXED_ADDR_TA_POS);
+    const isotp_fast_can_id rx_can_id = (ctx->rx_can_id & 0xFFFF0000)
+                                        | (isotp_fast_get_target_addr(ctx->rx_can_id))
+                                        | (target_addr << ISOTP_FIXED_ADDR_TA_POS);
     if (len <= (CAN_MAX_DLEN - ISOTP_FAST_SF_LEN_BYTE)) {
         struct can_frame frame;
-        prepare_frame(&frame, ctx, recipient_addr);
+        prepare_frame(&frame, ctx, rx_can_id);
         int index = 1;
 #ifdef CONFIG_CAN_FD_MODE
         if (len > ISOTP_4BIT_SF_MAX_CAN_DL - 1) {
@@ -1036,12 +1027,12 @@ int isotp_fast_send(struct isotp_fast_ctx *ctx, const uint8_t *data, size_t len,
             return ISOTP_N_BUFFER_OVERFLW;
         }
         struct isotp_fast_send_ctx *context;
-        int ret = get_send_ctx(ctx, recipient_addr, &context);
+        int ret = get_send_ctx(ctx, rx_can_id, &context);
         if (ret) {
             return ISOTP_NO_NET_BUF_LEFT;
         }
         context->ctx = ctx;
-        context->recipient_addr = recipient_addr;
+        context->tx_can_id = rx_can_id;
         context->data = data;
         context->bs = ctx->opts->bs;
         context->stmin = ctx->opts->stmin;

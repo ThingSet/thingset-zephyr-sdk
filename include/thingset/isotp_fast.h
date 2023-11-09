@@ -12,8 +12,8 @@
 
 /* Represents a sender or a receiver in an ISO-TP fixed addressing scheme */
 typedef uint8_t isotp_fast_node_id;
-/* ISO-TP message ID, i.e. the CAN ID */
-typedef uint32_t isotp_fast_msg_id;
+/* ISO-TP message CAN ID */
+typedef uint32_t isotp_fast_can_id;
 
 /**
  * Callback invoked when a message is received.
@@ -25,21 +25,20 @@ typedef uint32_t isotp_fast_msg_id;
  *                callback may be called repeatedly as a message's packets arrive to reduce
  *                the need to buffer an entire message in memory before it is dispatched
  *                to user code.
- * @param sender_addr The CAN ID of the message that has been received.
+ * @param can_id The CAN ID of the message that has been received.
  * @param arg The value of @ref recv_cb_arg passed to @ref isotp_fast_bind.
  */
 typedef void (*isotp_fast_recv_callback_t)(struct net_buf *buffer, int rem_len,
-                                           isotp_fast_msg_id sender_addr, void *arg);
+                                           isotp_fast_can_id can_id, void *arg);
 
 /**
  * Callback invoked when an error occurs during message receiption.
  *
  * @param error The error code.
- * @param sender_addr The CAN ID of the sender of the message, if available.
+ * @param can_id The CAN ID of the sender of the message, if available.
  * @param arg The value of @ref recv_cb_arg passed to @ref isotp_fast_bind.
  */
-typedef void (*isotp_fast_recv_error_callback_t)(int8_t error, isotp_fast_msg_id sender_addr,
-                                                 void *arg);
+typedef void (*isotp_fast_recv_error_callback_t)(int8_t error, isotp_fast_can_id can_id, void *arg);
 
 /**
  * Callback invoked when a message has been sent.
@@ -79,7 +78,7 @@ struct isotp_fast_ctx
     /** Callback that is invoked when a message is sent */
     isotp_fast_send_callback_t sent_callback;
     /** CAN ID of this node, used in both transmission and receipt of messages */
-    isotp_fast_msg_id my_addr;
+    isotp_fast_can_id rx_can_id;
 #ifdef CONFIG_ISOTP_FAST_BLOCKING_RECEIVE
     sys_slist_t wait_recv_list;
 #endif
@@ -92,8 +91,9 @@ struct isotp_fast_ctx
  *
  * @param ctx A pointer to the general ISO-TP context
  * @param can_dev The CAN device to which the context should be bound
- * @param my_addr The address to listen on for incoming messages or to use
- *                when transmitting messages
+ * @param rx_can_id The address to listen on for incoming messages. When
+ *                  transmitting messages, the target address byte will be
+ *                  used as the source address byte.
  * @param opts A pointer to an options structure, @ref isotp_fast_opts
  * @param recv_callback A callback that is invoked when a message is received
  * @param recv_cb_arg A pointer to data to be supplied to @ref recv_callback
@@ -103,7 +103,7 @@ struct isotp_fast_ctx
  * @returns 0 on success, otherwise an error code < 0.
  */
 int isotp_fast_bind(struct isotp_fast_ctx *ctx, const struct device *can_dev,
-                    const isotp_fast_msg_id my_addr, const struct isotp_fast_opts *opts,
+                    const isotp_fast_can_id rx_can_id, const struct isotp_fast_opts *opts,
                     isotp_fast_recv_callback_t recv_callback, void *recv_cb_arg,
                     isotp_fast_recv_error_callback_t recv_error_callback,
                     isotp_fast_send_callback_t sent_callback);
@@ -131,13 +131,13 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
  * @param ctx The bound context on which the message should be sent
  * @param data A pointer to the data containing the message to send
  * @param len The length of the data in @ref data
- * @param their_id The node ID identifying the recipient. This will be
- *                 combined with the sending address @ref my_addr on @ref ctx to form
- *                 the CAN ID on the message.
+ * @param target_addr The node ID identifying the recipient. This will be
+ *                    combined with the sending address @ref my_addr on @ref
+ *                    ctx to form the CAN ID on the message.
  * @param sent_cb_arg A pointer to data to be supplied to the callback
  *                    that will be invoked when the message is sent.
  *
  * @returns 0 on success.
  */
 int isotp_fast_send(struct isotp_fast_ctx *ctx, const uint8_t *data, size_t len,
-                    const isotp_fast_node_id their_id, void *sent_cb_arg);
+                    const isotp_fast_node_id target_addr, void *sent_cb_arg);

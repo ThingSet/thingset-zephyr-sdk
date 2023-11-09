@@ -201,7 +201,7 @@ ZTEST(isotp_fast_conformance, test_send_sf)
     memcpy(&des_frame.data[SF_LEN_BYTE], random_data, DATA_SIZE_SF);
     des_frame.length = CAN_MAX_DLEN;
 
-    filter_id = add_rx_msgq(tx_addr, CAN_EXT_ID_MASK);
+    filter_id = add_rx_msgq(tx_can_id, CAN_EXT_ID_MASK);
     zassert_true((filter_id >= 0), "Negative filter number [%d]", filter_id);
 
     send_sf();
@@ -222,7 +222,7 @@ ZTEST(isotp_fast_conformance, test_receive_sf)
     memcpy(&single_frame.data[SF_LEN_BYTE], random_data, DATA_SIZE_SF);
     single_frame.length = CAN_MAX_DLEN;
 
-    send_frame_series(&single_frame, 1, rx_addr);
+    send_frame_series(&single_frame, 1, rx_can_id);
 
     get_sf(&ctx, DATA_SIZE_SF);
 
@@ -231,7 +231,7 @@ ZTEST(isotp_fast_conformance, test_receive_sf)
 #else
     single_frame.data[0] = SF_PCI_BYTE_LEN_8;
 #endif
-    send_frame_series(&single_frame, 1, rx_addr);
+    send_frame_series(&single_frame, 1, rx_can_id);
 
     get_sf_ignore(&ctx);
 }
@@ -251,7 +251,7 @@ ZTEST(isotp_fast_conformance, test_send_sf_fixed)
     des_frame.length = CAN_MAX_DLEN;
 
     /* mask to allow any priority and source address (SA) */
-    filter_id = add_rx_msgq(tx_addr, CAN_EXT_ID_MASK);
+    filter_id = add_rx_msgq(tx_can_id, CAN_EXT_ID_MASK);
     zassert_true((filter_id >= 0), "Negative filter number [%d]", filter_id);
 
     ret = isotp_fast_send(&ctx, random_data, DATA_SIZE_SF, rx_node_id, INT_TO_POINTER(ISOTP_N_OK));
@@ -274,19 +274,19 @@ ZTEST(isotp_fast_conformance, test_receive_sf_fixed)
     single_frame.length = CAN_MAX_DLEN;
 
     /* default source address */
-    send_frame_series(&single_frame, 1, rx_addr);
+    send_frame_series(&single_frame, 1, rx_can_id);
     get_sf(&ctx, DATA_SIZE_SF);
 
     /* different source address */
-    send_frame_series(&single_frame, 1, rx_addr | 0xFF);
+    send_frame_series(&single_frame, 1, rx_can_id | 0xFF);
     get_sf(&ctx, DATA_SIZE_SF);
 
     /* different priority */
-    send_frame_series(&single_frame, 1, rx_addr | (7U << 26));
+    send_frame_series(&single_frame, 1, rx_can_id | (7U << 26));
     get_sf(&ctx, DATA_SIZE_SF);
 
     /* different target address (should fail) */
-    send_frame_series(&single_frame, 1, rx_addr | 0xFF00);
+    send_frame_series(&single_frame, 1, rx_can_id | 0xFF00);
     get_sf_ignore(&ctx);
 }
 
@@ -310,14 +310,14 @@ ZTEST(isotp_fast_conformance, test_send_data)
 
     prepare_cf_frames(des_frames, ARRAY_SIZE(des_frames), data_ptr, remaining_length);
 
-    filter_id = add_rx_msgq(tx_addr, CAN_EXT_ID_MASK);
+    filter_id = add_rx_msgq(tx_can_id, CAN_EXT_ID_MASK);
     zassert_true((filter_id >= 0), "Negative filter number [%d]", filter_id);
 
     send_test_data(random_data, DATA_SEND_LENGTH);
 
     check_frame_series(&ff_frame, 1, &frame_msgq);
 
-    send_frame_series(&fc_frame, 1, rx_addr);
+    send_frame_series(&fc_frame, 1, rx_can_id);
 
     check_frame_series(des_frames, ARRAY_SIZE(des_frames), &frame_msgq);
 }
@@ -349,7 +349,7 @@ ZTEST(isotp_fast_conformance, test_send_data_blocks)
 
     remaining_length = DATA_SEND_LENGTH;
 
-    filter_id = add_rx_msgq(tx_addr, CAN_EXT_ID_MASK);
+    filter_id = add_rx_msgq(tx_can_id, CAN_EXT_ID_MASK);
     zassert_true((filter_id >= 0), "Negative filter number [%d]", filter_id);
 
     send_test_data(random_data, DATA_SEND_LENGTH);
@@ -357,7 +357,7 @@ ZTEST(isotp_fast_conformance, test_send_data_blocks)
     check_frame_series(&ff_frame, 1, &frame_msgq);
     remaining_length -= DATA_SIZE_FF;
 
-    send_frame_series(&fc_frame, 1, rx_addr);
+    send_frame_series(&fc_frame, 1, rx_can_id);
 
     check_frame_series(data_frame_ptr, fc_opts.bs, &frame_msgq);
     data_frame_ptr += fc_opts.bs;
@@ -366,7 +366,7 @@ ZTEST(isotp_fast_conformance, test_send_data_blocks)
     zassert_equal(ret, -EAGAIN, "Expected timeout but got %d", ret);
 
     fc_frame.data[1] = FC_PCI_BYTE_2(2);
-    send_frame_series(&fc_frame, 1, rx_addr);
+    send_frame_series(&fc_frame, 1, rx_can_id);
 
     /* dynamic bs */
     check_frame_series(data_frame_ptr, 2, &frame_msgq);
@@ -377,7 +377,7 @@ ZTEST(isotp_fast_conformance, test_send_data_blocks)
 
     /* get the rest */
     fc_frame.data[1] = FC_PCI_BYTE_2(0);
-    send_frame_series(&fc_frame, 1, rx_addr);
+    send_frame_series(&fc_frame, 1, rx_can_id);
 
     check_frame_series(data_frame_ptr, DIV_ROUND_UP(remaining_length, DATA_SIZE_CF), &frame_msgq);
     ret = k_msgq_get(&frame_msgq, &dummy_frame, K_MSEC(50));
@@ -405,13 +405,13 @@ ZTEST(isotp_fast_conformance, test_receive_data)
 
     prepare_cf_frames(des_frames, ARRAY_SIZE(des_frames), data_ptr, remaining_length);
 
-    filter_id = add_rx_msgq(tx_addr, CAN_EXT_ID_MASK);
+    filter_id = add_rx_msgq(tx_can_id, CAN_EXT_ID_MASK);
 
-    send_frame_series(&ff_frame, 1, rx_addr);
+    send_frame_series(&ff_frame, 1, rx_can_id);
 
     check_frame_series(&fc_frame, 1, &frame_msgq);
 
-    send_frame_series(des_frames, ARRAY_SIZE(des_frames), rx_addr);
+    send_frame_series(des_frames, ARRAY_SIZE(des_frames), rx_can_id);
 
     receive_test_data(&ctx, random_data, DATA_SEND_LENGTH, 0);
 }
@@ -443,21 +443,21 @@ ZTEST(isotp_fast_conformance, test_receive_data_blocks)
 
     remaining_frames = DIV_ROUND_UP(remaining_length, DATA_SIZE_CF);
 
-    filter_id = add_rx_msgq(tx_addr, CAN_EXT_ID_MASK);
+    filter_id = add_rx_msgq(tx_can_id, CAN_EXT_ID_MASK);
     zassert_true((filter_id >= 0), "Negative filter number [%d]", filter_id);
 
-    send_frame_series(&ff_frame, 1, rx_addr);
+    send_frame_series(&ff_frame, 1, rx_can_id);
 
     while (remaining_frames) {
         check_frame_series(&fc_frame, 1, &frame_msgq);
 
         if (remaining_frames >= fc_opts.bs) {
-            send_frame_series(data_frame_ptr, fc_opts.bs, rx_addr);
+            send_frame_series(data_frame_ptr, fc_opts.bs, rx_can_id);
             data_frame_ptr += fc_opts.bs;
             remaining_frames -= fc_opts.bs;
         }
         else {
-            send_frame_series(data_frame_ptr, remaining_frames, rx_addr);
+            send_frame_series(data_frame_ptr, remaining_frames, rx_can_id);
             data_frame_ptr += remaining_frames;
             remaining_frames = 0;
         }
@@ -499,7 +499,7 @@ ZTEST(isotp_fast_conformance, test_send_timeouts)
                           INT_TO_POINTER(ISOTP_N_TIMEOUT_BS));
     zassert_equal(ret, ISOTP_N_OK, "Send returned %d", ret);
 
-    send_frame_series(&fc_cts_frame, 1, rx_addr);
+    send_frame_series(&fc_cts_frame, 1, rx_can_id);
 
     start_time = k_uptime_get_32();
     ret = k_sem_take(&send_compl_sem, K_MSEC(BS_TIMEOUT_UPPER_MS));
@@ -518,7 +518,7 @@ ZTEST(isotp_fast_conformance, test_send_timeouts)
     zassert_equal(ret, -EAGAIN, "Timeout too early");
 
     fc_cts_frame.data[0] = FC_PCI_BYTE_1(FC_PCI_CTS);
-    send_frame_series(&fc_cts_frame, 1, rx_addr);
+    send_frame_series(&fc_cts_frame, 1, rx_can_id);
 
     start_time = k_uptime_get_32();
     ret = k_sem_take(&send_compl_sem, K_MSEC(BS_TIMEOUT_UPPER_MS));
@@ -538,7 +538,7 @@ ZTEST(isotp_fast_conformance, test_receive_timeouts)
     memcpy(&ff_frame.data[2], random_data, DATA_SIZE_FF);
     ff_frame.length = DATA_SIZE_FF + 2;
 
-    send_frame_series(&ff_frame, 1, rx_addr);
+    send_frame_series(&ff_frame, 1, rx_can_id);
     start_time = k_uptime_get_32();
 
     ret = blocking_recv(data_buf, sizeof(data_buf), K_FOREVER);
@@ -573,14 +573,14 @@ ZTEST(isotp_fast_conformance, test_stmin)
     fc_frame.data[2] = FC_PCI_BYTE_3(STMIN_VAL_1);
     fc_frame.length = DATA_SIZE_FC;
 
-    filter_id = add_rx_msgq(rx_addr, CAN_EXT_ID_MASK);
+    filter_id = add_rx_msgq(rx_can_id, CAN_EXT_ID_MASK);
     zassert_true((filter_id >= 0), "Negative filter number [%d]", filter_id);
 
     send_test_data(random_data, DATA_SIZE_FF + DATA_SIZE_CF * 4);
 
     check_frame_series(&ff_frame, 1, &frame_msgq);
 
-    send_frame_series(&fc_frame, 1, tx_addr);
+    send_frame_series(&fc_frame, 1, tx_can_id);
 
     ret = k_msgq_get(&frame_msgq, &raw_frame, K_MSEC(100));
     zassert_equal(ret, 0, "Expected to get a message. [%d]", ret);
@@ -593,7 +593,7 @@ ZTEST(isotp_fast_conformance, test_stmin)
     zassert_true(time_diff >= STMIN_VAL_1, "STmin too short (%dms)", time_diff);
 
     fc_frame.data[2] = FC_PCI_BYTE_3(STMIN_VAL_2);
-    send_frame_series(&fc_frame, 1, tx_addr);
+    send_frame_series(&fc_frame, 1, tx_can_id);
 
     ret = k_msgq_get(&frame_msgq, &raw_frame, K_MSEC(100));
     zassert_equal(ret, 0, "Expected to get a message. [%d]", ret);
@@ -621,11 +621,11 @@ ZTEST(isotp_fast_conformance, test_receiver_fc_errors)
     fc_frame.data[2] = FC_PCI_BYTE_3(fc_opts.stmin);
     fc_frame.length = DATA_SIZE_FC;
 
-    filter_id = add_rx_msgq(tx_addr, CAN_EXT_ID_MASK);
+    filter_id = add_rx_msgq(tx_can_id, CAN_EXT_ID_MASK);
     zassert_true((filter_id >= 0), "Negative filter number [%d]", filter_id);
 
     /* wrong sequence number */
-    send_frame_series(&ff_frame, 1, rx_addr);
+    send_frame_series(&ff_frame, 1, rx_can_id);
     check_frame_series(&fc_frame, 1, &frame_msgq);
 
     /* original version of this test used data_buf, but then the receive just
@@ -641,7 +641,7 @@ ZTEST(isotp_fast_conformance, test_receiver_fc_errors)
                       sizeof(random_data) - DATA_SIZE_FF);
     /* SN should be 2 but is set to 3 for this test */
     des_frames[1].data[0] = CF_PCI_BYTE_1 | (3 & 0x0F);
-    send_frame_series(des_frames, ARRAY_SIZE(des_frames), rx_addr);
+    send_frame_series(des_frames, ARRAY_SIZE(des_frames), rx_can_id);
 
     ret = blocking_recv(data_buf, sizeof(data_buf), K_MSEC(200));
     zassert_equal(ret, ISOTP_N_WRONG_SN, "Expected wrong SN but got %d", ret);
@@ -657,7 +657,7 @@ ZTEST(isotp_fast_conformance, test_sender_fc_errors)
     memcpy(&ff_frame.data[2], random_data, DATA_SIZE_FF);
     ff_frame.length = DATA_SIZE_FF + 2;
 
-    filter_id = add_rx_msgq(tx_addr, CAN_EXT_ID_MASK);
+    filter_id = add_rx_msgq(tx_can_id, CAN_EXT_ID_MASK);
 
     /* invalid flow status */
     fc_frame.data[0] = FC_PCI_BYTE_1(3);
@@ -671,7 +671,7 @@ ZTEST(isotp_fast_conformance, test_sender_fc_errors)
     zassert_equal(ret, ISOTP_N_OK, "Send returned %d", ret);
 
     check_frame_series(&ff_frame, 1, &frame_msgq);
-    send_frame_series(&fc_frame, 1, rx_addr);
+    send_frame_series(&fc_frame, 1, rx_can_id);
     ret = k_sem_take(&send_compl_sem, K_MSEC(200));
     zassert_equal(ret, 0, "Send complete callback not called");
 
@@ -680,7 +680,7 @@ ZTEST(isotp_fast_conformance, test_sender_fc_errors)
 
     ret = isotp_fast_send(&ctx, random_data, 5 * 1024, rx_node_id, NULL);
     zassert_equal(ret, ISOTP_N_BUFFER_OVERFLW, "Expected overflow but got %d", ret);
-    filter_id = add_rx_msgq(tx_addr, CAN_EXT_ID_MASK);
+    filter_id = add_rx_msgq(tx_can_id, CAN_EXT_ID_MASK);
 
     k_sem_reset(&send_compl_sem);
     ret = isotp_fast_send(&ctx, random_data, DATA_SEND_LENGTH, rx_node_id,
@@ -688,7 +688,7 @@ ZTEST(isotp_fast_conformance, test_sender_fc_errors)
 
     check_frame_series(&ff_frame, 1, &frame_msgq);
     fc_frame.data[0] = FC_PCI_BYTE_1(FC_PCI_OVFLW);
-    send_frame_series(&fc_frame, 1, rx_addr);
+    send_frame_series(&fc_frame, 1, rx_can_id);
     ret = k_sem_take(&send_compl_sem, K_MSEC(200));
     zassert_equal(ret, 0, "Send complete callback not called");
 
@@ -700,7 +700,7 @@ ZTEST(isotp_fast_conformance, test_sender_fc_errors)
     check_frame_series(&ff_frame, 1, &frame_msgq);
     fc_frame.data[0] = FC_PCI_BYTE_1(FC_PCI_WAIT);
     for (i = 0; i < CONFIG_ISOTP_WFTMAX + 1; i++) {
-        send_frame_series(&fc_frame, 1, rx_addr);
+        send_frame_series(&fc_frame, 1, rx_can_id);
     }
 
     ret = k_sem_take(&send_compl_sem, K_MSEC(200));
@@ -718,7 +718,7 @@ ZTEST(isotp_fast_conformance, test_sf_length)
     des_frame.length = 8;
 
     /* mask to allow any priority and source address (SA) */
-    filter_id = add_rx_msgq(tx_addr, CAN_EXT_ID_MASK);
+    filter_id = add_rx_msgq(tx_can_id, CAN_EXT_ID_MASK);
     zassert_true((filter_id >= 0), "Negative filter number [%d]", filter_id);
 
     ret = isotp_fast_send(&ctx, random_data, 7, rx_node_id, INT_TO_POINTER(ISOTP_N_OK));
@@ -766,7 +766,7 @@ void isotp_fast_conformance_before(void *)
     filter_id = -1;
     k_msgq_purge(&frame_msgq);
 
-    isotp_fast_bind(&ctx, can_dev, rx_addr, &fc_opts, isotp_fast_recv_handler, NULL,
+    isotp_fast_bind(&ctx, can_dev, rx_can_id, &fc_opts, isotp_fast_recv_handler, NULL,
                     isotp_fast_recv_error_handler, isotp_fast_sent_handler);
 }
 

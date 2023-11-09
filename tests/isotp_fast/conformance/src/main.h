@@ -72,8 +72,8 @@ const struct isotp_fast_opts fc_opts = {
 #endif
 };
 
-const isotp_fast_msg_id rx_addr = 0x18DA0201;
-const isotp_fast_msg_id tx_addr = 0x18DA0102;
+const isotp_fast_can_id rx_can_id = 0x18DA0201;
+const isotp_fast_can_id tx_can_id = 0x18DA0102;
 
 const isotp_fast_node_id rx_node_id = 0x01;
 const isotp_fast_node_id tx_node_id = 0x02;
