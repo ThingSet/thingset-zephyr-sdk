@@ -43,18 +43,13 @@ NET_BUF_POOL_DEFINE(isotp_rx_pool,
                     CONFIG_ISOTP_FAST_RX_BUF_COUNT *CONFIG_ISOTP_FAST_RX_MAX_PACKET_COUNT,
                     CAN_MAX_DLEN - 1, sizeof(int), NULL);
 
-/* list of currently in-flight send contexts */
-static sys_slist_t isotp_send_ctx_list;
-/* list of currently in-flight receive contexts */
-static sys_slist_t isotp_recv_ctx_list;
-
 static int get_send_ctx(struct isotp_fast_ctx *ctx, isotp_fast_can_id tx_can_id,
                         struct isotp_fast_send_ctx **sctx)
 {
     isotp_fast_node_id target_addr = isotp_fast_get_target_addr(tx_can_id);
     struct isotp_fast_send_ctx *context;
 
-    SYS_SLIST_FOR_EACH_CONTAINER(&isotp_send_ctx_list, context, node)
+    SYS_SLIST_FOR_EACH_CONTAINER(&ctx->isotp_send_ctx_list, context, node)
     {
         if (isotp_fast_get_target_addr(context->tx_can_id) == target_addr) {
             LOG_DBG("Found existing send context for recipient %x", tx_can_id);
@@ -73,25 +68,25 @@ static int get_send_ctx(struct isotp_fast_ctx *ctx, isotp_fast_can_id tx_can_id,
     context->error = 0;
     k_work_init(&context->work, receive_work_handler);
     k_timer_init(&context->timer, receive_timeout_handler, NULL);
-    sys_slist_append(&isotp_send_ctx_list, &context->node);
+    sys_slist_append(&ctx->isotp_send_ctx_list, &context->node);
     LOG_DBG("Created new send context for recipient %x", tx_can_id);
 
     return 0;
 }
 
-static inline void free_send_ctx(struct isotp_fast_send_ctx **ctx)
+static inline void free_send_ctx(struct isotp_fast_send_ctx **sctx)
 {
-    LOG_DBG("Freeing send context for recipient %x", (*ctx)->tx_can_id);
-    k_timer_stop(&(*ctx)->timer);
-    sys_slist_find_and_remove(&isotp_send_ctx_list, &(*ctx)->node);
-    k_mem_slab_free(&isotp_send_ctx_slab, (void **)ctx);
+    LOG_DBG("Freeing send context for recipient %x", (*sctx)->tx_can_id);
+    k_timer_stop(&(*sctx)->timer);
+    sys_slist_find_and_remove(&(*sctx)->ctx->isotp_send_ctx_list, &(*sctx)->node);
+    k_mem_slab_free(&isotp_send_ctx_slab, (void **)sctx);
 }
 
 static inline void free_recv_ctx(struct isotp_fast_recv_ctx **rctx)
 {
     LOG_DBG("Freeing receive context %x", (*rctx)->rx_can_id);
     k_timer_stop(&(*rctx)->timer);
-    sys_slist_find_and_remove(&isotp_recv_ctx_list, &(*rctx)->node);
+    sys_slist_find_and_remove(&(*rctx)->ctx->isotp_recv_ctx_list, &(*rctx)->node);
     net_buf_unref((*rctx)->buffer);
 #ifdef ISOTP_FAST_RECEIVE_QUEUE
     k_msgq_purge(&(*rctx)->recv_queue);
@@ -116,7 +111,7 @@ static int get_recv_ctx(struct isotp_fast_ctx *ctx, isotp_fast_can_id rx_can_id,
     isotp_fast_node_id source_addr = isotp_fast_get_source_addr(rx_can_id);
     struct isotp_fast_recv_ctx *context;
 
-    SYS_SLIST_FOR_EACH_CONTAINER(&isotp_recv_ctx_list, context, node)
+    SYS_SLIST_FOR_EACH_CONTAINER(&ctx->isotp_recv_ctx_list, context, node)
     {
         if (isotp_fast_get_source_addr(context->rx_can_id) == source_addr) {
             LOG_DBG("Found existing receive context %x", rx_can_id);
@@ -158,7 +153,7 @@ static int get_recv_ctx(struct isotp_fast_ctx *ctx, isotp_fast_can_id rx_can_id,
 #endif
     k_work_init(&context->work, receive_work_handler);
     k_timer_init(&context->timer, receive_timeout_handler, NULL);
-    sys_slist_append(&isotp_recv_ctx_list, &context->node);
+    sys_slist_append(&ctx->isotp_recv_ctx_list, &context->node);
     LOG_DBG("Created new receive context %x", rx_can_id);
 
     return 0;
@@ -837,8 +832,8 @@ int isotp_fast_bind(struct isotp_fast_ctx *ctx, const struct device *can_dev,
                     isotp_fast_recv_error_callback_t recv_error_callback,
                     isotp_fast_send_callback_t sent_callback)
 {
-    sys_slist_init(&isotp_send_ctx_list);
-    sys_slist_init(&isotp_recv_ctx_list);
+    sys_slist_init(&ctx->isotp_send_ctx_list);
+    sys_slist_init(&ctx->isotp_recv_ctx_list);
 #ifdef CONFIG_ISOTP_FAST_BLOCKING_RECEIVE
     sys_slist_init(&ctx->wait_recv_list);
 #endif
@@ -919,7 +914,7 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
         /* try to find matching receive context in case there is already one pending */
         struct isotp_fast_recv_ctx *rctx;
         bool wait = true;
-        SYS_SLIST_FOR_EACH_CONTAINER(&isotp_recv_ctx_list, rctx, node)
+        SYS_SLIST_FOR_EACH_CONTAINER(&ctx->isotp_recv_ctx_list, rctx, node)
         {
             if ((sender.id & sender.mask) == (rctx->rx_can_id & sender.mask) && !rctx->pending) {
                 LOG_DBG("Matched await context %x:%x to sender %x", sender.id, sender.mask,

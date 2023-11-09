@@ -63,6 +63,10 @@ struct isotp_fast_opts
  */
 struct isotp_fast_ctx
 {
+    /** list of currently in-flight send contexts */
+    sys_slist_t isotp_send_ctx_list;
+    /** list of currently in-flight receive contexts */
+    sys_slist_t isotp_recv_ctx_list;
     /** The CAN device to which the context is bound via @ref isotp_fast_bind */
     const struct device *can_dev;
     /** Identifies the CAN filter which filters incoming messages */
