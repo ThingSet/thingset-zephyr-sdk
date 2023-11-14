@@ -10,6 +10,10 @@
 #include <zephyr/canbus/isotp.h>
 #include <zephyr/device.h>
 
+#ifdef CONFIG_ISOTP_FAST
+#include "isotp_fast.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -138,6 +142,19 @@ extern "C" {
  */
 typedef void (*thingset_can_report_rx_callback_t)(uint16_t data_id, const uint8_t *value,
                                                   size_t value_len, uint8_t source_addr);
+#ifdef CONFIG_ISOTP_FAST
+typedef void (*thingset_can_response_callback_t)(uint8_t *data, size_t len, int result,
+                                                 uint8_t sender_id, void *arg);
+
+struct thingset_can_request_response
+{
+    struct k_sem sem;
+    struct k_timer timer;
+    isotp_fast_can_id can_id;
+    thingset_can_response_callback_t callback;
+    void *cb_arg;
+};
+#endif /* CONFIG_ISOTP_FAST */
 
 /**
  * ThingSet CAN context storing all information required for one instance.
@@ -147,13 +164,20 @@ struct thingset_can
     const struct device *dev;
     struct k_work_delayable reporting_work;
     struct k_work_delayable addr_claim_work;
+#ifdef CONFIG_ISOTP_FAST
+    struct isotp_fast_ctx ctx;
+#else
     struct isotp_recv_ctx recv_ctx;
     struct isotp_send_ctx send_ctx;
     struct isotp_msg_id rx_addr;
     struct isotp_msg_id tx_addr;
+#endif
     struct k_event events;
-    thingset_can_report_rx_callback_t report_rx_cb;
+#ifdef CONFIG_ISOTP_FAST
+    struct thingset_can_request_response request_response;
+#endif
     uint8_t rx_buffer[CONFIG_THINGSET_CAN_RX_BUF_SIZE];
+    thingset_can_report_rx_callback_t report_rx_cb;
     int64_t next_pub_time;
     uint8_t node_addr;
 };
@@ -174,6 +198,25 @@ struct thingset_can
 int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buf, size_t rx_buf_size,
                               uint8_t *source_addr, k_timeout_t timeout);
 
+#ifdef CONFIG_ISOTP_FAST
+/**
+ * Send ThingSet message to other node
+ *
+ * @param ts_can Pointer to the thingset_can context.
+ * @param tx_buf Buffer containing the message.
+ * @param tx_len Length of the message.
+ * @param target_addr Target node address (8-bit value) to send the message to.
+ * @param rsp_callback If a response is expected, this callback will be invoked,
+ *                     either when it arrives or if a timeout or some other error occurs.
+ * @param callback_arg User data for the callback.
+ * @param timeout Timeout to wait for a response.
+ *
+ * @returns 0 for success or negative errno in case of error
+ */
+int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
+                           uint8_t target_addr, thingset_can_response_callback_t rsp_callback,
+                           void *callback_arg, k_timeout_t timeout);
+#else
 /**
  * Send ThingSet message to other node
  *
@@ -205,6 +248,7 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
  * @retval -EAGAIN in case of timeout
  */
 int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout);
+#endif /* CONFIG_ISOTP_FAST */
 
 /**
  * Set callback for received reports from other nodes
@@ -231,6 +275,20 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 
 #else /* !CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES */
 
+#ifdef CONFIG_ISOTP_FAST
+/**
+ * Send ThingSet message to other node
+ *
+ * @param tx_buf Buffer containing the message.
+ * @param tx_len Length of the message.
+ * @param target_addr Target node address (8-bit value) to send the message to.
+ *
+ * @returns 0 for success or negative errno in case of error
+ */
+int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr,
+                      thingset_can_response_callback_t rsp_callback, void *callback_arg,
+                      k_timeout_t timeout);
+#else
 /**
  * Send ThingSet message to other node
  *
@@ -241,6 +299,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
  * @returns 0 for success or negative errno in case of error
  */
 int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr);
+#endif /* CONFIG_ISOTP_FAST */
 
 /**
  * Set callback for received reports from other nodes

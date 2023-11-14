@@ -8,4 +8,4 @@ With twister:
 
 Manually (`tests/can` used as an example):
 
-    west build -b native_posix tests/can -t run
+    west build -b native_posix -T tests/can/thingset_sdk.can -t run
