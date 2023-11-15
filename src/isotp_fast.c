@@ -1015,7 +1015,7 @@ int isotp_fast_send(struct isotp_fast_ctx *ctx, const uint8_t *data, size_t len,
         memcpy(&frame.data[index], data, len);
         int ret = can_send(ctx->can_dev, &frame, K_MSEC(ISOTP_A_TIMEOUT_MS), NULL, NULL);
         ctx->sent_callback(ret, cb_arg);
-        return ISOTP_N_OK;
+        return ret;
     }
     else {
         if (len > ISOTP_FAST_MAX_LEN) {
