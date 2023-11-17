@@ -778,35 +778,24 @@ struct thingset_can *thingset_can_get_inst()
     return &ts_can_single;
 }
 
-static int thingset_can_init()
+static void thingset_can_thread()
 {
     int err;
 
     err = thingset_can_init_inst(&ts_can_single, can_dev);
     if (err != 0) {
         LOG_ERR("Failed to init ThingSet CAN: %d", err);
-        return err;
-    }
-
-    return 0;
-}
-
-#ifdef CONFIG_ISOTP_FAST
-SYS_INIT(thingset_can_init, APPLICATION, THINGSET_INIT_PRIORITY_DEFAULT);
-#else
-static void thingset_can_thread()
-{
-    if (thingset_can_init() != 0) {
         return;
     }
 
+#ifndef CONFIG_ISOTP_FAST
     while (true) {
         thingset_can_process_inst(&ts_can_single, K_FOREVER);
     }
+#endif
 }
 
 K_THREAD_DEFINE(thingset_can, CONFIG_THINGSET_CAN_THREAD_STACK_SIZE, thingset_can_thread, NULL,
                 NULL, NULL, CONFIG_THINGSET_CAN_THREAD_PRIORITY, 0, 0);
-#endif /* CONFIG_ISOTP_FAST */
 
 #endif /* !CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES */
