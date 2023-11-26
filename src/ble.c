@@ -85,7 +85,7 @@ volatile bool notify_resp;
 
 static char rx_buf[CONFIG_THINGSET_BLE_RX_BUF_SIZE];
 
-static volatile size_t rx_buf_pos = 0;
+static size_t rx_buf_pos = 0;
 static bool discard_buffer;
 
 /* binary semaphore used as mutex in ISR context */

@@ -39,17 +39,17 @@ jobs:
       - name: Run sample build tests
         working-directory: thingset-zephyr-sdk
         run: |
-          west build -p -b olimex_lora_stm32wl_devkit samples/counter -- -DOVERLAY_CONFIG=lorawan.conf
-          west build -p -b esp32c3_devkitm samples/counter -- -DOVERLAY_CONFIG=ble.conf
-          west build -p -b esp32c3_devkitm samples/counter -- -DOVERLAY_CONFIG=wifi_websocket.conf
-          west build -p -b native_posix samples/counter
-          west build -p -b nucleo_l073rz samples/counter -- -DOVERLAY_CONFIG=serial.conf
-          west build -p -b nucleo_l073rz samples/counter -- -DOVERLAY_CONFIG=storage_eeprom.conf
-          west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=auth.conf
-          west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=can.conf
-          west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=log_backend.conf
-          west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=native_websocket.conf
-          west build -p -b xiao_esp32c3 samples/serial_ble_gateway
+          west build -p -b olimex_lora_stm32wl_devkit samples/counter -- -DOVERLAY_CONFIG=lorawan.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
+          west build -p -b esp32c3_devkitm samples/counter -- -DOVERLAY_CONFIG=ble.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
+          west build -p -b esp32c3_devkitm samples/counter -- -DOVERLAY_CONFIG=wifi_websocket.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
+          west build -p -b native_posix samples/counter -- -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
+          west build -p -b nucleo_l073rz samples/counter -- -DOVERLAY_CONFIG=serial.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
+          west build -p -b nucleo_l073rz samples/counter -- -DOVERLAY_CONFIG=storage_eeprom.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
+          west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=auth.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
+          west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=can.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
+          west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=log_backend.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
+          west build -p -b native_posix samples/counter -- -DOVERLAY_CONFIG=native_websocket.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
+          west build -p -b xiao_esp32c3 samples/serial_ble_gateway -- -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
 
       - name: Run unit tests
         working-directory: thingset-zephyr-sdk
