@@ -60,6 +60,7 @@ endmenu # General Publication Settings
 config THINGSET_GENERATE_NODE_ID
     bool "Automatically generate node ID"
     select HWINFO
+    select CRC
     default y
 
 config THINGSET_NODE_NAME

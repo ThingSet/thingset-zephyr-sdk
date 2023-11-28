@@ -74,31 +74,31 @@ static int get_send_ctx(struct isotp_fast_ctx *ctx, isotp_fast_can_id tx_can_id,
     return 0;
 }
 
-static inline void free_send_ctx(struct isotp_fast_send_ctx **sctx)
+static inline void free_send_ctx(struct isotp_fast_send_ctx *sctx)
 {
-    LOG_DBG("Freeing send context for recipient %x", (*sctx)->tx_can_id);
-    k_timer_stop(&(*sctx)->timer);
-    sys_slist_find_and_remove(&(*sctx)->ctx->isotp_send_ctx_list, &(*sctx)->node);
-    k_mem_slab_free(&isotp_send_ctx_slab, (void **)sctx);
+    LOG_DBG("Freeing send context for recipient %x", sctx->tx_can_id);
+    k_timer_stop(&sctx->timer);
+    sys_slist_find_and_remove(&sctx->ctx->isotp_send_ctx_list, &sctx->node);
+    k_mem_slab_free(&isotp_send_ctx_slab, sctx);
 }
 
-static inline void free_recv_ctx(struct isotp_fast_recv_ctx **rctx)
+static inline void free_recv_ctx(struct isotp_fast_recv_ctx *rctx)
 {
-    LOG_DBG("Freeing receive context %x", (*rctx)->rx_can_id);
-    k_timer_stop(&(*rctx)->timer);
-    sys_slist_find_and_remove(&(*rctx)->ctx->isotp_recv_ctx_list, &(*rctx)->node);
-    net_buf_unref((*rctx)->buffer);
+    LOG_DBG("Freeing receive context %x", rctx->rx_can_id);
+    k_timer_stop(&rctx->timer);
+    sys_slist_find_and_remove(&rctx->ctx->isotp_recv_ctx_list, &rctx->node);
+    net_buf_unref(rctx->buffer);
 #ifdef ISOTP_FAST_RECEIVE_QUEUE
-    k_msgq_purge(&(*rctx)->recv_queue);
-    k_msgq_cleanup(&(*rctx)->recv_queue);
+    k_msgq_purge(&rctx->recv_queue);
+    k_msgq_cleanup(&rctx->recv_queue);
 #endif
-    k_mem_slab_free(&isotp_recv_ctx_slab, (void **)rctx);
+    k_mem_slab_free(&isotp_recv_ctx_slab, rctx);
 }
 
-static void free_recv_ctx_if_unowned(struct isotp_fast_recv_ctx **rctx)
+static void free_recv_ctx_if_unowned(struct isotp_fast_recv_ctx *rctx)
 {
 #ifdef ISOTP_FAST_RECEIVE_QUEUE
-    if ((*rctx)->pending) {
+    if (rctx->pending) {
         return;
     }
 #endif
@@ -119,7 +119,7 @@ static int get_recv_ctx(struct isotp_fast_ctx *ctx, isotp_fast_can_id rx_can_id,
             context->frag = net_buf_alloc(&isotp_rx_pool, K_NO_WAIT);
             if (context->frag == NULL) {
                 LOG_ERR("No free buffers");
-                free_recv_ctx(rctx);
+                free_recv_ctx(*rctx);
                 return ISOTP_NO_NET_BUF_LEFT;
             }
 #ifndef ISOTP_FAST_RECEIVE_QUEUE
@@ -136,7 +136,7 @@ static int get_recv_ctx(struct isotp_fast_ctx *ctx, isotp_fast_can_id rx_can_id,
     }
     context->buffer = net_buf_alloc(&isotp_rx_pool, K_NO_WAIT);
     if (!context->buffer) {
-        k_mem_slab_free(&isotp_recv_ctx_slab, (void **)&context);
+        k_mem_slab_free(&isotp_recv_ctx_slab, context);
         LOG_ERR("No net bufs.");
         return ISOTP_NO_NET_BUF_LEFT;
     }
@@ -363,7 +363,7 @@ static void receive_state_machine(struct isotp_fast_recv_ctx *rctx)
             // net_buf_unref(ctx->buffer);
             // ctx->buffer = NULL;
             // ctx->state = ISOTP_RX_STATE_RECYCLE;
-            free_recv_ctx_if_unowned(&rctx);
+            free_recv_ctx_if_unowned(rctx);
             __fallthrough;
         case ISOTP_RX_STATE_RECYCLE:
 #ifndef ISOTP_FAST_RECEIVE_QUEUE
@@ -374,7 +374,7 @@ static void receive_state_machine(struct isotp_fast_recv_ctx *rctx)
             notify_waiting_receiver(rctx);
 #endif
             rctx->state = ISOTP_RX_STATE_UNBOUND;
-            free_recv_ctx_if_unowned(&rctx);
+            free_recv_ctx_if_unowned(rctx);
             break;
         case ISOTP_RX_STATE_UNBOUND:
             break;
@@ -775,7 +775,7 @@ static void send_state_machine(struct isotp_fast_send_ctx *sctx)
             LOG_DBG("SM error");
             sctx->ctx->sent_callback(sctx->error, sctx->cb_arg);
             sctx->state = ISOTP_TX_STATE_RESET;
-            free_send_ctx(&sctx);
+            free_send_ctx(sctx);
             break;
 
             /*
@@ -790,7 +790,7 @@ static void send_state_machine(struct isotp_fast_send_ctx *sctx)
 
             sctx->ctx->sent_callback(ISOTP_N_OK, sctx->cb_arg);
             sctx->state = ISOTP_TX_STATE_RESET;
-            free_send_ctx(&sctx);
+            free_send_ctx(sctx);
             break;
 
         default:
@@ -856,13 +856,13 @@ int isotp_fast_bind(struct isotp_fast_ctx *ctx, const struct device *can_dev,
 }
 
 #ifdef CONFIG_ISOTP_FAST_BLOCKING_RECEIVE
-static void free_recv_await_ctx(struct isotp_fast_ctx *ctx, struct isotp_fast_recv_await_ctx **actx)
+static void free_recv_await_ctx(struct isotp_fast_ctx *ctx, struct isotp_fast_recv_await_ctx *actx)
 {
-    sys_slist_find_and_remove(&ctx->wait_recv_list, &(*actx)->node);
-    if ((*actx)->rctx) {
-        free_recv_ctx(&(*actx)->rctx);
+    sys_slist_find_and_remove(&ctx->wait_recv_list, &actx->node);
+    if (actx->rctx) {
+        free_recv_ctx(actx->rctx);
     }
-    k_mem_slab_free(&isotp_recv_await_ctx_slab, (void **)actx);
+    k_mem_slab_free(&isotp_recv_await_ctx_slab, actx);
 }
 #endif
 
@@ -877,7 +877,7 @@ int isotp_fast_unbind(struct isotp_fast_ctx *ctx)
     struct isotp_fast_recv_await_ctx *next;
     SYS_SLIST_FOR_EACH_CONTAINER_SAFE(&ctx->wait_recv_list, actx, next, node)
     {
-        free_recv_await_ctx(ctx, &actx);
+        free_recv_await_ctx(ctx, actx);
     }
 #endif
     return ISOTP_N_OK;
@@ -931,7 +931,7 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
             LOG_DBG("Waiting for message matching %x:%x", sender.id, sender.mask);
             ret = k_sem_take(&actx->sem, timeout);
             if (ret == -EAGAIN) {
-                free_recv_await_ctx(ctx, &actx);
+                free_recv_await_ctx(ctx, actx);
                 LOG_DBG("Timed out waiting for first message");
                 return ISOTP_RECV_TIMEOUT;
             }
@@ -942,7 +942,7 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
     if (actx->rctx->error != 0) {
         LOG_DBG("Error %d occurred", actx->rctx->error);
         ret = actx->rctx->error;
-        free_recv_await_ctx(ctx, &actx);
+        free_recv_await_ctx(ctx, actx);
         return ret;
     }
 
@@ -953,7 +953,7 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
         if (actx->rctx->error != 0) {
             LOG_DBG("Error %d occurred", actx->rctx->error);
             ret = actx->rctx->error;
-            free_recv_await_ctx(ctx, &actx);
+            free_recv_await_ctx(ctx, actx);
             return ret;
         }
         if (pos == 0) {
@@ -978,10 +978,10 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
     }
     actx->rctx->pending = false;
     if (rem_len == 0) {
-        free_recv_await_ctx(ctx, &actx);
+        free_recv_await_ctx(ctx, actx);
     }
     if (ret == -EAGAIN) {
-        free_recv_await_ctx(ctx, &actx);
+        free_recv_await_ctx(ctx, actx);
         LOG_DBG("Timed out waiting on more packets");
         return ISOTP_RECV_TIMEOUT;
     }

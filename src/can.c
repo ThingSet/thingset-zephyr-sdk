@@ -11,7 +11,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/net/buf.h>
-#include <zephyr/random/rand32.h>
+#include <zephyr/random/random.h>
 
 #include <thingset.h>
 #include <thingset/can.h>
@@ -671,13 +671,9 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 #endif
 
 #ifndef CONFIG_ISOTP_FAST
-    ts_can->rx_addr.ide = 1;
-    ts_can->rx_addr.use_ext_addr = 0;   /* Normal ISO-TP addressing (using only CAN ID) */
-    ts_can->rx_addr.use_fixed_addr = 1; /* enable SAE J1939 compatible addressing */
-
-    ts_can->tx_addr.ide = 1;
-    ts_can->tx_addr.use_ext_addr = 0;
-    ts_can->tx_addr.use_fixed_addr = 1;
+    /* ISO-TP fixed addressing with SAE J1939 compatible ID */
+    ts_can->rx_addr.flags = ISOTP_MSG_IDE | ISOTP_MSG_FIXED_ADDR;
+    ts_can->tx_addr.flags = ISOTP_MSG_IDE | ISOTP_MSG_FIXED_ADDR;
 #endif
 
     struct can_filter addr_discovery_filter = {

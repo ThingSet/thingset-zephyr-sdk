@@ -108,7 +108,7 @@ static void process(const struct log_backend *const backend, union log_msg_gener
     snprintf(log_module, sizeof(log_module), "%s", sname);
 
     /* HEXDUMPs are ignored and the log messages should be extracted w/o line ending */
-    log_output_process(&log_output_thingset, 0, NULL, NULL, log_level, package, NULL, 0,
+    log_output_process(&log_output_thingset, 0, NULL, NULL, NULL, log_level, package, NULL, 0,
                        LOG_OUTPUT_FLAG_CRLF_NONE);
 
     /* ToDo: Implement rate limit to avoid congestion */
