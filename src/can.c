@@ -252,7 +252,9 @@ static void thingset_can_report_tx_handler(struct k_work *work)
     struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
 
     struct thingset_data_object *obj = NULL;
-    while ((obj = thingset_iterate_subsets(&ts, TS_SUBSET_LIVE, obj)) != NULL) {
+    while (live_reporting_enable
+           && (obj = thingset_iterate_subsets(&ts, TS_SUBSET_LIVE, obj)) != NULL)
+    {
         k_sem_take(&sbuf->lock, K_FOREVER);
         data_len = thingset_export_item(&ts, sbuf->data, sbuf->size, obj, THINGSET_BIN_VALUES_ONLY);
         if (data_len > CAN_MAX_DLEN) {
@@ -317,7 +319,7 @@ static void thingset_can_report_tx_handler(struct k_work *work)
 
     ts_can->next_pub_time += 1000 * live_reporting_period;
     if (ts_can->next_pub_time <= k_uptime_get()) {
-        /* ensure proper initialization of t_start */
+        /* ensure proper initialization of next_pub_time */
         ts_can->next_pub_time = k_uptime_get() + 1000 * live_reporting_period;
     }
 
