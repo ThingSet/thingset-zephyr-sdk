@@ -11,7 +11,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/net/buf.h>
-#include <zephyr/random/rand32.h>
+#include <zephyr/random/random.h>
 
 #include <thingset.h>
 #include <thingset/can.h>
