@@ -23,16 +23,15 @@ extern "C" {
  *
  * Channel-based messages using ISO-TP:
  *
- *    28      26 25 24 23           16 15            8 7             0
- *   +----------+-----+---------------+---------------+---------------+
- *   | Priority | 0x0 |     bus ID    |  target addr  |  source addr  |
- *   +----------+-----+---------------+---------------+---------------+
+ *    28      26 25 24 23     20 19     16 15            8 7             0
+ *   +----------+-----+---------+---------+---------------+---------------+
+ *   | Priority | 0x0 | tgt bus | src bus |  target addr  |  source addr  |
+ *   +----------+-----+---------+---------+---------------+---------------+
  *
  *   Priority: 6
  *
- *   Bus ID:
- *     Set to 218 (0xDA) by default as suggested by ISO-TP standard (ISO 15765-2)
- *     for normal fixed addressing with N_TAtype = physical.
+ *   tgt bus: Bus number of the target node (default for single bus systems is 0x0)
+ *   src bus: Bus number of the source node (default for single bus systems is 0x0)
  *
  * Control and report messages (always single-frame):
  *
@@ -86,18 +85,27 @@ extern "C" {
 #define THINGSET_CAN_DATA_ID_GET(id) \
     (((uint32_t)id & THINGSET_CAN_DATA_ID_MASK) >> THINGSET_CAN_DATA_ID_POS)
 
-/* bus ID for request/response messages */
-#define THINGSET_CAN_BUS_ID_POS  (16U)
-#define THINGSET_CAN_BUS_ID_MASK (0xFF << THINGSET_CAN_BUS_ID_POS)
-#define THINGSET_CAN_BUS_ID_SET(id) \
-    (((uint32_t)id << THINGSET_CAN_BUS_ID_POS) & THINGSET_CAN_BUS_ID_MASK)
-#define THINGSET_CAN_BUS_ID_GET(id) \
-    (((uint32_t)id & THINGSET_CAN_BUS_ID_MASK) >> THINGSET_CAN_BUS_ID_POS)
-#define THINGSET_CAN_BUS_ID_DEFAULT (0xDA) // 218, N_TAtype = physical
+/* bus numbers for request/response messages */
+#define THINGSET_CAN_SOURCE_BUS_POS  (16U)
+#define THINGSET_CAN_SOURCE_BUS_MASK (0xF << THINGSET_CAN_SOURCE_BUS_POS)
+#define THINGSET_CAN_SOURCE_BUS_SET(id) \
+    (((uint32_t)id << THINGSET_CAN_SOURCE_BUS_POS) & THINGSET_CAN_SOURCE_BUS_MASK)
+#define THINGSET_CAN_SOURCE_BUS_GET(id) \
+    (((uint32_t)id & THINGSET_CAN_SOURCE_BUS_MASK) >> THINGSET_CAN_SOURCE_BUS_POS)
+#define THINGSET_CAN_SOURCE_BUS_DEFAULT (0x0)
+#define THINGSET_CAN_TARGET_BUS_POS     (20U)
+#define THINGSET_CAN_TARGET_BUS_MASK    (0xF << THINGSET_CAN_TARGET_BUS_POS)
+#define THINGSET_CAN_TARGET_BUS_SET(id) \
+    (((uint32_t)id << THINGSET_CAN_TARGET_BUS_POS) & THINGSET_CAN_TARGET_BUS_MASK)
+#define THINGSET_CAN_TARGET_BUS_GET(id) \
+    (((uint32_t)id & THINGSET_CAN_TARGET_BUS_MASK) >> THINGSET_CAN_TARGET_BUS_POS)
+#define THINGSET_CAN_TARGET_BUS_DEFAULT (0x0)
 
 /* random number for address discovery messages */
-#define THINGSET_CAN_RAND_SET THINGSET_CAN_BUS_ID_SET
-#define THINGSET_CAN_RAND_GET THINGSET_CAN_BUS_ID_GET
+#define THINGSET_CAN_RAND_POS     (16U)
+#define THINGSET_CAN_RAND_MASK    (0xFF << THINGSET_CAN_RAND_POS)
+#define THINGSET_CAN_RAND_SET(id) (((uint32_t)id << THINGSET_CAN_RAND_POS) & THINGSET_CAN_RAND_MASK)
+#define THINGSET_CAN_RAND_GET(id) (((uint32_t)id & THINGSET_CAN_RAND_MASK) >> THINGSET_CAN_RAND_POS)
 
 /* message types */
 #define THINGSET_CAN_TYPE_POS  (24U)
@@ -180,6 +188,7 @@ struct thingset_can
     thingset_can_report_rx_callback_t report_rx_cb;
     int64_t next_pub_time;
     uint8_t node_addr;
+    uint8_t bus_number : 4;
 };
 
 #ifdef CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES
@@ -191,12 +200,13 @@ struct thingset_can
  * @param rx_buf Buffer to store the message.
  * @param rx_buf_size Size of the buffer to store the message.
  * @param source_addr Pointer to store the node address the data was received from.
+ * @param source_bus Pointer to store the bus number the data was received from.
  * @param timeout Timeout to wait for a message from the node.
  *
  * @returns length of message or negative errno in case of error
  */
 int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buf, size_t rx_buf_size,
-                              uint8_t *source_addr, k_timeout_t timeout);
+                              uint8_t *source_addr, uint8_t *source_bus, k_timeout_t timeout);
 
 #ifdef CONFIG_ISOTP_FAST
 /**
@@ -206,6 +216,7 @@ int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buf, size
  * @param tx_buf Buffer containing the message.
  * @param tx_len Length of the message.
  * @param target_addr Target node address (8-bit value) to send the message to.
+ * @param target_bus Target bus number (4-bit value) to send the message to.
  * @param rsp_callback If a response is expected, this callback will be invoked,
  *                     either when it arrives or if a timeout or some other error occurs.
  * @param callback_arg User data for the callback.
@@ -214,8 +225,9 @@ int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buf, size
  * @returns 0 for success or negative errno in case of error
  */
 int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
-                           uint8_t target_addr, thingset_can_response_callback_t rsp_callback,
-                           void *callback_arg, k_timeout_t timeout);
+                           uint8_t target_addr, uint8_t target_bus,
+                           thingset_can_response_callback_t rsp_callback, void *callback_arg,
+                           k_timeout_t timeout);
 #else
 /**
  * Send ThingSet message to other node
@@ -224,11 +236,12 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
  * @param tx_buf Buffer containing the message.
  * @param tx_len Length of the message.
  * @param target_addr Target node address (8-bit value) to send the message to.
+ * @param target_bus Target bus number (4-bit value) to send the message to.
  *
  * @returns 0 for success or negative errno in case of error
  */
 int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
-                           uint8_t target_addr);
+                           uint8_t target_addr, uint8_t target_bus);
 
 /**
  * Process incoming ThingSet requests
@@ -268,10 +281,12 @@ int thingset_can_set_report_rx_callback_inst(struct thingset_can *ts_can,
  *
  * @param ts_can Pointer to the thingset_can context.
  * @param can_dev Pointer to the CAN device that should be used.
+ * @param bus_number Assigned bus number of this CAN device.
  *
  * @returns 0 for success or negative errno in case of error
  */
-int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev);
+int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev,
+                           uint8_t bus_number);
 
 #else /* !CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES */
 
@@ -282,10 +297,11 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
  * @param tx_buf Buffer containing the message.
  * @param tx_len Length of the message.
  * @param target_addr Target node address (8-bit value) to send the message to.
+ * @param target_bus Target bus number (4-bit value) to send the message to.
  *
  * @returns 0 for success or negative errno in case of error
  */
-int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr,
+int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus,
                       thingset_can_response_callback_t rsp_callback, void *callback_arg,
                       k_timeout_t timeout);
 #else
@@ -295,10 +311,11 @@ int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr,
  * @param tx_buf Buffer containing the message.
  * @param tx_len Length of the message.
  * @param target_addr Target node address (8-bit value) to send the message to.
+ * @param target_bus Target bus number (4-bit value) to send the message to.
  *
  * @returns 0 for success or negative errno in case of error
  */
-int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr);
+int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus);
 #endif /* CONFIG_ISOTP_FAST */
 
 /**

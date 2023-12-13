@@ -68,11 +68,27 @@ config THINGSET_CAN_PACKETIZED_REPORTS_FRAME_TX_INTERVAL
 
 config THINGSET_CAN_MULTIPLE_INSTANCES
     bool "Support for multiple ThingSet CAN instances"
+    depends on ISOTP_FAST
     help
       If enabled, the CAN message processing does not happen in the
       background anymore. Instead, each instance has to be initialized
       for a dedicated CAN device and and messages have to be processed
       manually in application threads.
+
+      The bus numbering scheme in the CAN ID is not compatible with
+      the current Zephyr upstream ISO-TP implementation, so it depends
+      on ISOTP_FAST.
+
+config THINGSET_CAN_BUS_NUMBER
+    int "ThingSet CAN bus number"
+    depends on !THINGSET_CAN_MULTIPLE_INSTANCES
+    range 0 15
+    default 0
+    help
+      The bus number can be used to identify multiple CAN buses in one system.
+      It is used by gateways to forward messages between different buses.
+
+      For a single bus system, the default bus number 0 should be used.
 
 config THINGSET_CAN_RESPONSE_DELAY
     int "ThingSet CAN response delay"

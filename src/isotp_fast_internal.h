@@ -94,3 +94,13 @@ static inline uint8_t isotp_fast_get_target_addr(uint32_t can_id)
 {
     return (uint8_t)((can_id & ISOTP_FIXED_ADDR_TA_MASK) >> ISOTP_FIXED_ADDR_TA_POS);
 }
+
+static inline uint8_t isotp_fast_get_source_bus(uint32_t can_id)
+{
+    return (uint8_t)((can_id & 0x000F0000) >> 16);
+}
+
+static inline uint8_t isotp_fast_get_target_bus(uint32_t can_id)
+{
+    return (uint8_t)((can_id & 0x00F00000) >> 20);
+}

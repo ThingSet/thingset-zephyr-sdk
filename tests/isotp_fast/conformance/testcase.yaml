@@ -1,5 +1,5 @@
 tests:
-  thingset_sdk.isotp_fast.conformance.sync.fd:
+  thingset_sdk.isotp_fast.conformance.sync:
     tags:
       - can
       - isotp

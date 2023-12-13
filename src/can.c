@@ -345,7 +345,7 @@ void thingset_can_request_response_timeout_handler(struct k_timer *timer)
 }
 #else
 int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buffer, size_t rx_buf_size,
-                              uint8_t *source_addr, k_timeout_t timeout)
+                              uint8_t *source_addr, uint8_t *source_bus, k_timeout_t timeout)
 {
     int ret, rem_len, rx_len;
     struct net_buf *netbuf;
@@ -390,7 +390,9 @@ int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buffer, s
     }
     else if (rx_len > 0 && rem_len == 0) {
         *source_addr = THINGSET_CAN_SOURCE_GET(ts_can->recv_ctx.rx_addr.ext_id);
-        LOG_DBG("ISO-TP received %d bytes from addr %d", rx_len, *source_addr);
+        *source_bus = THINGSET_CAN_SOURCE_BUS_GET(ts_can->recv_ctx.rx_addr.ext_id);
+        LOG_DBG("ISO-TP received %d bytes from addr 0x%X on bus 0x%X", rx_len, *source_addr,
+                *source_bus);
         return rx_len;
     }
     else if (rem_len == ISOTP_RECV_TIMEOUT) {
@@ -404,8 +406,9 @@ int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buffer, s
 
 #ifdef CONFIG_ISOTP_FAST
 int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
-                           uint8_t target_addr, thingset_can_response_callback_t rsp_callback,
-                           void *callback_arg, k_timeout_t timeout)
+                           uint8_t target_addr, uint8_t target_bus,
+                           thingset_can_response_callback_t rsp_callback, void *callback_arg,
+                           k_timeout_t timeout)
 {
     if (!device_is_ready(ts_can->dev)) {
         return -ENODEV;
@@ -422,16 +425,18 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
                      NULL);
         k_timer_start(&ts_can->request_response.timer, timeout, timeout);
         ts_can->request_response.can_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+                                          | THINGSET_CAN_TARGET_BUS_SET(ts_can->bus_number)
+                                          | THINGSET_CAN_SOURCE_BUS_SET(target_bus)
                                           | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
                                           | THINGSET_CAN_SOURCE_SET(target_addr);
     }
-    int ret = isotp_fast_send(&ts_can->ctx, tx_buf, tx_len, target_addr, ts_can);
+    int ret = isotp_fast_send(&ts_can->ctx, tx_buf, tx_len, target_addr, target_bus, ts_can);
 
     if (ret == ISOTP_N_OK) {
         return 0;
     }
     else {
-        LOG_ERR("Error sending data to addr %d: %d", target_addr, ret);
+        LOG_ERR("Error sending data to addr 0x%X: %d", target_addr, ret);
         return -EIO;
     }
 }
@@ -459,9 +464,10 @@ void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, uint32_t can_
             int tx_len =
                 thingset_process_message(&ts, ts_can->rx_buffer, len, sbuf->data, sbuf->size);
             if (tx_len > 0) {
-                uint8_t target_id = (uint8_t)(can_id & 0xFF);
-                int err = thingset_can_send_inst(ts_can, sbuf->data, tx_len, target_id, NULL, NULL,
-                                                 K_NO_WAIT);
+                uint8_t target_addr = THINGSET_CAN_SOURCE_GET(can_id);
+                uint8_t target_bus = THINGSET_CAN_SOURCE_BUS_GET(can_id);
+                int err = thingset_can_send_inst(ts_can, sbuf->data, tx_len, target_addr,
+                                                 target_bus, NULL, NULL, K_NO_WAIT);
                 if (err != 0) {
                     k_sem_give(&sbuf->lock);
                 }
@@ -492,19 +498,21 @@ void isotp_fast_sent_callback(int result, void *arg)
 }
 #else
 int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
-                           uint8_t target_addr)
+                           uint8_t target_addr, uint8_t target_bus)
 {
     if (!device_is_ready(ts_can->dev)) {
         return -ENODEV;
     }
 
-    ts_can->tx_addr.ext_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
-                             | THINGSET_CAN_TARGET_SET(target_addr)
-                             | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
+    ts_can->tx_addr.ext_id =
+        THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+        | THINGSET_CAN_TARGET_BUS_SET(target_bus) | THINGSET_CAN_SOURCE_BUS_SET(ts_can->bus_number)
+        | THINGSET_CAN_TARGET_SET(target_addr) | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
 
-    ts_can->rx_addr.ext_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
-                             | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
-                             | THINGSET_CAN_SOURCE_SET(target_addr);
+    ts_can->rx_addr.ext_id =
+        THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+        | THINGSET_CAN_TARGET_BUS_SET(ts_can->bus_number) | THINGSET_CAN_SOURCE_BUS_SET(target_bus)
+        | THINGSET_CAN_TARGET_SET(ts_can->node_addr) | THINGSET_CAN_SOURCE_SET(target_addr);
 
     int ret = isotp_send(&ts_can->send_ctx, ts_can->dev, tx_buf, tx_len, &ts_can->tx_addr,
                          &ts_can->rx_addr, NULL, NULL);
@@ -522,11 +530,12 @@ int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout)
 {
     struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
     uint8_t external_addr;
+    uint8_t external_bus;
     int tx_len, rx_len;
     int err;
 
     rx_len = thingset_can_receive_inst(ts_can, ts_can->rx_buffer, sizeof(ts_can->rx_buffer),
-                                       &external_addr, timeout);
+                                       &external_addr, &external_bus, timeout);
     if (rx_len == -EAGAIN) {
         return -EAGAIN;
     }
@@ -554,7 +563,7 @@ int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout)
     k_sleep(K_MSEC(CONFIG_THINGSET_CAN_RESPONSE_DELAY));
 
     if (tx_len > 0) {
-        err = thingset_can_send_inst(ts_can, sbuf->data, tx_len, external_addr);
+        err = thingset_can_send_inst(ts_can, sbuf->data, tx_len, external_addr, external_bus);
         if (err == -ENODEV) {
             LOG_ERR("CAN processing stopped because device not ready");
             k_sem_give(&sbuf->lock);
@@ -567,7 +576,8 @@ int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout)
 }
 #endif /* CONFIG_ISOTP_FAST */
 
-int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev)
+int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev,
+                           uint8_t bus_number)
 {
     struct can_frame tx_frame = {
         .flags = CAN_FRAME_IDE,
@@ -592,6 +602,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     k_work_init_delayable(&ts_can->addr_claim_work, thingset_can_addr_claim_tx_handler);
 
     ts_can->dev = can_dev;
+    ts_can->bus_number = bus_number;
 
     /* set initial address (will be changed if already used on the bus) */
     if (ts_can->node_addr < 1 || ts_can->node_addr > THINGSET_CAN_ADDR_MAX) {
@@ -751,17 +762,17 @@ THINGSET_ADD_ITEM_UINT8(TS_ID_NET, TS_ID_NET_CAN_NODE_ADDR, "pCANNodeAddr",
                         &ts_can_single.node_addr, THINGSET_ANY_RW, TS_SUBSET_NVM);
 
 #ifdef CONFIG_ISOTP_FAST
-int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr,
+int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus,
                       thingset_can_response_callback_t rsp_callback, void *callback_arg,
                       k_timeout_t timeout)
 {
-    return thingset_can_send_inst(&ts_can_single, tx_buf, tx_len, target_addr, rsp_callback,
-                                  callback_arg, timeout);
+    return thingset_can_send_inst(&ts_can_single, tx_buf, tx_len, target_addr, target_bus,
+                                  rsp_callback, callback_arg, timeout);
 }
 #else
-int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr)
+int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus)
 {
-    return thingset_can_send_inst(&ts_can_single, tx_buf, tx_len, target_addr);
+    return thingset_can_send_inst(&ts_can_single, tx_buf, tx_len, target_addr, target_bus);
 }
 #endif /* CONFIG_ISOTP_FAST */
 
@@ -779,7 +790,7 @@ static void thingset_can_thread()
 {
     int err;
 
-    err = thingset_can_init_inst(&ts_can_single, can_dev);
+    err = thingset_can_init_inst(&ts_can_single, can_dev, CONFIG_THINGSET_CAN_BUS_NUMBER);
     if (err != 0) {
         LOG_ERR("Failed to init ThingSet CAN: %d", err);
         return;

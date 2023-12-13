@@ -133,10 +133,11 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
  * @param target_addr The node ID identifying the recipient. This will be
  *                    combined with the sending address @ref my_addr on @ref
  *                    ctx to form the CAN ID on the message.
+ * @param target_bus Target bus number (4-bit value) to send the message to.
  * @param sent_cb_arg A pointer to data to be supplied to the callback
  *                    that will be invoked when the message is sent.
  *
  * @returns 0 on success.
  */
 int isotp_fast_send(struct isotp_fast_ctx *ctx, const uint8_t *data, size_t len,
-                    const uint8_t target_addr, void *sent_cb_arg);
+                    const uint8_t target_addr, uint8_t target_bus, void *sent_cb_arg);

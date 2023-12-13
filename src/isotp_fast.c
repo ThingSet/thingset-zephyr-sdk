@@ -217,11 +217,13 @@ static void receive_can_tx(const struct device *dev, int error, void *arg)
 
 static void receive_send_fc(struct isotp_fast_recv_ctx *rctx, uint8_t fs)
 {
+    /* swap bus and address for FC frame */
     struct can_frame frame = {
         .flags =
             CAN_FRAME_IDE | ((rctx->ctx->opts->flags & ISOTP_MSG_FDF) != 0 ? CAN_FRAME_FDF : 0),
-        .id = (rctx->rx_can_id & 0xFFFF0000) | ((rctx->rx_can_id & 0xFF00) >> 8)
-              | ((rctx->rx_can_id & 0xFF) << 8)
+        .id = (rctx->rx_can_id & 0xFF000000) | ((rctx->rx_can_id & 0x0000FF00) >> 8)
+              | ((rctx->rx_can_id & 0x000000FF) << 8) | ((rctx->rx_can_id & 0x000F0000) << 4)
+              | ((rctx->rx_can_id & 0x00F00000) >> 4)
     };
     uint8_t *data = frame.data;
     uint8_t payload_len;
@@ -616,8 +618,10 @@ static void can_rx_callback(const struct device *dev, struct can_frame *frame, v
 {
     struct isotp_fast_ctx *ctx = arg;
     int index = 0;
-    uint32_t can_id =
-        (frame->id & 0xFFFF0000) | ((frame->id & 0xFF00) >> 8) | ((frame->id & 0xFF) << 8);
+    uint32_t can_id = (frame->id & 0xFF000000) | ((frame->id & 0x0000FF00) >> 8)
+                      | ((frame->id & 0x000000FF) << 8) | ((frame->id & 0x000F0000) << 4)
+                      | ((frame->id & 0x00F00000) >> 4);
+
     if ((frame->data[index++] & ISOTP_PCI_TYPE_MASK) == ISOTP_PCI_TYPE_FC) {
         LOG_DBG("Got flow control frame from %x", frame->id);
         /* inbound flow control for a message we are currently transmitting */
@@ -821,7 +825,7 @@ static inline void prepare_filter(struct can_filter *filter, uint32_t rx_can_id,
                                   const struct isotp_fast_opts *opts)
 {
     filter->id = rx_can_id;
-    filter->mask = ISOTP_FIXED_ADDR_RX_MASK;
+    filter->mask = 0x03F0FF00; /* fixed target bus and target address of any priority */
     filter->flags = CAN_FILTER_DATA | CAN_FILTER_IDE
                     | ((opts->flags & ISOTP_MSG_FDF) != 0 ? CAN_FILTER_FDF : 0);
 }
@@ -990,9 +994,10 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
 #endif /* CONFIG_ISOTP_FAST_BLOCKING_RECEIVE */
 
 int isotp_fast_send(struct isotp_fast_ctx *ctx, const uint8_t *data, size_t len,
-                    const uint8_t target_addr, void *cb_arg)
+                    const uint8_t target_addr, uint8_t target_bus, void *cb_arg)
 {
-    const uint32_t rx_can_id = (ctx->rx_can_id & 0xFFFF0000)
+    const uint32_t rx_can_id = (ctx->rx_can_id & 0xFF000000) | (target_bus << 20)
+                               | (isotp_fast_get_target_bus(ctx->rx_can_id) << 16)
                                | (isotp_fast_get_target_addr(ctx->rx_can_id))
                                | (target_addr << ISOTP_FIXED_ADDR_TA_POS);
     if (len <= (CAN_MAX_DLEN - ISOTP_FAST_SF_LEN_BYTE)) {

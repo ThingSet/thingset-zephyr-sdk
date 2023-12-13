@@ -86,9 +86,9 @@ ZTEST(thingset_can, test_send_request_to_node)
     zassert_false(err < 0, "adding rx filter failed: %d", err);
 
 #ifdef CONFIG_ISOTP_FAST
-    thingset_can_send(req_buf, sizeof(req_buf), 0xCC, NULL, NULL, TEST_RECEIVE_TIMEOUT);
+    thingset_can_send(req_buf, sizeof(req_buf), 0xCC, 0x0, NULL, NULL, TEST_RECEIVE_TIMEOUT);
 #else
-    thingset_can_send(req_buf, sizeof(req_buf), 0xCC);
+    thingset_can_send(req_buf, sizeof(req_buf), 0xCC, 0x0);
 #endif
 
     err = k_sem_take(&request_tx_sem, TEST_RECEIVE_TIMEOUT);
@@ -111,7 +111,7 @@ ZTEST(thingset_can, test_request_response)
     zassert_equal(err, 0, "bind fail");
 
     uint8_t msg[] = { 0x01, 0x1e };
-    err = isotp_fast_send(&client_ctx, msg, sizeof(msg), 0x01, NULL);
+    err = isotp_fast_send(&client_ctx, msg, sizeof(msg), 0x01, 0x0, NULL);
     zassert_equal(err, 0, "send fail");
     k_sem_take(&request_tx_sem, TEST_RECEIVE_TIMEOUT);
 
