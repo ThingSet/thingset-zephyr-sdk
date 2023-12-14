@@ -10,11 +10,6 @@
 #define ISOTP_MSG_FDF BIT(3)
 #endif
 
-/* Represents a sender or a receiver in an ISO-TP fixed addressing scheme */
-typedef uint8_t isotp_fast_node_id;
-/* ISO-TP message CAN ID */
-typedef uint32_t isotp_fast_can_id;
-
 /**
  * Callback invoked when a message is received.
  *
@@ -28,8 +23,8 @@ typedef uint32_t isotp_fast_can_id;
  * @param can_id The CAN ID of the message that has been received.
  * @param arg The value of @ref recv_cb_arg passed to @ref isotp_fast_bind.
  */
-typedef void (*isotp_fast_recv_callback_t)(struct net_buf *buffer, int rem_len,
-                                           isotp_fast_can_id can_id, void *arg);
+typedef void (*isotp_fast_recv_callback_t)(struct net_buf *buffer, int rem_len, uint32_t can_id,
+                                           void *arg);
 
 /**
  * Callback invoked when an error occurs during message receiption.
@@ -38,7 +33,7 @@ typedef void (*isotp_fast_recv_callback_t)(struct net_buf *buffer, int rem_len,
  * @param can_id The CAN ID of the sender of the message, if available.
  * @param arg The value of @ref recv_cb_arg passed to @ref isotp_fast_bind.
  */
-typedef void (*isotp_fast_recv_error_callback_t)(int8_t error, isotp_fast_can_id can_id, void *arg);
+typedef void (*isotp_fast_recv_error_callback_t)(int8_t error, uint32_t can_id, void *arg);
 
 /**
  * Callback invoked when a message has been sent.
@@ -82,7 +77,7 @@ struct isotp_fast_ctx
     /** Callback that is invoked when a message is sent */
     isotp_fast_send_callback_t sent_callback;
     /** CAN ID of this node, used in both transmission and receipt of messages */
-    isotp_fast_can_id rx_can_id;
+    uint32_t rx_can_id;
 #ifdef CONFIG_ISOTP_FAST_BLOCKING_RECEIVE
     sys_slist_t wait_recv_list;
 #endif
@@ -107,7 +102,7 @@ struct isotp_fast_ctx
  * @returns 0 on success, otherwise an error code < 0.
  */
 int isotp_fast_bind(struct isotp_fast_ctx *ctx, const struct device *can_dev,
-                    const isotp_fast_can_id rx_can_id, const struct isotp_fast_opts *opts,
+                    const uint32_t rx_can_id, const struct isotp_fast_opts *opts,
                     isotp_fast_recv_callback_t recv_callback, void *recv_cb_arg,
                     isotp_fast_recv_error_callback_t recv_error_callback,
                     isotp_fast_send_callback_t sent_callback);
@@ -144,4 +139,4 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
  * @returns 0 on success.
  */
 int isotp_fast_send(struct isotp_fast_ctx *ctx, const uint8_t *data, size_t len,
-                    const isotp_fast_node_id target_addr, void *sent_cb_arg);
+                    const uint8_t target_addr, void *sent_cb_arg);

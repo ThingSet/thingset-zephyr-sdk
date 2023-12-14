@@ -436,8 +436,7 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
     }
 }
 
-void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, isotp_fast_can_id can_id,
-                              void *arg)
+void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, uint32_t can_id, void *arg)
 {
     struct thingset_can *ts_can = arg;
 
@@ -460,7 +459,7 @@ void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, isotp_fast_ca
             int tx_len =
                 thingset_process_message(&ts, ts_can->rx_buffer, len, sbuf->data, sbuf->size);
             if (tx_len > 0) {
-                isotp_fast_node_id target_id = (uint8_t)(can_id & 0xFF);
+                uint8_t target_id = (uint8_t)(can_id & 0xFF);
                 int err = thingset_can_send_inst(ts_can, sbuf->data, tx_len, target_id, NULL, NULL,
                                                  K_NO_WAIT);
                 if (err != 0) {
@@ -474,7 +473,7 @@ void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, isotp_fast_ca
     }
 }
 
-void isotp_fast_recv_error_callback(int8_t error, isotp_fast_can_id can_id, void *arg)
+void isotp_fast_recv_error_callback(int8_t error, uint32_t can_id, void *arg)
 {
     LOG_ERR("RX error %d", error);
 }
@@ -690,8 +689,8 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     }
 
 #ifdef CONFIG_ISOTP_FAST
-    isotp_fast_can_id rx_can_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
-                                  | THINGSET_CAN_TARGET_SET(ts_can->node_addr);
+    uint32_t rx_can_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+                         | THINGSET_CAN_TARGET_SET(ts_can->node_addr);
     isotp_fast_bind(&ts_can->ctx, can_dev, rx_can_id, &fc_opts, isotp_fast_recv_callback, ts_can,
                     isotp_fast_recv_error_callback, isotp_fast_sent_callback);
 #endif

@@ -25,8 +25,7 @@ uint8_t *response;
 size_t response_len;
 int response_code;
 
-static void isotp_fast_recv_cb(struct net_buf *buffer, int rem_len, isotp_fast_can_id rx_can_id,
-                               void *arg)
+static void isotp_fast_recv_cb(struct net_buf *buffer, int rem_len, uint32_t rx_can_id, void *arg)
 {
     response = malloc(buffer->len);
     memcpy(response, buffer->data, buffer->len);

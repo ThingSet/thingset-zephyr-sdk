@@ -72,11 +72,10 @@ const struct isotp_fast_opts fc_opts = {
 #endif
 };
 
-const isotp_fast_can_id rx_can_id = 0x18DA0201;
-const isotp_fast_can_id tx_can_id = 0x18DA0102;
+const uint32_t rx_can_id = 0x18DA0201;
+const uint32_t tx_can_id = 0x18DA0102;
 
-const isotp_fast_node_id rx_node_id = 0x01;
-const isotp_fast_node_id tx_node_id = 0x02;
+const uint8_t rx_node_addr = 0x01;
 
 const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 struct isotp_fast_ctx ctx;

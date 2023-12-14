@@ -43,10 +43,10 @@ NET_BUF_POOL_DEFINE(isotp_rx_pool,
                     CONFIG_ISOTP_FAST_RX_BUF_COUNT *CONFIG_ISOTP_FAST_RX_MAX_PACKET_COUNT,
                     CAN_MAX_DLEN - 1, sizeof(int), NULL);
 
-static int get_send_ctx(struct isotp_fast_ctx *ctx, isotp_fast_can_id tx_can_id,
+static int get_send_ctx(struct isotp_fast_ctx *ctx, uint32_t tx_can_id,
                         struct isotp_fast_send_ctx **sctx)
 {
-    isotp_fast_node_id target_addr = isotp_fast_get_target_addr(tx_can_id);
+    uint8_t target_addr = isotp_fast_get_target_addr(tx_can_id);
     struct isotp_fast_send_ctx *context;
 
     SYS_SLIST_FOR_EACH_CONTAINER(&ctx->isotp_send_ctx_list, context, node)
@@ -105,10 +105,10 @@ static void free_recv_ctx_if_unowned(struct isotp_fast_recv_ctx *rctx)
     free_recv_ctx(rctx);
 }
 
-static int get_recv_ctx(struct isotp_fast_ctx *ctx, isotp_fast_can_id rx_can_id,
+static int get_recv_ctx(struct isotp_fast_ctx *ctx, uint32_t rx_can_id,
                         struct isotp_fast_recv_ctx **rctx)
 {
-    isotp_fast_node_id source_addr = isotp_fast_get_source_addr(rx_can_id);
+    uint8_t source_addr = isotp_fast_get_source_addr(rx_can_id);
     struct isotp_fast_recv_ctx *context;
 
     SYS_SLIST_FOR_EACH_CONTAINER(&ctx->isotp_recv_ctx_list, context, node)
@@ -536,7 +536,7 @@ static void receive_can_rx(struct isotp_fast_recv_ctx *rctx, struct can_frame *f
 }
 
 static inline void prepare_frame(struct can_frame *frame, struct isotp_fast_ctx *ctx,
-                                 isotp_fast_can_id can_id)
+                                 uint32_t can_id)
 {
     frame->id = can_id;
     frame->flags = CAN_FRAME_IDE | ((ctx->opts->flags & ISOTP_MSG_FDF) != 0 ? CAN_FRAME_FDF : 0);
@@ -616,7 +616,7 @@ static void can_rx_callback(const struct device *dev, struct can_frame *frame, v
 {
     struct isotp_fast_ctx *ctx = arg;
     int index = 0;
-    isotp_fast_can_id can_id =
+    uint32_t can_id =
         (frame->id & 0xFFFF0000) | ((frame->id & 0xFF00) >> 8) | ((frame->id & 0xFF) << 8);
     if ((frame->data[index++] & ISOTP_PCI_TYPE_MASK) == ISOTP_PCI_TYPE_FC) {
         LOG_DBG("Got flow control frame from %x", frame->id);
@@ -817,7 +817,7 @@ static void send_timeout_handler(struct k_timer *timer)
     k_work_submit(&sctx->work);
 }
 
-static inline void prepare_filter(struct can_filter *filter, isotp_fast_can_id rx_can_id,
+static inline void prepare_filter(struct can_filter *filter, uint32_t rx_can_id,
                                   const struct isotp_fast_opts *opts)
 {
     filter->id = rx_can_id;
@@ -827,7 +827,7 @@ static inline void prepare_filter(struct can_filter *filter, isotp_fast_can_id r
 }
 
 int isotp_fast_bind(struct isotp_fast_ctx *ctx, const struct device *can_dev,
-                    const isotp_fast_can_id rx_can_id, const struct isotp_fast_opts *opts,
+                    const uint32_t rx_can_id, const struct isotp_fast_opts *opts,
                     isotp_fast_recv_callback_t recv_callback, void *recv_cb_arg,
                     isotp_fast_recv_error_callback_t recv_error_callback,
                     isotp_fast_send_callback_t sent_callback)
@@ -990,11 +990,11 @@ int isotp_fast_recv(struct isotp_fast_ctx *ctx, struct can_filter sender, uint8_
 #endif /* CONFIG_ISOTP_FAST_BLOCKING_RECEIVE */
 
 int isotp_fast_send(struct isotp_fast_ctx *ctx, const uint8_t *data, size_t len,
-                    const isotp_fast_node_id target_addr, void *cb_arg)
+                    const uint8_t target_addr, void *cb_arg)
 {
-    const isotp_fast_can_id rx_can_id = (ctx->rx_can_id & 0xFFFF0000)
-                                        | (isotp_fast_get_target_addr(ctx->rx_can_id))
-                                        | (target_addr << ISOTP_FIXED_ADDR_TA_POS);
+    const uint32_t rx_can_id = (ctx->rx_can_id & 0xFFFF0000)
+                               | (isotp_fast_get_target_addr(ctx->rx_can_id))
+                               | (target_addr << ISOTP_FIXED_ADDR_TA_POS);
     if (len <= (CAN_MAX_DLEN - ISOTP_FAST_SF_LEN_BYTE)) {
         struct can_frame frame;
         prepare_frame(&frame, ctx, rx_can_id);

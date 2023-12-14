@@ -150,7 +150,7 @@ struct thingset_can_request_response
 {
     struct k_sem sem;
     struct k_timer timer;
-    isotp_fast_can_id can_id;
+    uint32_t can_id;
     thingset_can_response_callback_t callback;
     void *cb_arg;
 };

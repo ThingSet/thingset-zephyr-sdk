@@ -31,9 +31,9 @@
  */
 struct isotp_fast_send_ctx
 {
-    sys_snode_t node;            /**< linked list node in @ref isotp_send_ctx_list */
-    struct isotp_fast_ctx *ctx;  /**< pointer to bound context */
-    isotp_fast_can_id tx_can_id; /**< CAN ID used on sent message frames */
+    sys_snode_t node;           /**< linked list node in @ref isotp_send_ctx_list */
+    struct isotp_fast_ctx *ctx; /**< pointer to bound context */
+    uint32_t tx_can_id;         /**< CAN ID used on sent message frames */
     struct k_work work;
     struct k_timer timer;          /**< handles timeouts */
     struct k_sem sem;              /**< used to ensure CF frames are sent in order */
@@ -55,9 +55,9 @@ struct isotp_fast_send_ctx
  */
 struct isotp_fast_recv_ctx
 {
-    sys_snode_t node;            /**< linked list node in @ref isotp_recv_ctx_list */
-    struct isotp_fast_ctx *ctx;  /**< pointer to bound context */
-    isotp_fast_can_id rx_can_id; /**< CAN ID on received frames */
+    sys_snode_t node;           /**< linked list node in @ref isotp_recv_ctx_list */
+    struct isotp_fast_ctx *ctx; /**< pointer to bound context */
+    uint32_t rx_can_id;         /**< CAN ID on received frames */
     struct k_work work;
     struct k_timer timer;   /**< handles timeouts */
     struct net_buf *buffer; /**< head node of buffer */
@@ -85,17 +85,12 @@ struct isotp_fast_recv_await_ctx
     struct isotp_fast_recv_ctx *rctx;
 };
 
-static inline isotp_fast_node_id isotp_fast_get_source_addr(isotp_fast_can_id can_id)
+static inline uint8_t isotp_fast_get_source_addr(uint32_t can_id)
 {
-    return (isotp_fast_node_id)(can_id & ISOTP_FIXED_ADDR_SA_MASK);
+    return (uint8_t)(can_id & ISOTP_FIXED_ADDR_SA_MASK);
 }
 
-static inline isotp_fast_node_id isotp_fast_get_frame_source(struct can_frame *frame)
+static inline uint8_t isotp_fast_get_target_addr(uint32_t can_id)
 {
-    return (isotp_fast_node_id)(frame->id & ISOTP_FIXED_ADDR_SA_MASK);
-}
-
-static inline isotp_fast_node_id isotp_fast_get_target_addr(isotp_fast_can_id can_id)
-{
-    return (isotp_fast_node_id)((can_id & ISOTP_FIXED_ADDR_TA_MASK) >> ISOTP_FIXED_ADDR_TA_POS);
+    return (uint8_t)((can_id & ISOTP_FIXED_ADDR_TA_MASK) >> ISOTP_FIXED_ADDR_TA_POS);
 }
