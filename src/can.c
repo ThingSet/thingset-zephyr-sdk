@@ -288,11 +288,11 @@ static void thingset_can_report_tx_handler(struct k_work *work)
                     break;
                 }
             }
-            k_sem_give(&sbuf->lock);
 #else
             LOG_WRN("Unable to send CAN frame with ID %x as it is too large (%d)", frame.id,
                     data_len);
 #endif /* CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_TX */
+            k_sem_give(&sbuf->lock);
         }
         else if (data_len > 0) {
             memcpy(frame.data, sbuf->data, data_len);
