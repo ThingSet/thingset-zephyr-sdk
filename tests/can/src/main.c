@@ -10,10 +10,9 @@
 
 #include <thingset.h>
 #include <thingset/can.h>
+#include <thingset/sdk.h>
 
 #define TEST_RECEIVE_TIMEOUT K_MSEC(100)
-
-static struct thingset_context ts;
 
 static const struct device *can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 
@@ -110,7 +109,8 @@ ZTEST(thingset_can, test_request_response)
                               NULL, isotp_fast_sent_cb);
     zassert_equal(err, 0, "bind fail");
 
-    uint8_t msg[] = { 0x01, 0x1e };
+    /* GET CAN node address */
+    uint8_t msg[] = { 0x01, 0x19, TS_ID_NET_CAN_NODE_ADDR >> 8, TS_ID_NET_CAN_NODE_ADDR & 0xFF };
     err = isotp_fast_send(&client_ctx, msg, sizeof(msg), 0x01, 0x0, NULL);
     zassert_equal(err, 0, "send fail");
     k_sem_take(&request_tx_sem, TEST_RECEIVE_TIMEOUT);
@@ -118,9 +118,10 @@ ZTEST(thingset_can, test_request_response)
     k_sem_take(&response_rx_sem, TEST_RECEIVE_TIMEOUT);
     zassert_equal(response_code, 0, "receive fail");
 
+    /* expected response is 0x01 for CAN node address */
+    uint8_t resp_exp[] = { 0x85, 0xF6, 0x01 };
     zassert_equal(response_len, 3, "unexpected response length %d", response_len);
-    // not found; can't do more than that for now
-    zassert_equal(response[0], 0xa4, "unexpected response");
+    zassert_mem_equal(response, resp_exp, sizeof(resp_exp), "unexpected response");
     free(response);
     isotp_fast_unbind(&client_ctx);
 }
