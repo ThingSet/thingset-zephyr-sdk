@@ -682,8 +682,10 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 
 #ifndef CONFIG_ISOTP_FAST
     /* ISO-TP fixed addressing with SAE J1939 compatible ID */
-    ts_can->rx_addr.flags = ISOTP_MSG_IDE | ISOTP_MSG_FIXED_ADDR;
-    ts_can->tx_addr.flags = ISOTP_MSG_IDE | ISOTP_MSG_FIXED_ADDR;
+    ts_can->rx_addr.flags =
+        ISOTP_MSG_IDE | ISOTP_MSG_FIXED_ADDR | IS_ENABLED(CONFIG_CAN_FD_MODE) ? ISOTP_MSG_FDF : 0;
+    ts_can->tx_addr.flags =
+        ISOTP_MSG_IDE | ISOTP_MSG_FIXED_ADDR | IS_ENABLED(CONFIG_CAN_FD_MODE) ? ISOTP_MSG_FDF : 0;
 #endif
 
     struct can_filter addr_discovery_filter = {
