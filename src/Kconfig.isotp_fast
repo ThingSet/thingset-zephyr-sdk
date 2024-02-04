@@ -6,6 +6,41 @@ menuconfig ISOTP_FAST
 
 if ISOTP_FAST
 
+config ISOTP_FAST_NORMAL_ADDRESSING
+  bool "Enable normal addressing"
+  default true
+  help
+    Whether to enable normal (11- or 29-bit) addressing.
+
+config ISOTP_FAST_FIXED_ADDRESSING
+  bool "Enable fixed addressing"
+  default false
+  help
+    Whether to enable SAE J1939-style fixed addressing.
+
+config ISOTP_FAST_EXTENDED_ADDRESSING
+  bool "Enable extended addressing"
+  default false
+  help
+    Whether to enable extended addressing (address in first byte of payload).
+
+config ISOTP_FAST_CUSTOM_ADDRESSING
+  bool "Custom addressing"
+  default false
+  help
+    Whether to enable the custom callback to determine a reply
+    address for a given inbound message.
+
+if ISOTP_FAST_CUSTOM_ADDRESSING
+
+config ISOTP_FAST_CUSTOM_ADDRESSING_RX_MASK
+  hex "RX mask for custom addressing mode"
+  default 0x0300ff00
+  help
+    Mask to match incoming messages in custom addressing mode.
+
+endif # ISOTP_FAST_CUSTOM_ADDRESSING
+
 config ISOTP_FAST_RX_MAX_PACKET_COUNT
   int "Max packets for ISO-TP reception"
   default 8

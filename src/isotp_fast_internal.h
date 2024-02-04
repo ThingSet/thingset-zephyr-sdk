@@ -31,9 +31,9 @@
  */
 struct isotp_fast_send_ctx
 {
-    sys_snode_t node;           /**< linked list node in @ref isotp_send_ctx_list */
-    struct isotp_fast_ctx *ctx; /**< pointer to bound context */
-    uint32_t tx_can_id;         /**< CAN ID used on sent message frames */
+    sys_snode_t node;               /**< linked list node in @ref isotp_send_ctx_list */
+    struct isotp_fast_ctx *ctx;     /**< pointer to bound context */
+    struct isotp_fast_addr tx_addr; /**< Address used on sent message frames */
     struct k_work work;
     struct k_timer timer;          /**< handles timeouts */
     struct k_sem sem;              /**< used to ensure CF frames are sent in order */
@@ -51,13 +51,13 @@ struct isotp_fast_send_ctx
 
 /**
  * Internal receive context. Used to manage the receipt of a single
- * message.
+ * message over one or more CAN frames.
  */
 struct isotp_fast_recv_ctx
 {
-    sys_snode_t node;           /**< linked list node in @ref isotp_recv_ctx_list */
-    struct isotp_fast_ctx *ctx; /**< pointer to bound context */
-    uint32_t rx_can_id;         /**< CAN ID on received frames */
+    sys_snode_t node;               /**< linked list node in @ref isotp_recv_ctx_list */
+    struct isotp_fast_ctx *ctx;     /**< pointer to bound context */
+    struct isotp_fast_addr rx_addr; /**< Address on received frames */
     struct k_work work;
     struct k_timer timer;   /**< handles timeouts */
     struct net_buf *buffer; /**< head node of buffer */
@@ -77,6 +77,7 @@ struct isotp_fast_recv_ctx
 #endif
 };
 
+#ifdef CONFIG_ISOTP_FAST_BLOCKING_RECEIVE
 struct isotp_fast_recv_await_ctx
 {
     sys_snode_t node;
@@ -84,23 +85,4 @@ struct isotp_fast_recv_await_ctx
     struct k_sem sem;
     struct isotp_fast_recv_ctx *rctx;
 };
-
-static inline uint8_t isotp_fast_get_source_addr(uint32_t can_id)
-{
-    return (uint8_t)(can_id & ISOTP_FIXED_ADDR_SA_MASK);
-}
-
-static inline uint8_t isotp_fast_get_target_addr(uint32_t can_id)
-{
-    return (uint8_t)((can_id & ISOTP_FIXED_ADDR_TA_MASK) >> ISOTP_FIXED_ADDR_TA_POS);
-}
-
-static inline uint8_t isotp_fast_get_source_bus(uint32_t can_id)
-{
-    return (uint8_t)((can_id & 0x000F0000) >> 16);
-}
-
-static inline uint8_t isotp_fast_get_target_bus(uint32_t can_id)
-{
-    return (uint8_t)((can_id & 0x00F00000) >> 20);
-}
+#endif

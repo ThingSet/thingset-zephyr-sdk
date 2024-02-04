@@ -56,20 +56,21 @@ static int blocking_recv(uint8_t *buf, size_t size, k_timeout_t timeout)
     return rx_len;
 }
 
-void isotp_fast_recv_handler(struct net_buf *buffer, int rem_len, uint32_t rx_can_id, void *arg)
+void isotp_fast_recv_handler(struct net_buf *buffer, int rem_len, struct isotp_fast_addr rx_addr,
+                             void *arg)
 {
     struct recv_msg msg = {
         .len = buffer->len,
         .rem_len = rem_len,
     };
     memcpy(&msg.data, buffer->data, MIN(sizeof(msg.data), buffer->len));
-    // printk("< [%x] [%02d] ", rx_can_id, buffer->len);
+    // printk("< [%x] [%02d] ", rx_can_id, msg.len);
     // print_hex(&msg.data[0], msg.len);
     // printk("[%d]\n", rem_len);
     k_msgq_put(&recv_msgq, &msg, K_NO_WAIT);
 }
 
-void isotp_fast_recv_error_handler(int8_t error, uint32_t rx_can_id, void *arg)
+void isotp_fast_recv_error_handler(int8_t error, struct isotp_fast_addr rx_addr, void *arg)
 {
     // printk("Error %d received\n", error);
     recv_last_error = error;

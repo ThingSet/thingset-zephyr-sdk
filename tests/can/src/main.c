@@ -40,7 +40,8 @@ THINGSET_ADD_ITEM_FLOAT(0x200, 0x201, "wFloat", &test_float, 1, THINGSET_ANY_RW,
 THINGSET_ADD_ITEM_STRING(0x200, 0x202, "wString", test_string, sizeof(test_string), THINGSET_ANY_RW,
                          TS_SUBSET_LIVE);
 
-static void isotp_fast_recv_cb(struct net_buf *buffer, int rem_len, uint32_t rx_can_id, void *arg)
+static void isotp_fast_recv_cb(struct net_buf *buffer, int rem_len, struct isotp_fast_addr rx_addr,
+                               void *arg)
 {
     response = malloc(buffer->len);
     memcpy(response, buffer->data, buffer->len);
@@ -66,6 +67,17 @@ static void item_rx_callback(uint16_t data_id, const uint8_t *value, size_t valu
     }
 }
 
+static struct isotp_fast_addr get_tx_addr_callback(struct isotp_fast_ctx *ctx,
+                                                   struct isotp_fast_addr rx_addr)
+{
+    return (struct isotp_fast_addr){
+        .ext_id = (rx_addr.ext_id & 0x1F000000)
+                  | THINGSET_CAN_TARGET_BUS_SET(THINGSET_CAN_SOURCE_BUS_GET(rx_addr.ext_id))
+                  | THINGSET_CAN_SOURCE_BUS_SET(THINGSET_CAN_TARGET_BUS_GET(rx_addr.ext_id))
+                  | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_TARGET_GET(rx_addr.ext_id))
+                  | THINGSET_CAN_TARGET_SET(THINGSET_CAN_SOURCE_GET(rx_addr.ext_id)),
+    };
+}
 static void report_rx_callback(const uint8_t *buf, size_t len, uint8_t source_addr)
 {
     if (len < sizeof(report_buf)) {
@@ -210,19 +222,24 @@ ZTEST(thingset_can, test_request_response)
     k_sem_reset(&request_tx_sem);
     k_sem_reset(&response_rx_sem);
 
-    struct isotp_fast_ctx client_ctx;
+    struct isotp_fast_ctx client_ctx = {
+        .get_tx_addr_callback = get_tx_addr_callback,
+    };
     struct isotp_fast_opts opts = {
         .bs = 0,
         .stmin = 0,
         .flags = 0,
+        .addressing_mode = ISOTP_FAST_ADDRESSING_MODE_CUSTOM,
     };
-    int err = isotp_fast_bind(&client_ctx, can_dev, 0x1800cc00, &opts, isotp_fast_recv_cb, NULL,
-                              NULL, isotp_fast_sent_cb);
+    struct isotp_fast_addr rx_addr = { .ext_id = 0x1800cc00 };
+    int err = isotp_fast_bind(&client_ctx, can_dev, rx_addr, &opts, isotp_fast_recv_cb, NULL, NULL,
+                              isotp_fast_sent_cb);
     zassert_equal(err, 0, "bind fail");
 
     /* GET CAN node address */
     uint8_t msg[] = { 0x01, 0x19, TS_ID_NET_CAN_NODE_ADDR >> 8, TS_ID_NET_CAN_NODE_ADDR & 0xFF };
-    err = isotp_fast_send(&client_ctx, msg, sizeof(msg), 0x01, 0x0, NULL);
+    struct isotp_fast_addr tx_addr = { .ext_id = 0x180001cc };
+    err = isotp_fast_send(&client_ctx, msg, sizeof(msg), tx_addr, NULL);
     zassert_equal(err, 0, "send fail");
     k_sem_take(&request_tx_sem, TEST_RECEIVE_TIMEOUT);
 
