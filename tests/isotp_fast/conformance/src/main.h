@@ -65,6 +65,7 @@ struct frame_desired des_frames[DIV_ROUND_UP((DATA_SEND_LENGTH - DATA_SIZE_FF), 
 const struct isotp_fast_opts fc_opts = {
     .bs = 8,
     .stmin = 0,
+    .addressing_mode = ISOTP_FAST_ADDRESSING_MODE_FIXED,
 #ifdef CONFIG_CAN_FD_MODE
     .flags = ISOTP_MSG_FDF,
 #else
@@ -72,11 +73,13 @@ const struct isotp_fast_opts fc_opts = {
 #endif
 };
 
-const uint32_t rx_can_id = 0x180A0201;
-const uint32_t tx_can_id = 0x18A00102;
+const uint32_t rx_can_id = 0x18DA0201;
+const uint32_t tx_can_id = 0x18DA0102;
 
 const uint8_t rx_node_addr = 0x01;
-const uint8_t rx_bus_id = 0xA;
+
+struct isotp_fast_addr rx_addr = { .ext_id = rx_can_id };
+struct isotp_fast_addr tx_addr = { .ext_id = tx_can_id };
 
 const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 struct isotp_fast_ctx ctx;
