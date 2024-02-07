@@ -188,52 +188,58 @@ static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame
     struct thingset_can *ts_can = user_data;
     uint16_t data_id = THINGSET_CAN_DATA_ID_GET(frame->id);
     uint8_t source_addr = THINGSET_CAN_SOURCE_GET(frame->id);
+
+    ts_can->report_rx_cb(data_id, frame->data, can_dlc_to_bytes(frame->dlc), source_addr);
+}
+
 #ifdef CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX
-    if (THINGSET_CAN_PACKETIZED_REPORT(frame->id)) {
-        struct net_buf *buffer = thingset_can_get_rx_buf(source_addr);
-        if (buffer != NULL) {
-            struct thingset_can_rx_context *context =
-                (struct thingset_can_rx_context *)buffer->user_data;
-            if (context->seq++ == frame->data[0]) {
-                int size = can_dlc_to_bytes(frame->dlc) - 1;
-                if (buffer->len + size > buffer->size) {
-                    LOG_WRN("Discarding packetised message from 0x%X for data ID 0x%X as it is too "
-                            "large.",
-                            source_addr, data_id);
-                    thingset_can_free_rx_buf(buffer);
-                    return;
-                }
-                uint8_t *buf = net_buf_add(buffer, size);
-                int pos = 0;
-                LOG_DBG("Reassembling %d bytes for data ID %x from node %x", size, data_id,
-                        source_addr);
-                bool finished =
-                    reassemble(frame->data + 1, size, buf, size, &pos, &(context->escape));
-                if (pos < size) {
-                    LOG_DBG("Trimming %d bytes", size - pos);
-                    /* if we over-allocated, trim the buffer */
-                    net_buf_remove_mem(buffer, size - pos);
-                }
-                if (finished) {
-                    LOG_DBG("Finished; dispatching %d bytes for data ID %x from node %x",
-                            buffer->len, data_id, source_addr);
-                    /* full message received */
-                    ts_can->report_rx_cb(data_id, buffer->data, buffer->len, source_addr);
-                    thingset_can_free_rx_buf(buffer);
-                }
+
+static void thingset_can_packetized_report_rx_cb(const struct device *dev, struct can_frame *frame,
+                                                 void *user_data)
+{
+    struct thingset_can *ts_can = user_data;
+    uint16_t data_id = THINGSET_CAN_DATA_ID_GET(frame->id);
+    uint8_t source_addr = THINGSET_CAN_SOURCE_GET(frame->id);
+
+    struct net_buf *buffer = thingset_can_get_rx_buf(source_addr);
+    if (buffer != NULL) {
+        struct thingset_can_rx_context *context =
+            (struct thingset_can_rx_context *)buffer->user_data;
+        if (context->seq++ == frame->data[0]) {
+            int size = can_dlc_to_bytes(frame->dlc) - 1;
+            if (buffer->len + size > buffer->size) {
+                LOG_WRN("Discarding packetised message from 0x%X for data ID 0x%X as it is too "
+                        "large.",
+                        source_addr, data_id);
+                thingset_can_free_rx_buf(buffer);
+                return;
             }
-            else {
-                /* out-of-sequence message received, so free the buffer */
+            uint8_t *buf = net_buf_add(buffer, size);
+            int pos = 0;
+            LOG_DBG("Reassembling %d bytes for data ID %x from node %x", size, data_id,
+                    source_addr);
+            bool finished = reassemble(frame->data + 1, size, buf, size, &pos, &(context->escape));
+            if (pos < size) {
+                LOG_DBG("Trimming %d bytes", size - pos);
+                /* if we over-allocated, trim the buffer */
+                net_buf_remove_mem(buffer, size - pos);
+            }
+            if (finished) {
+                LOG_DBG("Finished; dispatching %d bytes for data ID %x from node %x", buffer->len,
+                        data_id, source_addr);
+                /* full message received */
+                ts_can->report_rx_cb(data_id, buffer->data, buffer->len, source_addr);
                 thingset_can_free_rx_buf(buffer);
             }
         }
-    }
-    else
-#endif /* CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX */
-    {
-        ts_can->report_rx_cb(data_id, frame->data, can_dlc_to_bytes(frame->dlc), source_addr);
+        else {
+            /* out-of-sequence message received, so free the buffer */
+            thingset_can_free_rx_buf(buffer);
+        }
     }
 }
+
+#endif /* CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX */
 
 static void thingset_can_report_tx_cb(const struct device *dev, int error, void *user_data)
 {
@@ -734,7 +740,7 @@ int thingset_can_set_report_rx_callback_inst(struct thingset_can *ts_can,
     }
 
 #ifdef CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX
-    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_report_rx_cb, ts_can,
+    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_packetized_report_rx_cb, ts_can,
                                   &packetized_report_filter);
     if (filter_id < 0) {
         LOG_ERR("Unable to add packetized report filter: %d", filter_id);
