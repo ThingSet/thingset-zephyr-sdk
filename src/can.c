@@ -18,8 +18,6 @@
 #include <thingset/sdk.h>
 #include <thingset/storage.h>
 
-#include "packetizer.h"
-
 LOG_MODULE_REGISTER(thingset_can, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 extern uint8_t eui64[8];
@@ -200,42 +198,34 @@ static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame
                                       void *user_data)
 {
     struct thingset_can *ts_can = user_data;
-    uint16_t data_id = THINGSET_CAN_DATA_ID_GET(frame->id);
     uint8_t source_addr = THINGSET_CAN_SOURCE_GET(frame->id);
+    uint8_t seq = THINGSET_CAN_SEQ_NO_GET(frame->id);
 
     struct net_buf *buffer = thingset_can_get_rx_buf(source_addr);
     if (buffer != NULL) {
         struct thingset_can_rx_context *context =
             (struct thingset_can_rx_context *)buffer->user_data;
-        if (context->seq++ == frame->data[0]) {
-            int size = can_dlc_to_bytes(frame->dlc) - 1;
-            if (buffer->len + size > buffer->size) {
-                LOG_WRN("Discarding packetised message from 0x%X for data ID 0x%X as it is too "
-                        "large.",
-                        source_addr, data_id);
+        if ((context->seq & 0xF) == seq) {
+            int chunk_len = can_dlc_to_bytes(frame->dlc);
+            if (buffer->len + chunk_len > buffer->size) {
+                LOG_WRN("Discarded too large report from 0x%X", source_addr);
                 thingset_can_free_rx_buf(buffer);
                 return;
             }
-            uint8_t *buf = net_buf_add(buffer, size);
-            int pos = 0;
-            LOG_DBG("Reassembling %d bytes for data ID %x from node %x", size, data_id,
-                    source_addr);
-            bool finished = reassemble(frame->data + 1, size, buf, size, &pos, &(context->escape));
-            if (pos < size) {
-                LOG_DBG("Trimming %d bytes", size - pos);
-                /* if we over-allocated, trim the buffer */
-                net_buf_remove_mem(buffer, size - pos);
-            }
-            if (finished) {
-                LOG_DBG("Finished; dispatching %d bytes for data ID %x from node %x", buffer->len,
-                        data_id, source_addr);
-                /* full message received */
-                ts_can->report_rx_cb(data_id, buffer->data, buffer->len, source_addr);
+            uint8_t *buf = net_buf_add(buffer, chunk_len);
+            LOG_DBG("Reassembling %d bytes from ID 0x%08X", chunk_len, frame->id);
+            memcpy(buf, frame->data, chunk_len);
+            if (THINGSET_CAN_END_FLAG_GET(frame->id) != 0) {
+                LOG_DBG("Finished; dispatching %d bytes from node %x", buffer->len, source_addr);
+                ts_can->report_rx_cb(buffer->data, buffer->len, source_addr);
                 thingset_can_free_rx_buf(buffer);
             }
+
+            context->seq++;
         }
         else {
             /* out-of-sequence message received, so free the buffer */
+            LOG_WRN("Out-of-sequence message received");
             thingset_can_free_rx_buf(buffer);
         }
     }
@@ -250,39 +240,55 @@ static void thingset_can_report_tx_cb(const struct device *dev, int error, void 
 int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
                                   enum thingset_data_format format)
 {
-    int err = 0;
-    int pos_buf = 0;
+    int len, ret = 0;
+    int pos = 0;
     int chunk_len;
     uint8_t seq = 0;
+    bool end = false;
 
     struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
     k_sem_take(&tx_buf->lock, K_FOREVER);
 
-    struct thingset_endpoint endpoint;
-    thingset_endpoint_by_path(&ts, &endpoint, path, strlen(path));
-
-    int data_len = thingset_report_path(&ts, tx_buf->data, tx_buf->size, path, format);
+    len = thingset_report_path(&ts, tx_buf->data, tx_buf->size, path, format);
+    if (len <= 0) {
+        goto out;
+    }
 
     struct can_frame frame = {
         .flags = CAN_FRAME_IDE | (IS_ENABLED(CONFIG_CAN_FD_MODE) ? CAN_FRAME_FDF : 0),
-        .id = THINGSET_CAN_TYPE_MF_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
-              | THINGSET_CAN_DATA_ID_SET(endpoint.object->id)
-              | THINGSET_CAN_SOURCE_SET(ts_can->node_addr),
     };
-    uint8_t *body = frame.data + 1;
-    while ((chunk_len = packetize(tx_buf->data, data_len, body, CAN_MAX_DLEN - 1, &pos_buf)) != 0) {
-        frame.data[0] = seq++;
-        frame.dlc = can_bytes_to_dlc(chunk_len + 1);
-        err = can_send(ts_can->dev, &frame, K_MSEC(CONFIG_THINGSET_CAN_REPORT_SEND_TIMEOUT),
+
+    do {
+        if (len - pos > CAN_MAX_DLEN) {
+            chunk_len = CAN_MAX_DLEN;
+        }
+        else {
+            chunk_len = len - pos;
+            end = true;
+        }
+        memcpy(frame.data, tx_buf->data + pos, chunk_len);
+        frame.id = THINGSET_CAN_PRIO_REPORT_LOW | THINGSET_CAN_TYPE_MF_REPORT
+                   | THINGSET_CAN_MSG_NO_SET(ts_can->msg_no) | THINGSET_CAN_END_FLAG_SET(end)
+                   | THINGSET_CAN_SEQ_NO_SET(seq) | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
+        frame.dlc = can_bytes_to_dlc(chunk_len);
+
+        ret = can_send(ts_can->dev, &frame, K_MSEC(CONFIG_THINGSET_CAN_REPORT_SEND_TIMEOUT),
                        thingset_can_report_tx_cb, NULL);
-        if (err == -EAGAIN) {
-            LOG_DBG("Error sending CAN frame with ID %x", frame.id);
+
+        if (ret == -EAGAIN) {
+            LOG_DBG("Error sending CAN frame with ID 0x%X", frame.id);
             break;
         }
-    }
 
+        seq++;
+        pos += chunk_len;
+    } while (len - pos > 0);
+
+    ts_can->msg_no++;
+
+out:
     k_sem_give(&tx_buf->lock);
-    return err;
+    return ret;
 }
 
 static void thingset_can_live_reporting_handler(struct k_work *work)

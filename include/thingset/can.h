@@ -33,16 +33,24 @@ extern "C" {
  *   tgt bus: Bus number of the target node (default for single bus systems is 0x0)
  *   src bus: Bus number of the source node (default for single bus systems is 0x0)
  *
- * Reports (single-frame and multi-frame)
+ * Multi-frame reports:
+ *
+ *    28      26 25 24 23 20 19     16 15  13   12  11   8 7           0
+ *   +----------+-----+-----+---------+------+-----+------+-------------+
+ *   | Priority | 0x1 | res | src bus | msg# | end | seq# | source addr |
+ *   +----------+-----+-----+---------+------+-----+------+-------------+
+ *
+ *   Priority: 5 or 7
+ *   msg#: Wrapping message counter from 0 to 7
+ *   end: End of message flag
+ *   seq#: Wrapping sequence counter from 0 to 15
+ *
+ * Single-frame reports:
  *
  *    28      26 25 24 23           16 15            8 7             0
- *   +----------+------+---------------+---------------+---------------+
- *   | Priority | Type | data ID (MSB) | data ID (LSB) |  source addr  |
- *   +----------+------+---------------+---------------+---------------+
- *
- *   Type:
- *     0x1: multi-frame
- *     0x2: single-frame
+ *   +----------+-----+---------------+---------------+---------------+
+ *   | Priority | 0x2 | data ID (MSB) | data ID (LSB) |  source addr  |
+ *   +----------+-----+---------------+---------------+---------------+
  *
  *   Priority:
  *     0 .. 3: High-priority control frames
@@ -82,13 +90,33 @@ extern "C" {
 #define THINGSET_CAN_ADDR_ANONYMOUS (0xFE)
 #define THINGSET_CAN_ADDR_BROADCAST (0xFF)
 
-/* data IDs for publication messages */
+/* data IDs for single-frame reports */
 #define THINGSET_CAN_DATA_ID_POS  (8U)
 #define THINGSET_CAN_DATA_ID_MASK (0xFFFF << THINGSET_CAN_DATA_ID_POS)
 #define THINGSET_CAN_DATA_ID_SET(id) \
     (((uint32_t)id << THINGSET_CAN_DATA_ID_POS) & THINGSET_CAN_DATA_ID_MASK)
 #define THINGSET_CAN_DATA_ID_GET(id) \
     (((uint32_t)id & THINGSET_CAN_DATA_ID_MASK) >> THINGSET_CAN_DATA_ID_POS)
+
+/* message number, end flag and sequence number for multi-frame reports */
+#define THINGSET_CAN_SEQ_NO_POS  (8U)
+#define THINGSET_CAN_SEQ_NO_MASK (0xF << THINGSET_CAN_SEQ_NO_POS)
+#define THINGSET_CAN_SEQ_NO_SET(no) \
+    (((uint32_t)no << THINGSET_CAN_SEQ_NO_POS) & THINGSET_CAN_SEQ_NO_MASK)
+#define THINGSET_CAN_SEQ_NO_GET(id) \
+    (((uint32_t)id & THINGSET_CAN_SEQ_NO_MASK) >> THINGSET_CAN_SEQ_NO_POS)
+#define THINGSET_CAN_END_FLAG_POS  (12U)
+#define THINGSET_CAN_END_FLAG_MASK (0x1 << THINGSET_CAN_END_FLAG_POS)
+#define THINGSET_CAN_END_FLAG_SET(val) \
+    (((uint32_t)val << THINGSET_CAN_END_FLAG_POS) & THINGSET_CAN_END_FLAG_MASK)
+#define THINGSET_CAN_END_FLAG_GET(id) \
+    (((uint32_t)id & THINGSET_CAN_END_FLAG_MASK) >> THINGSET_CAN_END_FLAG_POS)
+#define THINGSET_CAN_MSG_NO_POS  (13U)
+#define THINGSET_CAN_MSG_NO_MASK (0x7 << THINGSET_CAN_MSG_NO_POS)
+#define THINGSET_CAN_MSG_NO_SET(no) \
+    (((uint32_t)no << THINGSET_CAN_MSG_NO_POS) & THINGSET_CAN_MSG_NO_MASK)
+#define THINGSET_CAN_MSG_NO_GET(id) \
+    (((uint32_t)id & THINGSET_CAN_MSG_NO_MASK) >> THINGSET_CAN_MSG_NO_POS)
 
 /* bus numbers for request/response messages */
 #define THINGSET_CAN_SOURCE_BUS_POS  (16U)
@@ -149,13 +177,12 @@ extern "C" {
 /**
  * Callback typedef for received multi-frame reports (type 0x1) via CAN
  *
- * @param data_id ThingSet data object ID
- * @param value Buffer containing the CBOR raw data of the value
- * @param value_len Length of the value in the buffer
+ * @param report_buf Pointer to the buffer containing the received report (text or binary format)
+ * @param report_len Length of the report in the buffer
  * @param source_addr Node address the report was received from
  */
-typedef void (*thingset_can_report_rx_callback_t)(uint16_t data_id, const uint8_t *value,
-                                                  size_t value_len, uint8_t source_addr);
+typedef void (*thingset_can_report_rx_callback_t)(const uint8_t *report_buf, size_t report_len,
+                                                  uint8_t source_addr);
 
 /**
  * Callback typedef for received single-frame reports (type 0x2) via CAN
