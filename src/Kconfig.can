@@ -17,32 +17,42 @@ config THINGSET_CAN_RX_BUF_SIZE
     help
       Default value large enough to receive a 512 byte flash page for DFU.
 
-config THINGSET_CAN_PACKETIZED_REPORTS_RX
-    bool "Support for reception of packetized reports over CAN"
+config THINGSET_CAN_ITEM_RX
+    bool "Support for reception of single-frame data items"
     help
-      If enabled, values larger than a single CAN message payload
-      (8 bytes in classical CAN; 64 in CAN-FD) can be received via CAN
-      reports.
+      Single-frame reports containing one data item (type 0x2) are usually used
+      for control purposes. Enable this option to allow configuring a receive
+      callback once single-frame reports from other nodes were received.
 
-config THINGSET_CAN_RX_BUF_PER_SENDER_SIZE
+      For normal reports, the multi-frame reports of type 0x1 are more
+      efficient (especially in case of CAN FD).
+
+config THINGSET_CAN_REPORT_RX
+    bool "Support for reception of multi-frame reports"
+    help
+      Multi-frame reports (type 0x1) are used to publish data items of one
+      group, subset or record over CAN. The size of one frame is 8 bytes
+      for classical CAN or up to 64 for CAN FD.
+
+config THINGSET_CAN_REPORT_RX_BUFFER_SIZE
     int "ThingSet CAN RX buffer size for reassembly of packetized reports"
-    depends on THINGSET_CAN_PACKETIZED_REPORTS_RX
+    depends on THINGSET_CAN_REPORT_RX
     range 32 512
     default 64
     help
       Default value enough to receive at least a 10-element array via broadcast.
 
-config THINGSET_CAN_NUM_RX_BUFFERS
+config THINGSET_CAN_REPORT_RX_NUM_BUFFERS
     int "ThingSet CAN number of RX buffers for reassembly of packetized reports"
-    depends on THINGSET_CAN_PACKETIZED_REPORTS_RX
+    depends on THINGSET_CAN_REPORT_RX
     range 1 64
     default 8
     help
       Maximum number of unique senders anticipated on the CAN bus.
 
-config THINGSET_CAN_NUM_RX_BUFFER_BUCKETS
+config THINGSET_CAN_REPORT_RX_BUCKETS
     int "ThingSet CAN number of buckets into which RX buffers are divided"
-    depends on THINGSET_CAN_PACKETIZED_REPORTS_RX
+    depends on THINGSET_CAN_REPORT_RX
     range 1 16
     default 8
     help

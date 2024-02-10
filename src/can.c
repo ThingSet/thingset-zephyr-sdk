@@ -28,19 +28,21 @@ extern uint8_t eui64[8];
 #define EVENT_ADDRESS_CLAIMING_FINISHED 0x02
 #define EVENT_ADDRESS_ALREADY_USED      0x03
 
-static const struct can_filter report_filter = {
-    .id = THINGSET_CAN_TYPE_REPORT,
+#ifdef CONFIG_THINGSET_CAN_ITEM_RX
+static const struct can_filter sf_report_filter = {
+    .id = THINGSET_CAN_TYPE_SF_REPORT,
     .mask = THINGSET_CAN_TYPE_MASK,
     .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
 };
+#endif /* CONFIG_THINGSET_CAN_ITEM_RX */
 
-#ifdef CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX
-static const struct can_filter packetized_report_filter = {
-    .id = THINGSET_CAN_TYPE_PACKETIZED_REPORT,
+#ifdef CONFIG_THINGSET_CAN_REPORT_RX
+static const struct can_filter mf_report_filter = {
+    .id = THINGSET_CAN_TYPE_MF_REPORT,
     .mask = THINGSET_CAN_TYPE_MASK,
     .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
 };
-#endif /* CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX */
+#endif /* CONFIG_THINGSET_CAN_REPORT_RX */
 
 static const struct can_filter addr_claim_filter = {
     .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_TARGET_SET(THINGSET_CAN_ADDR_BROADCAST),
@@ -63,7 +65,7 @@ static const isotp_opts fc_opts = {
 #endif
 };
 
-#ifdef CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX
+#ifdef CONFIG_THINGSET_CAN_REPORT_RX
 struct thingset_can_rx_context
 {
     uint8_t src_addr;
@@ -71,16 +73,16 @@ struct thingset_can_rx_context
     bool escape;
 };
 
-NET_BUF_POOL_DEFINE(thingset_can_rx_buffer_pool, CONFIG_THINGSET_CAN_NUM_RX_BUFFERS,
-                    CONFIG_THINGSET_CAN_RX_BUF_PER_SENDER_SIZE,
+NET_BUF_POOL_DEFINE(thingset_can_rx_buffer_pool, CONFIG_THINGSET_CAN_REPORT_RX_NUM_BUFFERS,
+                    CONFIG_THINGSET_CAN_REPORT_RX_BUFFER_SIZE,
                     sizeof(struct thingset_can_rx_context), NULL);
 
 /* Simple hashtable (key is src_addr % number of buckets) to speed up buffer retrival */
-static sys_slist_t rx_buf_lookup[CONFIG_THINGSET_CAN_NUM_RX_BUFFER_BUCKETS];
+static sys_slist_t rx_buf_lookup[CONFIG_THINGSET_CAN_REPORT_RX_BUCKETS];
 
 static struct net_buf *thingset_can_get_rx_buf(uint8_t src_addr)
 {
-    sys_slist_t *list = &rx_buf_lookup[src_addr % CONFIG_THINGSET_CAN_NUM_RX_BUFFER_BUCKETS];
+    sys_slist_t *list = &rx_buf_lookup[src_addr % CONFIG_THINGSET_CAN_REPORT_RX_BUCKETS];
 
     sys_snode_t *pnode;
     struct net_buf *buffer;
@@ -113,13 +115,12 @@ static struct net_buf *thingset_can_get_rx_buf(uint8_t src_addr)
 static void thingset_can_free_rx_buf(struct net_buf *buffer)
 {
     struct thingset_can_rx_context *context = (struct thingset_can_rx_context *)buffer->user_data;
-    sys_slist_t *list =
-        &rx_buf_lookup[context->src_addr % CONFIG_THINGSET_CAN_NUM_RX_BUFFER_BUCKETS];
+    sys_slist_t *list = &rx_buf_lookup[context->src_addr % CONFIG_THINGSET_CAN_REPORT_RX_BUCKETS];
     sys_slist_find_and_remove(list, &buffer->node);
     LOG_DBG("Releasing RX buffer of length %d for sender %x", buffer->len, context->src_addr);
     net_buf_unref(buffer);
 }
-#endif /* CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX */
+#endif /* CONFIG_THINGSET_CAN_REPORT_RX */
 
 static void thingset_can_addr_claim_tx_cb(const struct device *dev, int error, void *user_data)
 {
@@ -182,17 +183,19 @@ static void thingset_can_addr_claim_rx_cb(const struct device *dev, struct can_f
     /* Optimization: store in internal database to exclude from potentially available addresses */
 }
 
-static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame *frame,
-                                      void *user_data)
+#ifdef CONFIG_THINGSET_CAN_ITEM_RX
+static void thingset_can_item_rx_cb(const struct device *dev, struct can_frame *frame,
+                                    void *user_data)
 {
     struct thingset_can *ts_can = user_data;
     uint16_t data_id = THINGSET_CAN_DATA_ID_GET(frame->id);
     uint8_t source_addr = THINGSET_CAN_SOURCE_GET(frame->id);
 
-    ts_can->report_rx_cb(data_id, frame->data, can_dlc_to_bytes(frame->dlc), source_addr);
+    ts_can->item_rx_cb(data_id, frame->data, can_dlc_to_bytes(frame->dlc), source_addr);
 }
+#endif /* CONFIG_THINGSET_CAN_ITEM_RX */
 
-#ifdef CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX
+#ifdef CONFIG_THINGSET_CAN_REPORT_RX
 
 static void thingset_can_packetized_report_rx_cb(const struct device *dev, struct can_frame *frame,
                                                  void *user_data)
@@ -239,23 +242,23 @@ static void thingset_can_packetized_report_rx_cb(const struct device *dev, struc
     }
 }
 
-#endif /* CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX */
+#endif /* CONFIG_THINGSET_CAN_REPORT_RX */
 
 static void thingset_can_report_tx_cb(const struct device *dev, int error, void *user_data)
 {
     /* Do nothing: Reports are fire and forget. */
 }
 
-static void thingset_can_send_packetized_report_inst(struct thingset_can *ts_can,
-                                                     struct thingset_data_object *obj,
-                                                     uint8_t *data, size_t data_len)
+static int thingset_can_send_packetized_report_inst(struct thingset_can *ts_can,
+                                                    struct thingset_data_object *obj, uint8_t *data,
+                                                    size_t data_len)
 {
     struct can_frame frame = {
         .flags = CAN_FRAME_IDE | (IS_ENABLED(CONFIG_CAN_FD_MODE) ? CAN_FRAME_FDF : 0),
-        .id = THINGSET_CAN_TYPE_PACKETIZED_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
+        .id = THINGSET_CAN_TYPE_MF_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
               | THINGSET_CAN_DATA_ID_SET(obj->id) | THINGSET_CAN_SOURCE_SET(ts_can->node_addr),
     };
-    int err;
+    int err = 0;
     int pos_buf = 0;
     int chunk_len;
     uint8_t seq = 0;
@@ -270,6 +273,24 @@ static void thingset_can_send_packetized_report_inst(struct thingset_can *ts_can
             break;
         }
     }
+    return err;
+}
+
+int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
+                                  enum thingset_data_format format)
+{
+    struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
+    k_sem_take(&tx_buf->lock, K_FOREVER);
+
+    struct thingset_endpoint endpoint;
+    thingset_endpoint_by_path(&ts, &endpoint, path, strlen(path));
+
+    int len = thingset_report_path(&ts, tx_buf->data, tx_buf->size, path, format);
+
+    int ret = thingset_can_send_packetized_report_inst(ts_can, endpoint.object, tx_buf->data, len);
+
+    k_sem_give(&tx_buf->lock);
+    return ret;
 }
 
 static void thingset_can_report_tx_handler(struct k_work *work)
@@ -297,7 +318,7 @@ static void thingset_can_report_tx_handler(struct k_work *work)
         else if (data_len > 0) {
             memcpy(frame.data, sbuf->data, data_len);
             k_sem_give(&sbuf->lock);
-            frame.id = THINGSET_CAN_TYPE_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
+            frame.id = THINGSET_CAN_TYPE_SF_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
                        | THINGSET_CAN_DATA_ID_SET(obj->id)
                        | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
 #ifdef CONFIG_CAN_FD_MODE
@@ -356,9 +377,9 @@ int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buffer, s
         return -ENODEV;
     }
 
-    ts_can->rx_addr.ext_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+    ts_can->rx_addr.ext_id = THINGSET_CAN_TYPE_REQRESP | THINGSET_CAN_PRIO_REQRESP
                              | THINGSET_CAN_TARGET_SET(ts_can->node_addr);
-    ts_can->tx_addr.ext_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+    ts_can->tx_addr.ext_id = THINGSET_CAN_TYPE_REQRESP | THINGSET_CAN_PRIO_REQRESP
                              | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
 
     ret = isotp_bind(&ts_can->recv_ctx, ts_can->dev, &ts_can->rx_addr, &ts_can->tx_addr, &fc_opts,
@@ -426,7 +447,7 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
         k_timer_init(&ts_can->request_response.timer, thingset_can_request_response_timeout_handler,
                      NULL);
         k_timer_start(&ts_can->request_response.timer, timeout, timeout);
-        ts_can->request_response.can_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+        ts_can->request_response.can_id = THINGSET_CAN_TYPE_REQRESP | THINGSET_CAN_PRIO_REQRESP
                                           | THINGSET_CAN_TARGET_BUS_SET(ts_can->bus_number)
                                           | THINGSET_CAN_SOURCE_BUS_SET(target_bus)
                                           | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
@@ -507,12 +528,12 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
     }
 
     ts_can->tx_addr.ext_id =
-        THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+        THINGSET_CAN_TYPE_REQRESP | THINGSET_CAN_PRIO_REQRESP
         | THINGSET_CAN_TARGET_BUS_SET(target_bus) | THINGSET_CAN_SOURCE_BUS_SET(ts_can->bus_number)
         | THINGSET_CAN_TARGET_SET(target_addr) | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
 
     ts_can->rx_addr.ext_id =
-        THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+        THINGSET_CAN_TYPE_REQRESP | THINGSET_CAN_PRIO_REQRESP
         | THINGSET_CAN_TARGET_BUS_SET(ts_can->bus_number) | THINGSET_CAN_SOURCE_BUS_SET(target_bus)
         | THINGSET_CAN_TARGET_SET(ts_can->node_addr) | THINGSET_CAN_SOURCE_SET(target_addr);
 
@@ -592,8 +613,8 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         return -ENODEV;
     }
 
-#ifdef CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX
-    for (int i = 0; i < CONFIG_THINGSET_CAN_NUM_RX_BUFFER_BUCKETS; i++) {
+#ifdef CONFIG_THINGSET_CAN_REPORT_RX
+    for (int i = 0; i < CONFIG_THINGSET_CAN_REPORT_RX_BUCKETS; i++) {
         sys_slist_init(&rx_buf_lookup[i]);
     }
 #endif
@@ -706,7 +727,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     }
 
 #ifdef CONFIG_ISOTP_FAST
-    uint32_t rx_can_id = THINGSET_CAN_TYPE_CHANNEL | THINGSET_CAN_PRIO_CHANNEL
+    uint32_t rx_can_id = THINGSET_CAN_TYPE_REQRESP | THINGSET_CAN_PRIO_REQRESP
                          | THINGSET_CAN_TARGET_SET(ts_can->node_addr);
     isotp_fast_bind(&ts_can->ctx, can_dev, rx_can_id, &fc_opts, isotp_fast_recv_callback, ts_can,
                     isotp_fast_recv_error_callback, isotp_fast_sent_callback);
@@ -717,6 +738,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     return 0;
 }
 
+#ifdef CONFIG_THINGSET_CAN_REPORT_RX
 int thingset_can_set_report_rx_callback_inst(struct thingset_can *ts_can,
                                              thingset_can_report_rx_callback_t rx_cb)
 {
@@ -730,24 +752,41 @@ int thingset_can_set_report_rx_callback_inst(struct thingset_can *ts_can,
 
     ts_can->report_rx_cb = rx_cb;
 
+    int filter_id = can_add_rx_filter(ts_can->dev, thingset_can_packetized_report_rx_cb, ts_can,
+                                      &mf_report_filter);
+    if (filter_id < 0) {
+        LOG_ERR("Unable to add packetized report filter: %d", filter_id);
+        return filter_id;
+    }
+
+    return 0;
+}
+#endif /* CONFIG_THINGSET_CAN_REPORT_RX */
+
+#ifdef CONFIG_THINGSET_CAN_ITEM_RX
+int thingset_can_set_item_rx_callback_inst(struct thingset_can *ts_can,
+                                           thingset_can_item_rx_callback_t rx_cb)
+{
+    if (!device_is_ready(ts_can->dev)) {
+        return -ENODEV;
+    }
+
+    if (rx_cb == NULL) {
+        return -EINVAL;
+    }
+
+    ts_can->item_rx_cb = rx_cb;
+
     int filter_id =
-        can_add_rx_filter(ts_can->dev, thingset_can_report_rx_cb, ts_can, &report_filter);
+        can_add_rx_filter(ts_can->dev, thingset_can_item_rx_cb, ts_can, &sf_report_filter);
     if (filter_id < 0) {
         LOG_ERR("Unable to add report filter: %d", filter_id);
         return filter_id;
     }
 
-#ifdef CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX
-    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_packetized_report_rx_cb, ts_can,
-                                  &packetized_report_filter);
-    if (filter_id < 0) {
-        LOG_ERR("Unable to add packetized report filter: %d", filter_id);
-        return filter_id;
-    }
-#endif /* CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_RX */
-
     return 0;
 }
+#endif /* CONFIG_THINGSET_CAN_ITEM_RX */
 
 #ifndef CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES
 
@@ -767,6 +806,11 @@ static struct thingset_can ts_can_single = {
 THINGSET_ADD_ITEM_UINT8(TS_ID_NET, TS_ID_NET_CAN_NODE_ADDR, "pCANNodeAddr",
                         &ts_can_single.node_addr, THINGSET_ANY_RW, TS_SUBSET_NVM);
 
+int thingset_can_send_report(const char *path, enum thingset_data_format format)
+{
+    return thingset_can_send_report_inst(&ts_can_single, path, format);
+}
+
 #ifdef CONFIG_ISOTP_FAST
 int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus,
                       thingset_can_response_callback_t rsp_callback, void *callback_arg,
@@ -782,10 +826,19 @@ int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8
 }
 #endif /* CONFIG_ISOTP_FAST */
 
+#ifdef CONFIG_THINGSET_CAN_REPORT_RX
 int thingset_can_set_report_rx_callback(thingset_can_report_rx_callback_t rx_cb)
 {
     return thingset_can_set_report_rx_callback_inst(&ts_can_single, rx_cb);
 }
+#endif
+
+#ifdef CONFIG_THINGSET_CAN_ITEM_RX
+int thingset_can_set_item_rx_callback(thingset_can_item_rx_callback_t rx_cb)
+{
+    return thingset_can_set_item_rx_callback_inst(&ts_can_single, rx_cb);
+}
+#endif
 
 struct thingset_can *thingset_can_get_inst()
 {

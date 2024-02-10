@@ -21,7 +21,7 @@ extern "C" {
 /*
  * ThingSet addressing in 29-bit CAN ID
  *
- * Channel-based messages using ISO-TP:
+ * Request/response messages using ISO-TP:
  *
  *    28      26 25 24 23     20 19     16 15            8 7             0
  *   +----------+-----+---------+---------+---------------+---------------+
@@ -33,12 +33,16 @@ extern "C" {
  *   tgt bus: Bus number of the target node (default for single bus systems is 0x0)
  *   src bus: Bus number of the source node (default for single bus systems is 0x0)
  *
- * Control and report messages (always single-frame):
+ * Reports (single-frame and multi-frame)
  *
  *    28      26 25 24 23           16 15            8 7             0
- *   +----------+-----+---------------+---------------+---------------+
- *   | Priority | 0x2 | data ID (MSB) | data ID (LSB) |  source addr  |
- *   +----------+-----+---------------+---------------+---------------+
+ *   +----------+------+---------------+---------------+---------------+
+ *   | Priority | Type | data ID (MSB) | data ID (LSB) |  source addr  |
+ *   +----------+------+---------------+---------------+---------------+
+ *
+ *   Type:
+ *     0x1: multi-frame
+ *     0x2: single-frame
  *
  *   Priority:
  *     0 .. 3: High-priority control frames
@@ -112,10 +116,10 @@ extern "C" {
 #define THINGSET_CAN_TYPE_POS  (24U)
 #define THINGSET_CAN_TYPE_MASK (0x3 << THINGSET_CAN_TYPE_POS)
 
-#define THINGSET_CAN_TYPE_CHANNEL           (0x0 << THINGSET_CAN_TYPE_POS)
-#define THINGSET_CAN_TYPE_PACKETIZED_REPORT (0x1 << THINGSET_CAN_TYPE_POS)
-#define THINGSET_CAN_TYPE_REPORT            (0x2 << THINGSET_CAN_TYPE_POS)
-#define THINGSET_CAN_TYPE_NETWORK           (0x3 << THINGSET_CAN_TYPE_POS)
+#define THINGSET_CAN_TYPE_REQRESP   (0x0 << THINGSET_CAN_TYPE_POS)
+#define THINGSET_CAN_TYPE_MF_REPORT (0x1 << THINGSET_CAN_TYPE_POS)
+#define THINGSET_CAN_TYPE_SF_REPORT (0x2 << THINGSET_CAN_TYPE_POS)
+#define THINGSET_CAN_TYPE_NETWORK   (0x3 << THINGSET_CAN_TYPE_POS)
 
 /* message priorities */
 #define THINGSET_CAN_PRIO_POS       (26U)
@@ -128,21 +132,22 @@ extern "C" {
 #define THINGSET_CAN_PRIO_CONTROL_LOW       (0x3 << THINGSET_CAN_PRIO_POS)
 #define THINGSET_CAN_PRIO_NETWORK_MGMT      (0x4 << THINGSET_CAN_PRIO_POS)
 #define THINGSET_CAN_PRIO_REPORT_HIGH       (0x5 << THINGSET_CAN_PRIO_POS)
-#define THINGSET_CAN_PRIO_CHANNEL           (0x6 << THINGSET_CAN_PRIO_POS)
+#define THINGSET_CAN_PRIO_REQRESP           (0x6 << THINGSET_CAN_PRIO_POS)
 #define THINGSET_CAN_PRIO_REPORT_LOW        (0x7 << THINGSET_CAN_PRIO_POS)
 
 /* below macros return true if the CAN ID matches the specified message type */
 #define THINGSET_CAN_CONTROL(id) \
     (((id & THINGSET_CAN_TYPE_MASK) == THINGSET_CAN_TYPE_CONTROL) && THINGSET_CAN_PRIO_GET(id) < 4)
-#define THINGSET_CAN_REPORT(id) \
-    (((id & THINGSET_CAN_TYPE_MASK) == THINGSET_CAN_TYPE_REPORT) && THINGSET_CAN_PRIO_GET(id) >= 4)
-#define THINGSET_CAN_PACKETIZED_REPORT(id) \
-    (((id & THINGSET_CAN_TYPE_MASK) == THINGSET_CAN_TYPE_PACKETIZED_REPORT) \
+#define THINGSET_CAN_SF_REPORT(id) \
+    (((id & THINGSET_CAN_TYPE_MASK) == THINGSET_CAN_TYPE_SF_REPORT) \
      && THINGSET_CAN_PRIO_GET(id) >= 4)
-#define THINGSET_CAN_CHANNEL(id) ((id & THINGSET_CAN_TYPE_MASK) == THINGSET_CAN_TYPE_CHANNEL)
+#define THINGSET_CAN_MF_REPORT(id) \
+    (((id & THINGSET_CAN_TYPE_MASK) == THINGSET_CAN_TYPE_MF_REPORT) \
+     && THINGSET_CAN_PRIO_GET(id) >= 4)
+#define THINGSET_CAN_REQRESP(id) ((id & THINGSET_CAN_TYPE_MASK) == THINGSET_CAN_TYPE_REQRESP)
 
 /**
- * Callback typedef for received ThingSet report via CAN
+ * Callback typedef for received multi-frame reports (type 0x1) via CAN
  *
  * @param data_id ThingSet data object ID
  * @param value Buffer containing the CBOR raw data of the value
@@ -151,6 +156,18 @@ extern "C" {
  */
 typedef void (*thingset_can_report_rx_callback_t)(uint16_t data_id, const uint8_t *value,
                                                   size_t value_len, uint8_t source_addr);
+
+/**
+ * Callback typedef for received single-frame reports (type 0x2) via CAN
+ *
+ * @param data_id ThingSet data object ID
+ * @param value Buffer containing the CBOR raw data of the value
+ * @param value_len Length of the value in the buffer
+ * @param source_addr Node address the control message was received from
+ */
+typedef void (*thingset_can_item_rx_callback_t)(uint16_t data_id, const uint8_t *value,
+                                                size_t value_len, uint8_t source_addr);
+
 #ifdef CONFIG_ISOTP_FAST
 typedef void (*thingset_can_response_callback_t)(uint8_t *data, size_t len, int result,
                                                  uint8_t sender_id, void *arg);
@@ -186,10 +203,16 @@ struct thingset_can
     struct thingset_can_request_response request_response;
 #endif
     uint8_t rx_buffer[CONFIG_THINGSET_CAN_RX_BUF_SIZE];
+#ifdef CONFIG_THINGSET_CAN_REPORT_RX
     thingset_can_report_rx_callback_t report_rx_cb;
+#endif
+#ifdef CONFIG_THINGSET_CAN_ITEM_RX
+    thingset_can_item_rx_callback_t item_rx_cb;
+#endif
     int64_t next_pub_time;
     uint8_t node_addr;
     uint8_t bus_number : 4;
+    uint8_t msg_no;
 };
 
 #ifdef CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES
@@ -208,6 +231,18 @@ struct thingset_can
  */
 int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buf, size_t rx_buf_size,
                               uint8_t *source_addr, uint8_t *source_bus, k_timeout_t timeout);
+
+/**
+ * Send ThingSet report to the CAN bus.
+ *
+ * @param ts_can Pointer to the thingset_can context.
+ * @param path Path of subset/group/record to be published
+ * @param format Protocol data format to be used (text, binary with IDs or binary with names)
+ *
+ * @returns 0 for success or negative errno in case of error
+ */
+int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
+                                  enum thingset_data_format format);
 
 #ifdef CONFIG_ISOTP_FAST
 /**
@@ -264,10 +299,13 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
 int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout);
 #endif /* CONFIG_ISOTP_FAST */
 
+#ifdef CONFIG_THINGSET_CAN_REPORT_RX
 /**
  * Set callback for received reports from other nodes
  *
- * The callback can be used to subscribe to reports from other nodes, e.g. for control purposes.
+ * These messages use ThingSet CAN frame type 0x1 (multi-frame report).
+ *
+ * The callback can be used to subscribe to reports from other nodes.
  *
  * If not set, reports from other nodes are ignored on the bus.
  *
@@ -276,6 +314,22 @@ int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout);
  */
 int thingset_can_set_report_rx_callback_inst(struct thingset_can *ts_can,
                                              thingset_can_report_rx_callback_t rx_cb);
+#endif /* CONFIG_THINGSET_CAN_REPORT_RX */
+
+#ifdef CONFIG_THINGSET_CAN_ITEM_RX
+/**
+ * Set callback for received data items from other nodes
+ *
+ * These messages use ThingSet CAN frame type 0x2 (single-frame report).
+ *
+ * If not set, single-frame reports from other nodes are ignored on the bus.
+ *
+ * @param ts_can Pointer to the thingset_can context.
+ * @param rx_cb Callback function.
+ */
+int thingset_can_set_item_rx_callback_inst(struct thingset_can *ts_can,
+                                           thingset_can_report_rx_callback_t rx_cb);
+#endif /* CONFIG_THINGSET_CAN_ITEM_RX */
 
 /**
  * Initialize a ThingSet CAN instance
@@ -290,6 +344,16 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
                            uint8_t bus_number);
 
 #else /* !CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES */
+
+/**
+ * Send ThingSet report to the CAN bus.
+ *
+ * @param path Path of subset/group/record to be published
+ * @param format Protocol data format to be used (text, binary with IDs or binary with names)
+ *
+ * @returns 0 for success or negative errno in case of error
+ */
+int thingset_can_send_report(const char *path, enum thingset_data_format format);
 
 #ifdef CONFIG_ISOTP_FAST
 /**
@@ -319,17 +383,33 @@ int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8
 int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus);
 #endif /* CONFIG_ISOTP_FAST */
 
+#ifdef CONFIG_THINGSET_CAN_REPORT_RX
 /**
  * Set callback for received reports from other nodes
  *
- * The callback can be used to subscribe to reports from other nodes, e.g. for control purposes.
+ * These messages use ThingSet CAN frame type 0x1 (multi-frame report).
+ *
+ * The callback can be used to subscribe to reports from other nodes.
  *
  * If not set, reports from other nodes are ignored on the bus.
  *
- * @param ts_can Pointer to the thingset_can context.
  * @param rx_cb Callback function.
  */
 int thingset_can_set_report_rx_callback(thingset_can_report_rx_callback_t rx_cb);
+#endif /* CONFIG_THINGSET_CAN_REPORT_RX */
+
+#ifdef CONFIG_THINGSET_CAN_ITEM_RX
+/**
+ * Set callback for received data items from other nodes
+ *
+ * These messages use ThingSet CAN frame type 0x2 (single-frame report).
+ *
+ * If not set, single-frame reports from other nodes are ignored on the bus.
+ *
+ * @param rx_cb Callback function.
+ */
+int thingset_can_set_item_rx_callback(thingset_can_item_rx_callback_t rx_cb);
+#endif /* CONFIG_THINGSET_CAN_ITEM_RX */
 
 /**
  * Get ThingSet CAN instance

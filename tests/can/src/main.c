@@ -16,13 +16,16 @@
 
 static const struct device *can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 
-static struct k_sem report_rx_sem;
 static struct k_sem request_tx_sem;
 static struct k_sem response_rx_sem;
-
 uint8_t *response;
 size_t response_len;
 int response_code;
+
+static struct k_sem item_rx_sem;
+static uint16_t item_data_id;
+static uint8_t item_value_buf[8];
+static size_t item_value_len;
 
 static void isotp_fast_recv_cb(struct net_buf *buffer, int rem_len, uint32_t rx_can_id, void *arg)
 {
@@ -39,29 +42,37 @@ static void isotp_fast_sent_cb(int result, void *arg)
     k_sem_give(&request_tx_sem);
 }
 
-static void report_rx_callback(uint16_t data_id, const uint8_t *value, size_t value_len,
-                               uint8_t source_addr)
+static void item_rx_callback(uint16_t data_id, const uint8_t *value, size_t value_len,
+                             uint8_t source_addr)
 {
-    k_sem_give(&report_rx_sem);
+    if (value_len < sizeof(item_value_buf)) {
+        item_data_id = data_id;
+        memcpy(item_value_buf, value, value_len);
+        item_value_len = value_len;
+        k_sem_give(&item_rx_sem);
+    }
 }
 
-ZTEST(thingset_can, test_receive_report_from_node)
+ZTEST(thingset_can, test_receive_item_from_node)
 {
-    struct can_frame report_frame = {
-        .id = 0x1E000002, /* node with address 0x02 */
+    struct can_frame rx_frame = {
+        .id = 0x1E123402, /* node with address 0x02 */
         .flags = CAN_FRAME_IDE,
         .data = { 0xF6 },
         .dlc = 1,
     };
     int err;
 
-    k_sem_reset(&report_rx_sem);
+    k_sem_reset(&item_rx_sem);
 
-    err = can_send(can_dev, &report_frame, K_MSEC(10), NULL, NULL);
+    err = can_send(can_dev, &rx_frame, K_MSEC(10), NULL, NULL);
     zassert_equal(err, 0, "can_send failed: %d", err);
 
-    err = k_sem_take(&report_rx_sem, TEST_RECEIVE_TIMEOUT);
+    err = k_sem_take(&item_rx_sem, TEST_RECEIVE_TIMEOUT);
     zassert_equal(err, 0, "receive timeout");
+    zassert_equal(item_data_id, 0x1234, "wrong data object ID");
+    zassert_equal(item_value_len, 1, "wrong value len");
+    zassert_equal(item_value_buf[0], 0xF6);
 }
 
 static void request_rx_cb(const struct device *dev, struct can_frame *frame, void *user_data)
@@ -130,7 +141,7 @@ static void *thingset_can_setup(void)
 {
     int err;
 
-    k_sem_init(&report_rx_sem, 0, 1);
+    k_sem_init(&item_rx_sem, 0, 1);
     k_sem_init(&request_tx_sem, 0, 1);
     k_sem_init(&response_rx_sem, 0, 1);
 
@@ -149,7 +160,7 @@ static void *thingset_can_setup(void)
     /* wait for address claiming to finish */
     k_sleep(K_MSEC(1000));
 
-    thingset_can_set_report_rx_callback(report_rx_callback);
+    thingset_can_set_item_rx_callback(item_rx_callback);
 
     return NULL;
 }
