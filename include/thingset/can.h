@@ -228,6 +228,7 @@ struct thingset_can
     struct isotp_msg_id rx_addr;
     struct isotp_msg_id tx_addr;
 #endif
+    struct k_sem report_tx_sem;
     struct k_event events;
 #ifdef CONFIG_ISOTP_FAST
     struct thingset_can_request_response request_response;

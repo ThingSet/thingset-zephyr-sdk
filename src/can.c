@@ -234,7 +234,9 @@ static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame
 
 static void thingset_can_report_tx_cb(const struct device *dev, int error, void *user_data)
 {
-    /* Do nothing: Reports are fire and forget. */
+    struct thingset_can *ts_can = (struct thingset_can *)user_data;
+
+    k_sem_give(&ts_can->report_tx_sem);
 }
 
 int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
@@ -248,6 +250,8 @@ int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
 
     struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
     k_sem_take(&tx_buf->lock, K_FOREVER);
+
+    k_sem_reset(&ts_can->report_tx_sem);
 
     len = thingset_report_path(&ts, tx_buf->data, tx_buf->size, path, format);
     if (len <= 0) {
@@ -273,10 +277,16 @@ int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
         frame.dlc = can_bytes_to_dlc(chunk_len);
 
         ret = can_send(ts_can->dev, &frame, K_MSEC(CONFIG_THINGSET_CAN_REPORT_SEND_TIMEOUT),
-                       thingset_can_report_tx_cb, NULL);
-
+                       thingset_can_report_tx_cb, ts_can);
         if (ret == -EAGAIN) {
             LOG_DBG("Error sending CAN frame with ID 0x%X", frame.id);
+            break;
+        }
+
+        /* wait until frame was actually sent to ensure message order */
+        ret = k_sem_take(&ts_can->report_tx_sem, K_MSEC(100));
+        if (ret != 0) {
+            LOG_DBG("Sending CAN frame with ID 0x%X timed out", frame.id);
             break;
         }
 
@@ -310,6 +320,11 @@ static void thingset_can_live_reporting_handler(struct k_work *work)
 }
 
 #ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
+static void thingset_can_item_tx_cb(const struct device *dev, int error, void *user_data)
+{
+    /* Do nothing: Single-frame reports are fire and forget. */
+}
+
 static void thingset_can_control_reporting_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
@@ -344,7 +359,7 @@ static void thingset_can_control_reporting_handler(struct k_work *work)
 #endif
             frame.dlc = can_bytes_to_dlc(data_len);
             err = can_send(ts_can->dev, &frame, K_MSEC(CONFIG_THINGSET_CAN_REPORT_SEND_TIMEOUT),
-                           thingset_can_report_tx_cb, NULL);
+                           thingset_can_item_tx_cb, NULL);
             if (err != 0) {
                 LOG_DBG("Error sending CAN frame with ID %x", frame.id);
             }
@@ -641,6 +656,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 #ifdef CONFIG_ISOTP_FAST
     k_sem_init(&ts_can->request_response.sem, 1, 1);
 #endif
+    k_sem_init(&ts_can->report_tx_sem, 0, 1);
 
     k_work_init_delayable(&ts_can->live_reporting_work, thingset_can_live_reporting_handler);
 #ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
