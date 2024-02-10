@@ -607,8 +607,8 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     ts_can->bus_number = bus_number;
 
     /* set initial address (will be changed if already used on the bus) */
-    if (ts_can->node_addr < 1 || ts_can->node_addr > THINGSET_CAN_ADDR_MAX) {
-        ts_can->node_addr = 1;
+    if (ts_can->node_addr < THINGSET_CAN_ADDR_MIN || ts_can->node_addr > THINGSET_CAN_ADDR_MAX) {
+        ts_can->node_addr = THINGSET_CAN_ADDR_MIN;
     }
 
     k_event_init(&ts_can->events);
@@ -646,7 +646,9 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
             k_event_wait(&ts_can->events, EVENT_ADDRESS_ALREADY_USED, false, K_MSEC(500));
         if (event & EVENT_ADDRESS_ALREADY_USED) {
             /* try again with new random node_addr between 0x01 and 0xFD */
-            ts_can->node_addr = 1 + sys_rand32_get() % THINGSET_CAN_ADDR_MAX;
+            ts_can->node_addr =
+                THINGSET_CAN_ADDR_MIN
+                + sys_rand32_get() % (THINGSET_CAN_ADDR_MAX - THINGSET_CAN_ADDR_MIN);
             LOG_WRN("Node addr already in use, trying 0x%.2X", ts_can->node_addr);
         }
         else {
