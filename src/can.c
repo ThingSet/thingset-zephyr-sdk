@@ -246,6 +246,32 @@ static void thingset_can_report_tx_cb(const struct device *dev, int error, void 
     /* Do nothing: Reports are fire and forget. */
 }
 
+static void thingset_can_send_packetized_report_inst(struct thingset_can *ts_can,
+                                                     struct thingset_data_object *obj,
+                                                     uint8_t *data, size_t data_len)
+{
+    struct can_frame frame = {
+        .flags = CAN_FRAME_IDE | (IS_ENABLED(CONFIG_CAN_FD_MODE) ? CAN_FRAME_FDF : 0),
+        .id = THINGSET_CAN_TYPE_PACKETIZED_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
+              | THINGSET_CAN_DATA_ID_SET(obj->id) | THINGSET_CAN_SOURCE_SET(ts_can->node_addr),
+    };
+    int err;
+    int pos_buf = 0;
+    int chunk_len;
+    uint8_t seq = 0;
+    uint8_t *body = frame.data + 1;
+    while ((chunk_len = packetize(data, data_len, body, CAN_MAX_DLEN - 1, &pos_buf)) != 0) {
+        frame.data[0] = seq++;
+        frame.dlc = can_bytes_to_dlc(chunk_len + 1);
+        err = can_send(ts_can->dev, &frame, K_MSEC(CONFIG_THINGSET_CAN_REPORT_SEND_TIMEOUT),
+                       thingset_can_report_tx_cb, NULL);
+        if (err == -EAGAIN) {
+            LOG_DBG("Error sending CAN frame with ID %x", frame.id);
+            break;
+        }
+    }
+}
+
 static void thingset_can_report_tx_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
@@ -265,38 +291,7 @@ static void thingset_can_report_tx_handler(struct k_work *work)
         k_sem_take(&sbuf->lock, K_FOREVER);
         data_len = thingset_export_item(&ts, sbuf->data, sbuf->size, obj, THINGSET_BIN_VALUES_ONLY);
         if (data_len > CAN_MAX_DLEN) {
-#ifdef CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_TX
-            frame.id = THINGSET_CAN_TYPE_PACKETIZED_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
-                       | THINGSET_CAN_DATA_ID_SET(obj->id)
-                       | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
-            int pos_buf = 0;
-            int chunk_len;
-            uint8_t seq = 0;
-            uint8_t *body = frame.data + 1;
-            // clang-format off
-            while ((chunk_len = packetize(sbuf->data, data_len, body, CAN_MAX_DLEN - 1, &pos_buf))
-                   != 0)
-            {
-#ifdef CONFIG_CAN_FD_MODE
-                frame.flags |= CAN_FRAME_FDF;
-#endif
-                // clang-format on
-                frame.data[0] = seq++;
-                frame.dlc = can_bytes_to_dlc(chunk_len + 1);
-                err = can_send(ts_can->dev, &frame, K_MSEC(CONFIG_THINGSET_CAN_REPORT_SEND_TIMEOUT),
-                               thingset_can_report_tx_cb, NULL);
-#ifdef CONFIG_CAN_FD_MODE
-                frame.flags &= ~CAN_FRAME_FDF;
-#endif
-                if (err == -EAGAIN) {
-                    LOG_DBG("Error sending CAN frame with ID %x", frame.id);
-                    break;
-                }
-            }
-#else
-            LOG_WRN("Unable to send CAN frame with ID %x as it is too large (%d)", frame.id,
-                    data_len);
-#endif /* CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_TX */
+            thingset_can_send_packetized_report_inst(ts_can, obj, sbuf->data, data_len);
             k_sem_give(&sbuf->lock);
         }
         else if (data_len > 0) {

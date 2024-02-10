@@ -17,19 +17,12 @@ config THINGSET_CAN_RX_BUF_SIZE
     help
       Default value large enough to receive a 512 byte flash page for DFU.
 
-config THINGSET_CAN_PACKETIZED_REPORTS_TX
-  bool "Support for transmission of packetized reports over CAN"
-  help
-    If enabled, values larger than a single CAN message payload
-    (8 bytes in classical CAN; 64 in CAN-FD) can be transmitted via CAN
-    reports.
-
 config THINGSET_CAN_PACKETIZED_REPORTS_RX
-  bool "Support for reception of packetized reports over CAN"
-  help
-    If enabled, values larger than a single CAN message payload
-    (8 bytes in classical CAN; 64 in CAN-FD) can be received via CAN
-    reports.
+    bool "Support for reception of packetized reports over CAN"
+    help
+      If enabled, values larger than a single CAN message payload
+      (8 bytes in classical CAN; 64 in CAN-FD) can be received via CAN
+      reports.
 
 config THINGSET_CAN_RX_BUF_PER_SENDER_SIZE
     int "ThingSet CAN RX buffer size for reassembly of packetized reports"
