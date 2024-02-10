@@ -188,7 +188,10 @@ struct thingset_can_request_response
 struct thingset_can
 {
     const struct device *dev;
-    struct k_work_delayable reporting_work;
+    struct k_work_delayable live_reporting_work;
+#ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
+    struct k_work_delayable control_reporting_work;
+#endif
     struct k_work_delayable addr_claim_work;
 #ifdef CONFIG_ISOTP_FAST
     struct isotp_fast_ctx ctx;
@@ -209,7 +212,10 @@ struct thingset_can
 #ifdef CONFIG_THINGSET_CAN_ITEM_RX
     thingset_can_item_rx_callback_t item_rx_cb;
 #endif
-    int64_t next_pub_time;
+    int64_t next_live_report_time;
+#ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
+    int64_t next_control_report_time;
+#endif
     uint8_t node_addr;
     uint8_t bus_number : 4;
     uint8_t msg_no;

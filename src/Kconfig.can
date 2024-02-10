@@ -68,6 +68,21 @@ config THINGSET_CAN_REPORT_SEND_TIMEOUT
       Timeout in milliseconds to wait for a report frame to be successfully
       submitted to the CAN TX FIFO.
 
+config THINGSET_CAN_CONTROL_REPORTING
+    bool "Publish data of control subset"
+    help
+      Enable automatic publication of control data. The subset is application-
+      specific and has to be specified.
+
+config THINGSET_CAN_CONTROL_SUBSET
+    bool "Subset containing control data to be published"
+    depends on THINGSET_CAN_CONTROL_REPORTING
+
+config THINGSET_CAN_CONTROL_REPORTING_PERIOD
+    bool "Control data reporting interval in milliseconds"
+    depends on THINGSET_CAN_CONTROL_REPORTING
+    default 100
+
 config THINGSET_CAN_MULTIPLE_INSTANCES
     bool "Support for multiple ThingSet CAN instances"
     depends on ISOTP_FAST

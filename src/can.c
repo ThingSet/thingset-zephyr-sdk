@@ -196,9 +196,8 @@ static void thingset_can_item_rx_cb(const struct device *dev, struct can_frame *
 #endif /* CONFIG_THINGSET_CAN_ITEM_RX */
 
 #ifdef CONFIG_THINGSET_CAN_REPORT_RX
-
-static void thingset_can_packetized_report_rx_cb(const struct device *dev, struct can_frame *frame,
-                                                 void *user_data)
+static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame *frame,
+                                      void *user_data)
 {
     struct thingset_can *ts_can = user_data;
     uint16_t data_id = THINGSET_CAN_DATA_ID_GET(frame->id);
@@ -241,7 +240,6 @@ static void thingset_can_packetized_report_rx_cb(const struct device *dev, struc
         }
     }
 }
-
 #endif /* CONFIG_THINGSET_CAN_REPORT_RX */
 
 static void thingset_can_report_tx_cb(const struct device *dev, int error, void *user_data)
@@ -249,21 +247,30 @@ static void thingset_can_report_tx_cb(const struct device *dev, int error, void 
     /* Do nothing: Reports are fire and forget. */
 }
 
-static int thingset_can_send_packetized_report_inst(struct thingset_can *ts_can,
-                                                    struct thingset_data_object *obj, uint8_t *data,
-                                                    size_t data_len)
+int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
+                                  enum thingset_data_format format)
 {
-    struct can_frame frame = {
-        .flags = CAN_FRAME_IDE | (IS_ENABLED(CONFIG_CAN_FD_MODE) ? CAN_FRAME_FDF : 0),
-        .id = THINGSET_CAN_TYPE_MF_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
-              | THINGSET_CAN_DATA_ID_SET(obj->id) | THINGSET_CAN_SOURCE_SET(ts_can->node_addr),
-    };
     int err = 0;
     int pos_buf = 0;
     int chunk_len;
     uint8_t seq = 0;
+
+    struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
+    k_sem_take(&tx_buf->lock, K_FOREVER);
+
+    struct thingset_endpoint endpoint;
+    thingset_endpoint_by_path(&ts, &endpoint, path, strlen(path));
+
+    int data_len = thingset_report_path(&ts, tx_buf->data, tx_buf->size, path, format);
+
+    struct can_frame frame = {
+        .flags = CAN_FRAME_IDE | (IS_ENABLED(CONFIG_CAN_FD_MODE) ? CAN_FRAME_FDF : 0),
+        .id = THINGSET_CAN_TYPE_MF_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
+              | THINGSET_CAN_DATA_ID_SET(endpoint.object->id)
+              | THINGSET_CAN_SOURCE_SET(ts_can->node_addr),
+    };
     uint8_t *body = frame.data + 1;
-    while ((chunk_len = packetize(data, data_len, body, CAN_MAX_DLEN - 1, &pos_buf)) != 0) {
+    while ((chunk_len = packetize(tx_buf->data, data_len, body, CAN_MAX_DLEN - 1, &pos_buf)) != 0) {
         frame.data[0] = seq++;
         frame.dlc = can_bytes_to_dlc(chunk_len + 1);
         err = can_send(ts_can->dev, &frame, K_MSEC(CONFIG_THINGSET_CAN_REPORT_SEND_TIMEOUT),
@@ -273,30 +280,34 @@ static int thingset_can_send_packetized_report_inst(struct thingset_can *ts_can,
             break;
         }
     }
+
+    k_sem_give(&tx_buf->lock);
     return err;
 }
 
-int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
-                                  enum thingset_data_format format)
-{
-    struct shared_buffer *tx_buf = thingset_sdk_shared_buffer();
-    k_sem_take(&tx_buf->lock, K_FOREVER);
-
-    struct thingset_endpoint endpoint;
-    thingset_endpoint_by_path(&ts, &endpoint, path, strlen(path));
-
-    int len = thingset_report_path(&ts, tx_buf->data, tx_buf->size, path, format);
-
-    int ret = thingset_can_send_packetized_report_inst(ts_can, endpoint.object, tx_buf->data, len);
-
-    k_sem_give(&tx_buf->lock);
-    return ret;
-}
-
-static void thingset_can_report_tx_handler(struct k_work *work)
+static void thingset_can_live_reporting_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
-    struct thingset_can *ts_can = CONTAINER_OF(dwork, struct thingset_can, reporting_work);
+    struct thingset_can *ts_can = CONTAINER_OF(dwork, struct thingset_can, live_reporting_work);
+
+    if (live_reporting_enable) {
+        thingset_can_send_report_inst(ts_can, TS_NAME_SUBSET_LIVE, THINGSET_BIN_IDS_VALUES);
+    }
+
+    ts_can->next_live_report_time += 1000 * live_reporting_period;
+    if (ts_can->next_live_report_time <= k_uptime_get()) {
+        /* ensure proper initialization of next_live_report_time */
+        ts_can->next_live_report_time = k_uptime_get() + 1000 * live_reporting_period;
+    }
+
+    thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(ts_can->next_live_report_time));
+}
+
+#ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
+static void thingset_can_control_reporting_handler(struct k_work *work)
+{
+    struct k_work_delayable *dwork = k_work_delayable_from_work(work);
+    struct thingset_can *ts_can = CONTAINER_OF(dwork, struct thingset_can, control_reporting_work);
     int data_len = 0;
     int err;
 
@@ -307,12 +318,13 @@ static void thingset_can_report_tx_handler(struct k_work *work)
 
     struct thingset_data_object *obj = NULL;
     while (live_reporting_enable
-           && (obj = thingset_iterate_subsets(&ts, TS_SUBSET_LIVE, obj)) != NULL)
+           && (obj = thingset_iterate_subsets(&ts, CONFIG_THINGSET_CAN_CONTROL_SUBSET, obj))
+                  != NULL)
     {
         k_sem_take(&sbuf->lock, K_FOREVER);
         data_len = thingset_export_item(&ts, sbuf->data, sbuf->size, obj, THINGSET_BIN_VALUES_ONLY);
         if (data_len > CAN_MAX_DLEN) {
-            thingset_can_send_packetized_report_inst(ts_can, obj, sbuf->data, data_len);
+            LOG_WRN("Value of data item %x exceeds single CAN frame payload size", obj->id);
             k_sem_give(&sbuf->lock);
         }
         else if (data_len > 0) {
@@ -340,14 +352,16 @@ static void thingset_can_report_tx_handler(struct k_work *work)
         obj++; /* continue with object behind current one */
     }
 
-    ts_can->next_pub_time += 1000 * live_reporting_period;
-    if (ts_can->next_pub_time <= k_uptime_get()) {
-        /* ensure proper initialization of next_pub_time */
-        ts_can->next_pub_time = k_uptime_get() + 1000 * live_reporting_period;
+    ts_can->next_control_report_time += CONFIG_THINGSET_CAN_CONTROL_REPORTING_PERIOD;
+    if (ts_can->next_control_report_time <= k_uptime_get()) {
+        /* ensure proper initialization of next_control_report_time */
+        ts_can->next_control_report_time =
+            k_uptime_get() + CONFIG_THINGSET_CAN_CONTROL_REPORTING_PERIOD;
     }
 
-    thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(ts_can->next_pub_time));
+    thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(ts_can->next_control_report_time));
 }
+#endif
 
 #ifdef CONFIG_ISOTP_FAST
 void thingset_can_reset_request_response(struct thingset_can_request_response *rr)
@@ -621,7 +635,11 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 #ifdef CONFIG_ISOTP_FAST
     k_sem_init(&ts_can->request_response.sem, 1, 1);
 #endif
-    k_work_init_delayable(&ts_can->reporting_work, thingset_can_report_tx_handler);
+
+    k_work_init_delayable(&ts_can->live_reporting_work, thingset_can_live_reporting_handler);
+#ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
+    k_work_init_delayable(&ts_can->live_reporting_work, thingset_can_control_reporting_handler);
+#endif
     k_work_init_delayable(&ts_can->addr_claim_work, thingset_can_addr_claim_tx_handler);
 
     ts_can->dev = can_dev;
@@ -733,7 +751,10 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
                     isotp_fast_recv_error_callback, isotp_fast_sent_callback);
 #endif
 
-    thingset_sdk_reschedule_work(&ts_can->reporting_work, K_NO_WAIT);
+    thingset_sdk_reschedule_work(&ts_can->live_reporting_work, K_NO_WAIT);
+#ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
+    thingset_sdk_reschedule_work(&ts_can->control_reporting_work, K_NO_WAIT);
+#endif
 
     return 0;
 }
@@ -752,8 +773,8 @@ int thingset_can_set_report_rx_callback_inst(struct thingset_can *ts_can,
 
     ts_can->report_rx_cb = rx_cb;
 
-    int filter_id = can_add_rx_filter(ts_can->dev, thingset_can_packetized_report_rx_cb, ts_can,
-                                      &mf_report_filter);
+    int filter_id =
+        can_add_rx_filter(ts_can->dev, thingset_can_report_rx_cb, ts_can, &mf_report_filter);
     if (filter_id < 0) {
         LOG_ERR("Unable to add packetized report filter: %d", filter_id);
         return filter_id;
