@@ -251,6 +251,7 @@ static void thingset_can_report_tx_handler(struct k_work *work)
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
     struct thingset_can *ts_can = CONTAINER_OF(dwork, struct thingset_can, reporting_work);
     int data_len = 0;
+    int err;
 
     struct can_frame frame = {
         .flags = CAN_FRAME_IDE,
@@ -265,7 +266,6 @@ static void thingset_can_report_tx_handler(struct k_work *work)
         data_len = thingset_export_item(&ts, sbuf->data, sbuf->size, obj, THINGSET_BIN_VALUES_ONLY);
         if (data_len > CAN_MAX_DLEN) {
 #ifdef CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_TX
-            int err;
             frame.id = THINGSET_CAN_TYPE_PACKETIZED_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
                        | THINGSET_CAN_DATA_ID_SET(obj->id)
                        | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
@@ -283,8 +283,7 @@ static void thingset_can_report_tx_handler(struct k_work *work)
                 // clang-format on
                 frame.data[0] = seq++;
                 frame.dlc = can_bytes_to_dlc(chunk_len + 1);
-                err = can_send(ts_can->dev, &frame,
-                               K_MSEC(CONFIG_THINGSET_CAN_PACKETIZED_REPORTS_FRAME_TX_INTERVAL),
+                err = can_send(ts_can->dev, &frame, K_MSEC(CONFIG_THINGSET_CAN_REPORT_SEND_TIMEOUT),
                                thingset_can_report_tx_cb, NULL);
 #ifdef CONFIG_CAN_FD_MODE
                 frame.flags &= ~CAN_FRAME_FDF;
@@ -310,7 +309,9 @@ static void thingset_can_report_tx_handler(struct k_work *work)
             frame.flags |= CAN_FRAME_FDF;
 #endif
             frame.dlc = can_bytes_to_dlc(data_len);
-            if (can_send(ts_can->dev, &frame, K_MSEC(10), thingset_can_report_tx_cb, NULL) != 0) {
+            err = can_send(ts_can->dev, &frame, K_MSEC(CONFIG_THINGSET_CAN_REPORT_SEND_TIMEOUT),
+                           thingset_can_report_tx_cb, NULL);
+            if (err != 0) {
                 LOG_DBG("Error sending CAN frame with ID %x", frame.id);
             }
 #ifdef CONFIG_CAN_FD_MODE

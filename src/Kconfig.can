@@ -57,14 +57,13 @@ config THINGSET_CAN_NUM_RX_BUFFER_BUCKETS
       up current buffers. The hash function is simply a modulo operation, so
       for maximum efficiency a power-of-2 value should be used.
 
-config THINGSET_CAN_PACKETIZED_REPORTS_FRAME_TX_INTERVAL
-  int "ThingSet CAN maximum time to wait to send a frame in a packetized report"
-  depends on THINGSET_CAN_PACKETIZED_REPORTS_TX
-  range 0 100
-  default 30
-  help
-    Timeout in milliseconds to wait for a frame of a packetized report to
-    successfully send.
+config THINGSET_CAN_REPORT_SEND_TIMEOUT
+    int "ThingSet CAN report send timeout"
+    range 0 100
+    default 30
+    help
+      Timeout in milliseconds to wait for a report frame to be successfully
+      submitted to the CAN TX FIFO.
 
 config THINGSET_CAN_MULTIPLE_INSTANCES
     bool "Support for multiple ThingSet CAN instances"
