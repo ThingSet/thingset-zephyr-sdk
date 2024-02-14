@@ -54,8 +54,8 @@ typedef struct isotp_fast_opts isotp_opts;
 typedef struct isotp_fc_opts isotp_opts;
 #endif
 static const isotp_opts fc_opts = {
-    .bs = 8,    /* block size */
-    .stmin = 1, /* minimum separation time = 100 ms */
+    .bs = 8, /* block size */
+    .stmin = CONFIG_THINGSET_CAN_FRAME_SEPARATION_TIME,
 #ifdef CONFIG_ISOTP_FAST
 #ifdef CONFIG_CAN_FD_MODE
     .flags = ISOTP_MSG_FDF,
@@ -289,6 +289,8 @@ int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
             LOG_DBG("Sending CAN frame with ID 0x%X timed out", frame.id);
             break;
         }
+
+        k_sleep(K_MSEC(CONFIG_THINGSET_CAN_FRAME_SEPARATION_TIME));
 
         seq++;
         pos += chunk_len;

@@ -68,6 +68,18 @@ config THINGSET_CAN_REPORT_SEND_TIMEOUT
       Timeout in milliseconds to wait for a report frame to be successfully
       submitted to the CAN TX FIFO.
 
+config THINGSET_CAN_FRAME_SEPARATION_TIME
+    int "ThingSet CAN minimum frame separation time"
+    range 0 127
+    default 1
+    help
+      Minimum time in milliseconds between the end of one frame and the
+      beginning of the next consecutive frame in multi-frame messages.
+
+      This parameter is used for the STmin value in the underlying ISO-TP
+      protocol of request/response messages and as a delay between individual
+      frames of multi-frame reports.
+
 config THINGSET_CAN_CONTROL_REPORTING
     bool "Publish data of control subset"
     help
