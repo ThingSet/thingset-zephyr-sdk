@@ -688,7 +688,7 @@ static inline int send_ff(struct isotp_fast_send_ctx *sctx)
      * although it's not part of the FF frame
      */
     sctx->sn = 1;
-    uint16_t size = MIN(CAN_MAX_DLEN, len) - index;
+    uint16_t size = MIN(CAN_MAX_DLEN - index, len);
     memcpy(&frame.data[index], sctx->data, size);
     sctx->rem_len -= size;
     sctx->data += size;
