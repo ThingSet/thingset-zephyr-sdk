@@ -9,6 +9,8 @@ manifest:
       url-base: https://github.com/ThingSet
     - name: libresolar
       url-base: https://github.com/LibreSolar
+    - name: garethpotter
+      url-base: https://github.com/garethpotter
   projects:
     - name: zephyr
       remote: zephyrproject
@@ -26,7 +28,7 @@ manifest:
           - tinycrypt
           - picolibc
     - name: thingset-node-c
-      remote: thingset
-      revision: 339168222a1754e7cb9c6df9942cddd7c49dfe35
+      remote: garethpotter
+      revision: 35b5d337bdf50a7ac5ad8bf99c8a0dcef1710471
       path: modules/thingset-node-c
       import: true
