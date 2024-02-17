@@ -739,6 +739,40 @@ ZTEST(isotp_fast_conformance, test_sf_length)
 
     check_frame_series(&des_frame, 1, &frame_msgq);
 }
+
+ZTEST(isotp_fast_conformance, test_send_length_63)
+{
+    int ret;
+    struct frame_desired des_frames[2];
+
+    des_frames[0].data[0] = (FF_PCI_TYPE << PCI_TYPE_POS);
+    des_frames[0].data[1] = 63;
+    memcpy(&des_frames[0].data[2], random_data, 62);
+    des_frames[0].length = 64;
+    des_frames[1].data[0] = (CF_PCI_TYPE << PCI_TYPE_POS) | 1;
+    des_frames[1].data[1] = random_data[62];
+    des_frames[1].length = 2;
+
+    /* mask to allow any priority and source address (SA) */
+    filter_id = add_rx_msgq(tx_can_id, CAN_EXT_ID_MASK);
+    zassert_true((filter_id >= 0), "Negative filter number [%d]", filter_id);
+
+    ret =
+        isotp_fast_send(&ctx, random_data, 63, rx_node_addr, rx_bus_id, INT_TO_POINTER(ISOTP_N_OK));
+    zassert_equal(ret, 0, "Send returned %d", ret);
+
+    struct frame_desired fc_frame;
+    fc_frame.data[0] = FC_PCI_BYTE_1(FC_PCI_CTS);
+    fc_frame.data[1] = FC_PCI_BYTE_2(0);
+    fc_frame.data[2] = FC_PCI_BYTE_3(0);
+    fc_frame.length = DATA_SIZE_FC;
+
+    check_frame_series(&des_frames[0], 1, &frame_msgq);
+
+    send_frame_series(&fc_frame, 1, rx_can_id);
+
+    check_frame_series(&des_frames[1], 1, &frame_msgq);
+}
 #endif
 
 void *isotp_fast_conformance_setup(void)
