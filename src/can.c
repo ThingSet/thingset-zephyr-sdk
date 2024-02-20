@@ -30,7 +30,8 @@ extern uint8_t eui64[8];
 static const struct can_filter sf_report_filter = {
     .id = THINGSET_CAN_TYPE_SF_REPORT,
     .mask = THINGSET_CAN_TYPE_MASK,
-    .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
+    .flags =
+        CAN_FILTER_DATA | CAN_FILTER_IDE | (IS_ENABLED(CONFIG_CAN_FD_MODE) ? CAN_FILTER_FDF : 0),
 };
 #endif /* CONFIG_THINGSET_CAN_ITEM_RX */
 
@@ -38,7 +39,8 @@ static const struct can_filter sf_report_filter = {
 static const struct can_filter mf_report_filter = {
     .id = THINGSET_CAN_TYPE_MF_REPORT,
     .mask = THINGSET_CAN_TYPE_MASK,
-    .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
+    .flags =
+        CAN_FILTER_DATA | CAN_FILTER_IDE | (IS_ENABLED(CONFIG_CAN_FD_MODE) ? CAN_FILTER_FDF : 0),
 };
 #endif /* CONFIG_THINGSET_CAN_REPORT_RX */
 
