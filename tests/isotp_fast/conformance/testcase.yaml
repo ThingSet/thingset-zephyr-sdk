@@ -7,7 +7,7 @@ tests:
     integration_platforms:
       - native_posix_64
     filter: dt_chosen_enabled("zephyr,canbus") and not dt_compat_enabled("kvaser,pcican")
-    extra_args: EXTRA_CFLAGS=-Wno-error
+    extra_args: EXTRA_CFLAGS=-Werror
     extra_configs:
       - CONFIG_ISOTP_FAST_BLOCKING_RECEIVE=y
   thingset_sdk.isotp_fast.conformance.async:
@@ -28,7 +28,7 @@ tests:
     integration_platforms:
       - native_posix_64
     filter: dt_chosen_enabled("zephyr,canbus") and not dt_compat_enabled("kvaser,pcican")
-    extra_args: EXTRA_CFLAGS=-Wno-error
+    extra_args: EXTRA_CFLAGS=-Werror
     extra_configs:
       - CONFIG_ISOTP_FAST_PER_FRAME_DISPATCH=y
       - CONFIG_CAN_FD_MODE=y

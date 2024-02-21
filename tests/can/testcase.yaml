@@ -4,11 +4,11 @@ tests:
   thingset_sdk.can:
     integration_platforms:
       - native_posix_64
-    extra_args: EXTRA_CFLAGS=-Wno-error
+    extra_args: EXTRA_CFLAGS=-Werror
   thingset_sdk.can.isotp_fast:
     integration_platforms:
       - native_posix_64
-    extra_args: EXTRA_CFLAGS=-Wno-error
+    extra_args: EXTRA_CFLAGS=-Werror
     extra_configs:
       - CONFIG_ISOTP_FAST=y
       - CONFIG_ISOTP_USE_TX_BUF=y
