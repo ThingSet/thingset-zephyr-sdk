@@ -71,7 +71,6 @@ struct thingset_can_rx_context
 {
     uint8_t src_addr;
     uint8_t seq;
-    bool escape;
 };
 
 NET_BUF_POOL_DEFINE(thingset_can_rx_buffer_pool, CONFIG_THINGSET_CAN_REPORT_RX_NUM_BUFFERS,
@@ -104,7 +103,6 @@ static struct net_buf *thingset_can_get_rx_buf(uint8_t src_addr)
             (struct thingset_can_rx_context *)buffer->user_data;
         context->src_addr = src_addr;
         context->seq = 0;
-        context->escape = false;
         sys_slist_append(list, &buffer->node);
         LOG_DBG("Created new RX buffer for sender %x", src_addr);
         return buffer;
@@ -278,6 +276,15 @@ int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
                    | THINGSET_CAN_MSG_NO_SET(ts_can->msg_no) | THINGSET_CAN_END_FLAG_SET(end)
                    | THINGSET_CAN_SEQ_NO_SET(seq) | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
         frame.dlc = can_bytes_to_dlc(chunk_len);
+        if (end && IS_ENABLED(CONFIG_CAN_FD_MODE)) {
+            /* pad message with empty bytes */
+            size_t frame_len = can_dlc_to_bytes(frame.dlc);
+            if (frame_len > chunk_len) {
+                for (unsigned int i = 0; i < frame_len - chunk_len; i++) {
+                    frame.data[chunk_len + i] = 0x00;
+                }
+            }
+        }
 
         ret = can_send(ts_can->dev, &frame, K_MSEC(CONFIG_THINGSET_CAN_REPORT_SEND_TIMEOUT),
                        thingset_can_report_tx_cb, ts_can);
