@@ -40,6 +40,7 @@ extern "C" {
 #define TS_ID_METADATAURL THINGSET_ID_METADATAURL
 #define TS_ID_NODEID      THINGSET_ID_NODEID
 #define TS_ID_NODENAME    0x1E
+#define TS_ID_EUI         0x1C
 
 /* Authentication */
 #define TS_ID_AUTH       0x20

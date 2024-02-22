@@ -29,6 +29,9 @@ LOG_MODULE_REGISTER(thingset_sdk, CONFIG_THINGSET_SDK_LOG_LEVEL);
  */
 char node_id[17];
 uint8_t eui64[8];
+#ifdef CONFIG_THINGSET_64BIT_TYPES_SUPPORT
+uint64_t eui;
+#endif
 
 char node_name[] = CONFIG_THINGSET_NODE_NAME;
 
@@ -63,6 +66,10 @@ struct thingset_context ts;
 
 THINGSET_ADD_ITEM_STRING(TS_ID_ROOT, THINGSET_ID_NODEID, "pNodeID", node_id, sizeof(node_id),
                          THINGSET_ANY_R | THINGSET_MFR_W, TS_SUBSET_NVM);
+
+#ifdef CONFIG_THINGSET_64BIT_TYPES_SUPPORT
+THINGSET_ADD_ITEM_UINT64(TS_ID_ROOT, TS_ID_EUI, "pEUI", &eui, THINGSET_ANY_R | THINGSET_MFR_W, 0);
+#endif
 
 THINGSET_ADD_ITEM_STRING(TS_ID_ROOT, TS_ID_NODENAME, "pNodeName", node_name, sizeof(node_name),
                          THINGSET_ANY_R | THINGSET_MFR_W, TS_SUBSET_NVM);
@@ -133,6 +140,13 @@ static void generate_device_eui()
 
     /* set U/L bit to 0 for locally administered (not globally unique) EUIs */
     eui64[0] &= ~(1U << 1);
+
+#ifdef CONFIG_THINGSET_64BIT_TYPES_SUPPORT
+    eui = 0;
+    for (size_t i = 0; i < sizeof(eui64); i++) {
+        eui |= ((uint64_t)eui64[i]) << (sizeof(eui64) - i - 1) * 8;
+    }
+#endif
 
     snprintf(node_id, sizeof(node_id), "%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X", eui64[0], eui64[1],
              eui64[2], eui64[3], eui64[4], eui64[5], eui64[6], eui64[7]);
