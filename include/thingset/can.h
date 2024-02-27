@@ -11,7 +11,7 @@
 #include <zephyr/device.h>
 
 #ifdef CONFIG_ISOTP_FAST
-#include "isotp_fast.h"
+#include "canbus/isotp_fast.h"
 #endif
 
 #ifdef __cplusplus

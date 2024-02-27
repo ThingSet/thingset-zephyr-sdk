@@ -5,7 +5,7 @@
  */
 
 #include "isotp_internal.h"
-#include <thingset/isotp_fast.h>
+#include <canbus/isotp_fast.h>
 #include <zephyr/sys/slist.h>
 
 #ifdef CONFIG_ISOTP_FAST_PER_FRAME_DISPATCH

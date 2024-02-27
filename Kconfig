@@ -1,8 +1,6 @@
 # Copyright (c) The ThingSet Project Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-rsource "src/Kconfig.isotp_fast"
-
 menuconfig THINGSET_SDK
     bool "ThingSet SDK"
 
@@ -95,3 +93,5 @@ module-str = thingset_sdk
 source "subsys/logging/Kconfig.template.log_config"
 
 endif # THINGSET_SDK
+
+rsource "subsys/canbus/isotp_fast/Kconfig"

@@ -6,8 +6,8 @@
  */
 
 #include "random_data.h"
+#include <canbus/isotp_fast.h>
 #include <strings.h>
-#include <thingset/isotp_fast.h>
 #include <zephyr/drivers/can.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/ztest.h>
