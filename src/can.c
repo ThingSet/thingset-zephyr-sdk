@@ -402,8 +402,12 @@ static struct isotp_fast_addr thingset_can_get_tx_addr(const struct isotp_fast_a
 {
     return (struct isotp_fast_addr){
         .ext_id = (rx_addr->ext_id & 0x1F000000)
+#ifdef CONFIG_THINGSET_CAN_ROUTING_BUSES
                   | THINGSET_CAN_TARGET_BUS_SET(THINGSET_CAN_SOURCE_BUS_GET(rx_addr->ext_id))
                   | THINGSET_CAN_SOURCE_BUS_SET(THINGSET_CAN_TARGET_BUS_GET(rx_addr->ext_id))
+#else /* CONFIG_THINGSET_CAN_ROUTING_BRIDGES */
+                  | THINGSET_CAN_BRIDGE_SET(THINGSET_CAN_BRIDGE_GET(rx_addr->ext_id))
+#endif
                   | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_TARGET_GET(rx_addr->ext_id))
                   | THINGSET_CAN_TARGET_SET(THINGSET_CAN_SOURCE_GET(rx_addr->ext_id)),
     };
@@ -418,7 +422,7 @@ static void thingset_can_reqresp_timeout_handler(struct k_timer *timer)
 }
 
 int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
-                           uint8_t target_addr, uint8_t target_bus,
+                           uint8_t target_addr, uint8_t route,
                            thingset_can_reqresp_callback_t callback, void *callback_arg,
                            k_timeout_t timeout)
 {
@@ -428,8 +432,11 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
 
     struct isotp_fast_addr tx_addr = {
         .ext_id = THINGSET_CAN_TYPE_REQRESP | THINGSET_CAN_PRIO_REQRESP
-                  | THINGSET_CAN_SOURCE_BUS_SET(ts_can->bus_number)
-                  | THINGSET_CAN_TARGET_BUS_SET(target_bus)
+#ifdef CONFIG_THINGSET_CAN_ROUTING_BUSES
+                  | THINGSET_CAN_SOURCE_BUS_SET(ts_can->route) | THINGSET_CAN_TARGET_BUS_SET(route)
+#else /* CONFIG_THINGSET_CAN_ROUTING_BRIDGES */
+                  | THINGSET_CAN_BRIDGE_SET(route)
+#endif
                   | THINGSET_CAN_SOURCE_SET(ts_can->node_addr)
                   | THINGSET_CAN_TARGET_SET(target_addr),
     };
@@ -484,9 +491,11 @@ static void thingset_can_reqresp_recv_callback(struct net_buf *buffer, int rem_l
                 thingset_process_message(&ts, ts_can->rx_buffer, len, sbuf->data, sbuf->size);
             if (tx_len > 0) {
                 uint8_t target_addr = THINGSET_CAN_SOURCE_GET(addr.ext_id);
-                uint8_t target_bus = THINGSET_CAN_SOURCE_BUS_GET(addr.ext_id);
-                int err = thingset_can_send_inst(ts_can, sbuf->data, tx_len, target_addr,
-                                                 target_bus, NULL, NULL, K_NO_WAIT);
+                uint8_t route = IS_ENABLED(CONFIG_THINGSET_CAN_ROUTING_BUSES)
+                                    ? THINGSET_CAN_SOURCE_BUS_GET(addr.ext_id)
+                                    : THINGSET_CAN_BRIDGE_GET(addr.ext_id);
+                int err = thingset_can_send_inst(ts_can, sbuf->data, tx_len, target_addr, route,
+                                                 NULL, NULL, K_NO_WAIT);
                 if (err != 0) {
                     k_sem_give(&sbuf->lock);
                 }
@@ -546,7 +555,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     k_work_init_delayable(&ts_can->addr_claim_work, thingset_can_addr_claim_tx_handler);
 
     ts_can->dev = can_dev;
-    ts_can->bus_number = bus_number;
+    ts_can->route = bus_number;
 
     /* set initial address (will be changed if already used on the bus) */
     if (ts_can->node_addr < THINGSET_CAN_ADDR_MIN || ts_can->node_addr > THINGSET_CAN_ADDR_MAX) {
@@ -729,11 +738,11 @@ int thingset_can_send_report(const char *path, enum thingset_data_format format)
     return thingset_can_send_report_inst(&ts_can_single, path, format);
 }
 
-int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus,
+int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t route,
                       thingset_can_reqresp_callback_t callback, void *callback_arg,
                       k_timeout_t timeout)
 {
-    return thingset_can_send_inst(&ts_can_single, tx_buf, tx_len, target_addr, target_bus, callback,
+    return thingset_can_send_inst(&ts_can_single, tx_buf, tx_len, target_addr, route, callback,
                                   callback_arg, timeout);
 }
 
@@ -761,7 +770,7 @@ static void thingset_can_thread()
     int err;
 
     LOG_DBG("Initialising ThingSet CAN");
-    err = thingset_can_init_inst(&ts_can_single, can_dev, CONFIG_THINGSET_CAN_BUS_NUMBER);
+    err = thingset_can_init_inst(&ts_can_single, can_dev, CONFIG_THINGSET_CAN_DEFAULT_ROUTE);
     if (err != 0) {
         LOG_ERR("Failed to init ThingSet CAN: %d", err);
         return;

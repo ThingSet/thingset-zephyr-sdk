@@ -19,7 +19,7 @@ extern "C" {
 /*
  * ThingSet addressing in 29-bit CAN ID
  *
- * Request/response messages using ISO-TP:
+ * Request/response messages using ISO-TP (bus forwarding scheme):
  *
  *    28      26 25 24 23     20 19     16 15            8 7             0
  *   +----------+-----+---------+---------+---------------+---------------+
@@ -30,6 +30,17 @@ extern "C" {
  *
  *   tgt bus: Bus number of the target node (default for single bus systems is 0x0)
  *   src bus: Bus number of the source node (default for single bus systems is 0x0)
+ *
+ * Request/response messages using ISO-TP (bridge forwarding scheme):
+ *
+ *    28      26 25 24 23      16 15            8 7             0
+ *   +----------+-----+----------+---------------+---------------+
+ *   | Priority | 0x0 |  bridge  |  target addr  |  source addr  |
+ *   +----------+-----+----------+---------------+---------------+
+ *
+ *   Priority: 6
+ *
+ *   bridge: Bridge number for message forwarding (0x00 for local communication)
  *
  * Multi-frame reports:
  *
@@ -42,6 +53,7 @@ extern "C" {
  *   msg#: Wrapping message counter from 0 to 7
  *   end: End of message flag
  *   seq#: Wrapping sequence counter from 0 to 15
+ *   src bus and res: Either source bus or bridge number
  *
  * Single-frame reports:
  *
@@ -116,7 +128,7 @@ extern "C" {
 #define THINGSET_CAN_MSG_NO_GET(id) \
     (((uint32_t)id & THINGSET_CAN_MSG_NO_MASK) >> THINGSET_CAN_MSG_NO_POS)
 
-/* bus numbers for request/response messages */
+/* bus numbers for request/response messages and multi-frame reports */
 #define THINGSET_CAN_SOURCE_BUS_POS  (16U)
 #define THINGSET_CAN_SOURCE_BUS_MASK (0xF << THINGSET_CAN_SOURCE_BUS_POS)
 #define THINGSET_CAN_SOURCE_BUS_SET(id) \
@@ -131,6 +143,15 @@ extern "C" {
 #define THINGSET_CAN_TARGET_BUS_GET(id) \
     (((uint32_t)id & THINGSET_CAN_TARGET_BUS_MASK) >> THINGSET_CAN_TARGET_BUS_POS)
 #define THINGSET_CAN_TARGET_BUS_DEFAULT (0x0)
+
+/* bridge numbers for request/response messages and multi-frame reports */
+#define THINGSET_CAN_BRIDGE_POS  (16U)
+#define THINGSET_CAN_BRIDGE_MASK (0xFF << THINGSET_CAN_BRIDGE_POS)
+#define THINGSET_CAN_BRIDGE_SET(id) \
+    (((uint32_t)id << THINGSET_CAN_BRIDGE_POS) & THINGSET_CAN_BRIDGE_MASK)
+#define THINGSET_CAN_BRIDGE_GET(id) \
+    (((uint32_t)id & THINGSET_CAN_BRIDGE_MASK) >> THINGSET_CAN_BRIDGE_POS)
+#define THINGSET_CAN_BRIDGE_LOCAL (0x00)
 
 /* random number for address discovery messages */
 #define THINGSET_CAN_RAND_POS     (16U)
@@ -242,7 +263,8 @@ struct thingset_can
     int64_t next_control_report_time;
 #endif
     uint8_t node_addr;
-    uint8_t bus_number : 4;
+    /** bus or bridge number */
+    uint8_t route;
     uint8_t msg_no;
 };
 
@@ -267,7 +289,7 @@ int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
  * @param tx_buf Buffer containing the message.
  * @param tx_len Length of the message.
  * @param target_addr Target node address (8-bit value) to send the message to.
- * @param target_bus Target bus number (4-bit value) to send the message to.
+ * @param route Target bus/bridge number to send the message to.
  * @param callback This callback will be invoked when a response is received or an error during
  *                 sending or receiving occurred. Set to NULL if no response is expected.
  * @param callback_arg User data for the callback.
@@ -276,7 +298,7 @@ int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
  * @returns 0 for success or negative errno in case of error
  */
 int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
-                           uint8_t target_addr, uint8_t target_bus,
+                           uint8_t target_addr, uint8_t route,
                            thingset_can_reqresp_callback_t callback, void *callback_arg,
                            k_timeout_t timeout);
 
@@ -317,7 +339,7 @@ int thingset_can_set_item_rx_callback_inst(struct thingset_can *ts_can,
  *
  * @param ts_can Pointer to the thingset_can context.
  * @param can_dev Pointer to the CAN device that should be used.
- * @param bus_number Assigned bus number of this CAN device.
+ * @param bus_number Assigned bus number of this CAN device (ignored if bridge routing is used)
  *
  * @returns 0 for success or negative errno in case of error
  */
@@ -339,14 +361,11 @@ int thingset_can_send_report(const char *path, enum thingset_data_format format)
 /**
  * Send ThingSet message to other node
  *
- * @param tx_buf Buffer containing the message.
- * @param tx_len Length of the message.
- * @param target_addr Target node address (8-bit value) to send the message to.
- * @param target_bus Target bus number (4-bit value) to send the message to.
+ * See thingset_can_send_inst() for function parameters.
  *
  * @returns 0 for success or negative errno in case of error
  */
-int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus,
+int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t route,
                       thingset_can_reqresp_callback_t callback, void *callback_arg,
                       k_timeout_t timeout);
 

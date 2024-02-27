@@ -7,6 +7,7 @@ menuconfig THINGSET_CAN
     depends on ISOTP_FAST
     depends on ENTROPY_GENERATOR
     select EVENTS
+    select ISOTP_FAST_CUSTOM_ADDRESSING
 
 if THINGSET_CAN
 
@@ -95,6 +96,36 @@ config THINGSET_CAN_CONTROL_REPORTING_PERIOD
     depends on THINGSET_CAN_CONTROL_REPORTING
     default 100
 
+choice THINGSET_CAN_ROUTING
+    prompt "Message routing scheme"
+    default THINGSET_CAN_ROUTING_BUSES
+    help
+      Select how frames should be routed between different buses.
+
+config THINGSET_CAN_ROUTING_BUSES
+    bool "Bus numbers"
+    depends on ISOTP_FAST
+    select ISOTP_FAST_CUSTOM_ADDRESSING
+    help
+      Bits 16-23 of the CAN ID are used for a target bus (higher nibble) and a
+      source bus (lower nibble).
+
+      Buses should be used to allow message routing from one bus to any other bus.
+      There is no hierarchy between the buses.
+
+config THINGSET_CAN_ROUTING_BRIDGES
+    bool "Bridge numbers"
+    select ISOTP_FAST_FIXED_ADDRESSING
+    help
+      Bits 16-23 of the CAN ID are used to define a bridge number between 1 and
+      255. Each bridge defines the connection between two fixed buses. Bridge
+      number 0 is reserved local communication on the same bus (i.e. no routing).
+
+      Bridges should be used if the maximum amount of 16 buses is not
+      sufficient. Otherwise, routing using bus numbers are more simple and generic.
+
+endchoice
+
 config THINGSET_CAN_MULTIPLE_INSTANCES
     bool "Support for multiple ThingSet CAN instances"
     depends on ISOTP_FAST
@@ -108,16 +139,17 @@ config THINGSET_CAN_MULTIPLE_INSTANCES
       the current Zephyr upstream ISO-TP implementation, so it depends
       on ISOTP_FAST.
 
-config THINGSET_CAN_BUS_NUMBER
-    int "ThingSet CAN bus number"
+config THINGSET_CAN_DEFAULT_ROUTE
+    int "ThingSet CAN default route"
     depends on !THINGSET_CAN_MULTIPLE_INSTANCES
-    range 0 15
+    range 0 15 if THINGSET_CAN_ROUTING_BUSES
+    range 0 255 if THINGSET_CAN_ROUTING_BRIDGES
     default 0
     help
-      The bus number can be used to identify multiple CAN buses in one system.
-      It is used by gateways to forward messages between different buses.
+      The bus or bridge number (depending on THINGSET_CAN_ROUTING choice) is
+      used to route messages between different buses.
 
-      For a single bus system, the default bus number 0 should be used.
+      For a single bus system, the default 0 should be used.
 
 config THINGSET_CAN_RESPONSE_DELAY
     int "ThingSet CAN response delay"
