@@ -205,11 +205,7 @@ ZTEST(thingset_can, test_send_request_to_node)
     int filter_id = can_add_rx_filter(can_dev, &request_rx_cb, NULL, &other_node_filter);
     zassert_false(filter_id < 0, "adding rx filter failed: %d", filter_id);
 
-#ifdef CONFIG_ISOTP_FAST
     thingset_can_send(req_buf, sizeof(req_buf), 0xCC, 0x0, NULL, NULL, TEST_RECEIVE_TIMEOUT);
-#else
-    thingset_can_send(req_buf, sizeof(req_buf), 0xCC, 0x0);
-#endif
 
     err = k_sem_take(&request_tx_sem, TEST_RECEIVE_TIMEOUT);
     zassert_equal(err, 0, "receive timeout");

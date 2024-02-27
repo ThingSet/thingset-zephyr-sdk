@@ -10,9 +10,7 @@
 #include <zephyr/canbus/isotp.h>
 #include <zephyr/device.h>
 
-#ifdef CONFIG_ISOTP_FAST
 #include "canbus/isotp_fast.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -195,7 +193,6 @@ typedef void (*thingset_can_report_rx_callback_t)(const uint8_t *report_buf, siz
 typedef void (*thingset_can_item_rx_callback_t)(uint16_t data_id, const uint8_t *value,
                                                 size_t value_len, uint8_t source_addr);
 
-#ifdef CONFIG_ISOTP_FAST
 typedef void (*thingset_can_response_callback_t)(uint8_t *data, size_t len, int result,
                                                  uint8_t sender_id, void *arg);
 
@@ -207,7 +204,6 @@ struct thingset_can_request_response
     thingset_can_response_callback_t callback;
     void *cb_arg;
 };
-#endif /* CONFIG_ISOTP_FAST */
 
 /**
  * ThingSet CAN context storing all information required for one instance.
@@ -220,19 +216,10 @@ struct thingset_can
     struct k_work_delayable control_reporting_work;
 #endif
     struct k_work_delayable addr_claim_work;
-#ifdef CONFIG_ISOTP_FAST
     struct isotp_fast_ctx ctx;
-#else
-    struct isotp_recv_ctx recv_ctx;
-    struct isotp_send_ctx send_ctx;
-    struct isotp_msg_id rx_addr;
-    struct isotp_msg_id tx_addr;
-#endif
     struct k_sem report_tx_sem;
     struct k_event events;
-#ifdef CONFIG_ISOTP_FAST
     struct thingset_can_request_response request_response;
-#endif
     uint8_t rx_buffer[CONFIG_THINGSET_CAN_RX_BUF_SIZE];
 #ifdef CONFIG_THINGSET_CAN_REPORT_RX
     thingset_can_report_rx_callback_t report_rx_cb;
@@ -278,7 +265,6 @@ int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buf, size
 int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
                                   enum thingset_data_format format);
 
-#ifdef CONFIG_ISOTP_FAST
 /**
  * Send ThingSet message to other node
  *
@@ -298,40 +284,6 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
                            uint8_t target_addr, uint8_t target_bus,
                            thingset_can_response_callback_t rsp_callback, void *callback_arg,
                            k_timeout_t timeout);
-#else
-/**
- * Send ThingSet message to other node
- *
- * @param ts_can Pointer to the thingset_can context.
- * @param tx_buf Buffer containing the message.
- * @param tx_len Length of the message.
- * @param target_addr Target node address (8-bit value) to send the message to.
- * @param target_bus Target bus number (4-bit value) to send the message to.
- *
- * @returns 0 for success or negative errno in case of error
- */
-int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
-                           uint8_t target_addr, uint8_t target_bus);
-
-/**
- * Process incoming ThingSet requests
- *
- * This function waits for incoming ThingSet requests, processes the request and sends the response
- * back to the node.
- *
- * The function returns after each sent response or after the timeout, so it must be called in a
- * continuous loop from a thread to keep listening to requests.
- *
- * A short timeout can be used to process multiple instances consecutively from the same thread.
- *
- * @param ts_can Pointer to the thingset_can context.
- * @param timeout Timeout to wait for a message from the node.
- *
- * @retval 0 for success
- * @retval -EAGAIN in case of timeout
- */
-int thingset_can_process_inst(struct thingset_can *ts_can, k_timeout_t timeout);
-#endif /* CONFIG_ISOTP_FAST */
 
 #ifdef CONFIG_THINGSET_CAN_REPORT_RX
 /**
@@ -389,7 +341,6 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
  */
 int thingset_can_send_report(const char *path, enum thingset_data_format format);
 
-#ifdef CONFIG_ISOTP_FAST
 /**
  * Send ThingSet message to other node
  *
@@ -403,19 +354,6 @@ int thingset_can_send_report(const char *path, enum thingset_data_format format)
 int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus,
                       thingset_can_response_callback_t rsp_callback, void *callback_arg,
                       k_timeout_t timeout);
-#else
-/**
- * Send ThingSet message to other node
- *
- * @param tx_buf Buffer containing the message.
- * @param tx_len Length of the message.
- * @param target_addr Target node address (8-bit value) to send the message to.
- * @param target_bus Target bus number (4-bit value) to send the message to.
- *
- * @returns 0 for success or negative errno in case of error
- */
-int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus);
-#endif /* CONFIG_ISOTP_FAST */
 
 #ifdef CONFIG_THINGSET_CAN_REPORT_RX
 /**
