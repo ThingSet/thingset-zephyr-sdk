@@ -216,14 +216,6 @@ int isotp_fast_send(struct isotp_fast_ctx *ctx, const uint8_t *data, size_t len,
 #ifdef CONFIG_ISOTP_FAST_FIXED_ADDRESSING
 
 /**
- * Create the counterpart address from a given fixed address by swapping the target
- * address and the source address.
- *
- * @returns resulting address
- */
-struct isotp_fast_addr isotp_fast_get_tx_addr_fixed(const struct isotp_fast_addr *addr);
-
-/**
  * Send a message to a given recipient. If the message fits within a
  * CAN frame, it will be sent synchronously. If not, it will be sent
  * asynchronously.

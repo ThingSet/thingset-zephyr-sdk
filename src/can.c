@@ -398,6 +398,17 @@ void thingset_can_reset_request_response(struct thingset_can_request_response *r
     k_sem_give(&rr->sem);
 }
 
+static struct isotp_fast_addr thingset_can_get_tx_addr(const struct isotp_fast_addr *rx_addr)
+{
+    return (struct isotp_fast_addr){
+        .ext_id = (rx_addr->ext_id & 0x1F000000)
+                  | THINGSET_CAN_TARGET_BUS_SET(THINGSET_CAN_SOURCE_BUS_GET(rx_addr->ext_id))
+                  | THINGSET_CAN_SOURCE_BUS_SET(THINGSET_CAN_TARGET_BUS_GET(rx_addr->ext_id))
+                  | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_TARGET_GET(rx_addr->ext_id))
+                  | THINGSET_CAN_TARGET_SET(THINGSET_CAN_SOURCE_GET(rx_addr->ext_id)),
+    };
+}
+
 void thingset_can_request_response_timeout_handler(struct k_timer *timer)
 {
     struct thingset_can_request_response *rr =
@@ -433,7 +444,7 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
         k_timer_init(&ts_can->request_response.timer, thingset_can_request_response_timeout_handler,
                      NULL);
         k_timer_start(&ts_can->request_response.timer, timeout, timeout);
-        ts_can->request_response.can_id = isotp_fast_get_tx_addr_fixed(&tx_addr).ext_id;
+        ts_can->request_response.can_id = thingset_can_get_tx_addr(&tx_addr).ext_id;
     }
 
     int ret = isotp_fast_send(&ts_can->ctx, tx_buf, tx_len, tx_addr, ts_can);
@@ -504,18 +515,6 @@ void isotp_fast_sent_callback(int result, void *arg)
         struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
         k_sem_give(&sbuf->lock);
     }
-}
-
-static struct isotp_fast_addr
-thingset_can_get_tx_addr_callback(const struct isotp_fast_addr *rx_addr)
-{
-    return (struct isotp_fast_addr){
-        .ext_id = (rx_addr->ext_id & 0x1F000000)
-                  | THINGSET_CAN_TARGET_BUS_SET(THINGSET_CAN_SOURCE_BUS_GET(rx_addr->ext_id))
-                  | THINGSET_CAN_SOURCE_BUS_SET(THINGSET_CAN_TARGET_BUS_GET(rx_addr->ext_id))
-                  | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_TARGET_GET(rx_addr->ext_id))
-                  | THINGSET_CAN_TARGET_SET(THINGSET_CAN_SOURCE_GET(rx_addr->ext_id)),
-    };
 }
 
 int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev,
@@ -644,7 +643,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         .ext_id = THINGSET_CAN_TYPE_REQRESP | THINGSET_CAN_PRIO_REQRESP
                   | THINGSET_CAN_TARGET_SET(ts_can->node_addr),
     };
-    ts_can->ctx.get_tx_addr_callback = thingset_can_get_tx_addr_callback;
+    ts_can->ctx.get_tx_addr_callback = thingset_can_get_tx_addr;
     isotp_fast_bind(&ts_can->ctx, can_dev, rx_addr, &fc_opts, isotp_fast_recv_callback, ts_can,
                     isotp_fast_recv_error_callback, isotp_fast_sent_callback);
 

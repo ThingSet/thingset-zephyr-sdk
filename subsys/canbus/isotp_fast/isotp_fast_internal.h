@@ -86,3 +86,15 @@ struct isotp_fast_recv_await_ctx
     struct isotp_fast_recv_ctx *rctx;
 };
 #endif
+
+#ifdef CONFIG_ISOTP_FAST_FIXED_ADDRESSING
+
+/**
+ * Create the counterpart address from a given fixed address by swapping the target
+ * address and the source address.
+ *
+ * @returns resulting address
+ */
+struct isotp_fast_addr isotp_fast_get_tx_addr_fixed(const struct isotp_fast_addr *addr);
+
+#endif
