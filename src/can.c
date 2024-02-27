@@ -433,7 +433,7 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
         k_timer_init(&ts_can->request_response.timer, thingset_can_request_response_timeout_handler,
                      NULL);
         k_timer_start(&ts_can->request_response.timer, timeout, timeout);
-        ts_can->request_response.can_id = isotp_fast_get_counterpart_addr(&tx_addr).ext_id;
+        ts_can->request_response.can_id = isotp_fast_get_tx_addr_fixed(&tx_addr).ext_id;
     }
 
     int ret = isotp_fast_send(&ts_can->ctx, tx_buf, tx_len, tx_addr, ts_can);
@@ -506,15 +506,15 @@ void isotp_fast_sent_callback(int result, void *arg)
     }
 }
 
-static struct isotp_fast_addr thingset_can_get_tx_addr_callback(struct isotp_fast_ctx *ctx,
-                                                                struct isotp_fast_addr rx_addr)
+static struct isotp_fast_addr
+thingset_can_get_tx_addr_callback(const struct isotp_fast_addr *rx_addr)
 {
     return (struct isotp_fast_addr){
-        .ext_id = (rx_addr.ext_id & 0x1F000000)
-                  | THINGSET_CAN_TARGET_BUS_SET(THINGSET_CAN_SOURCE_BUS_GET(rx_addr.ext_id))
-                  | THINGSET_CAN_SOURCE_BUS_SET(THINGSET_CAN_TARGET_BUS_GET(rx_addr.ext_id))
-                  | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_TARGET_GET(rx_addr.ext_id))
-                  | THINGSET_CAN_TARGET_SET(THINGSET_CAN_SOURCE_GET(rx_addr.ext_id)),
+        .ext_id = (rx_addr->ext_id & 0x1F000000)
+                  | THINGSET_CAN_TARGET_BUS_SET(THINGSET_CAN_SOURCE_BUS_GET(rx_addr->ext_id))
+                  | THINGSET_CAN_SOURCE_BUS_SET(THINGSET_CAN_TARGET_BUS_GET(rx_addr->ext_id))
+                  | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_TARGET_GET(rx_addr->ext_id))
+                  | THINGSET_CAN_TARGET_SET(THINGSET_CAN_SOURCE_GET(rx_addr->ext_id)),
     };
 }
 

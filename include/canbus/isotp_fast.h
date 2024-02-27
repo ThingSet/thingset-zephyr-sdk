@@ -74,8 +74,8 @@ typedef void (*isotp_fast_send_callback_t)(int result, void *arg);
  * @param ctx Pointer to the main context.
  * @param addr Address.
  */
-typedef struct isotp_fast_addr (*isotp_fast_get_tx_addr_callback_t)(struct isotp_fast_ctx *ctx,
-                                                                    struct isotp_fast_addr addr);
+typedef struct isotp_fast_addr (*isotp_fast_get_tx_addr_callback_t)(
+    const struct isotp_fast_addr *addr);
 #endif /* CONFIG_ISOTP_FAST_CUSTOM_ADDRESSING */
 
 /**
@@ -221,7 +221,7 @@ int isotp_fast_send(struct isotp_fast_ctx *ctx, const uint8_t *data, size_t len,
  *
  * @returns resulting address
  */
-struct isotp_fast_addr isotp_fast_get_counterpart_addr(const struct isotp_fast_addr *addr);
+struct isotp_fast_addr isotp_fast_get_tx_addr_fixed(const struct isotp_fast_addr *addr);
 
 /**
  * Send a message to a given recipient. If the message fits within a

@@ -67,15 +67,14 @@ static void item_rx_callback(uint16_t data_id, const uint8_t *value, size_t valu
     }
 }
 
-static struct isotp_fast_addr get_tx_addr_callback(struct isotp_fast_ctx *ctx,
-                                                   struct isotp_fast_addr rx_addr)
+static struct isotp_fast_addr get_tx_addr_callback(const struct isotp_fast_addr *rx_addr)
 {
     return (struct isotp_fast_addr){
-        .ext_id = (rx_addr.ext_id & 0x1F000000)
-                  | THINGSET_CAN_TARGET_BUS_SET(THINGSET_CAN_SOURCE_BUS_GET(rx_addr.ext_id))
-                  | THINGSET_CAN_SOURCE_BUS_SET(THINGSET_CAN_TARGET_BUS_GET(rx_addr.ext_id))
-                  | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_TARGET_GET(rx_addr.ext_id))
-                  | THINGSET_CAN_TARGET_SET(THINGSET_CAN_SOURCE_GET(rx_addr.ext_id)),
+        .ext_id = (rx_addr->ext_id & 0x1F000000)
+                  | THINGSET_CAN_TARGET_BUS_SET(THINGSET_CAN_SOURCE_BUS_GET(rx_addr->ext_id))
+                  | THINGSET_CAN_SOURCE_BUS_SET(THINGSET_CAN_TARGET_BUS_GET(rx_addr->ext_id))
+                  | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_TARGET_GET(rx_addr->ext_id))
+                  | THINGSET_CAN_TARGET_SET(THINGSET_CAN_SOURCE_GET(rx_addr->ext_id)),
     };
 }
 static void report_rx_callback(const uint8_t *buf, size_t len, uint8_t source_addr)

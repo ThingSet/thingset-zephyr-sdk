@@ -177,7 +177,7 @@ static int get_recv_ctx(struct isotp_fast_ctx *ctx, struct isotp_fast_addr rx_ad
 }
 
 struct isotp_fast_addr isotp_fast_get_reply_addr(struct isotp_fast_ctx *ctx,
-                                                 const struct isotp_fast_addr addr)
+                                                 const struct isotp_fast_addr *addr)
 {
     switch (ctx->opts->addressing_mode) {
 #ifdef CONFIG_ISOTP_FAST_NORMAL_ADDRESSING
@@ -186,23 +186,23 @@ struct isotp_fast_addr isotp_fast_get_reply_addr(struct isotp_fast_ctx *ctx,
 #endif
 #ifdef CONFIG_ISOTP_FAST_FIXED_ADDRESSING
         case ISOTP_FAST_ADDRESSING_MODE_FIXED:
-            return isotp_fast_get_counterpart_addr(&addr);
+            return isotp_fast_get_tx_addr_fixed(addr);
 #endif
 #ifdef CONFIG_ISOTP_FAST_EXTENDED_ADDRESSING
         case ISOTP_FAST_ADDRESSING_MODE_EXTENDED:
             return (struct isotp_fast_addr){
-                .ext_addr = addr.ext_addr, // is this right?
+                .ext_addr = addr->ext_addr, // is this right?
             };
 #ifdef CONFIG_ISOTP_FAST_FIXED_ADDRESSING
         case ISOTP_FAST_ADDRESSING_MODE_FIXED | ISOTP_FAST_ADDRESSING_MODE_EXTENDED:
-            struct isotp_fast_addr result = isotp_fast_get_counterpart_addr(&addr);
-            result.ext_addr = addr.ext_addr;
+            struct isotp_fast_addr result = isotp_fast_get_tx_addr_fixed(addr);
+            result.ext_addr = addr->ext_addr;
             return result;
 #endif /* CONFIG_ISOTP_FAST_FIXED_ADDRESSING */
 #endif /* CONFIG_ISOTP_FAST_EXTENDED_ADDRESSING */
 #ifdef CONFIG_ISOTP_FAST_CUSTOM_ADDRESSING
         case ISOTP_FAST_ADDRESSING_MODE_CUSTOM:
-            return ctx->get_tx_addr_callback(ctx, addr);
+            return ctx->get_tx_addr_callback(addr);
 #endif /* CONFIG_ISOTP_FAST_CUSTOM_ADDRESSING */
     }
     __ASSERT(false,
@@ -267,7 +267,7 @@ static void receive_can_tx(const struct device *dev, int error, void *arg)
 
 static void receive_send_fc(struct isotp_fast_recv_ctx *rctx, uint8_t fs)
 {
-    struct isotp_fast_addr reply_addr = isotp_fast_get_reply_addr(rctx->ctx, rctx->rx_addr);
+    struct isotp_fast_addr reply_addr = isotp_fast_get_reply_addr(rctx->ctx, &rctx->rx_addr);
     /* swap bus and address for FC frame */
     struct can_frame frame = {
         .flags =
@@ -676,7 +676,7 @@ static void can_rx_callback(const struct device *dev, struct can_frame *frame, v
         .ext_addr = frame->data[index++],
 #endif
     };
-    struct isotp_fast_addr reply_addr = isotp_fast_get_reply_addr(ctx, sender_addr);
+    struct isotp_fast_addr reply_addr = isotp_fast_get_reply_addr(ctx, &sender_addr);
 
     if ((frame->data[index++] & ISOTP_PCI_TYPE_MASK) == ISOTP_PCI_TYPE_FC) {
         LOG_DBG("Got flow control frame from %x", frame->id);
@@ -1126,11 +1126,11 @@ int isotp_fast_send_fixed(struct isotp_fast_ctx *ctx, const uint8_t *data, size_
 {
     struct isotp_fast_addr rx_addr = ctx->rx_addr;
     rx_addr.ext_id &= target_addr;
-    struct isotp_fast_addr tx_addr = isotp_fast_get_counterpart_addr(&rx_addr);
+    struct isotp_fast_addr tx_addr = isotp_fast_get_tx_addr_fixed(&rx_addr);
     return isotp_fast_send(ctx, data, len, tx_addr, cb_arg);
 }
 
-struct isotp_fast_addr isotp_fast_get_counterpart_addr(const struct isotp_fast_addr *addr)
+struct isotp_fast_addr isotp_fast_get_tx_addr_fixed(const struct isotp_fast_addr *addr)
 {
     /* swap source address (SA) and target address (TA) */
     uint8_t sa_new = (addr->ext_id & ISOTP_FIXED_ADDR_TA_MASK) >> ISOTP_FIXED_ADDR_TA_POS;
