@@ -239,21 +239,6 @@ struct thingset_can
 #ifdef CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES
 
 /**
- * Wait for incoming ThingSet message (usually requests)
- *
- * @param ts_can Pointer to the thingset_can context.
- * @param rx_buf Buffer to store the message.
- * @param rx_buf_size Size of the buffer to store the message.
- * @param source_addr Pointer to store the node address the data was received from.
- * @param source_bus Pointer to store the bus number the data was received from.
- * @param timeout Timeout to wait for a message from the node.
- *
- * @returns length of message or negative errno in case of error
- */
-int thingset_can_receive_inst(struct thingset_can *ts_can, uint8_t *rx_buf, size_t rx_buf_size,
-                              uint8_t *source_addr, uint8_t *source_bus, k_timeout_t timeout);
-
-/**
  * Send ThingSet report to the CAN bus.
  *
  * @param ts_can Pointer to the thingset_can context.
