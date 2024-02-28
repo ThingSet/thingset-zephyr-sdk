@@ -188,20 +188,30 @@ typedef void (*thingset_can_report_rx_callback_t)(const uint8_t *report_buf, siz
  * @param data_id ThingSet data object ID
  * @param value Buffer containing the CBOR raw data of the value
  * @param value_len Length of the value in the buffer
- * @param source_addr Node address the control message was received from
+ * @param source_addr Node address the item was received from
  */
 typedef void (*thingset_can_item_rx_callback_t)(uint16_t data_id, const uint8_t *value,
                                                 size_t value_len, uint8_t source_addr);
 
-typedef void (*thingset_can_response_callback_t)(uint8_t *data, size_t len, int result,
-                                                 uint8_t sender_id, void *arg);
+/**
+ * Callback typedef for received responses via CAN ISO-TP
+ *
+ * @param data Buffer containing the ThingSet response or NULL in case of error.
+ * @param length Length of the data in the buffer
+ * @param send_err 0 for success or negative errno indicating a send error.
+ * @param recv_err 0 for success or negative errno indicating a receive error.
+ * @param source_addr Node address the response was received from
+ * @param arg User-data passed to the callback
+ */
+typedef void (*thingset_can_reqresp_callback_t)(uint8_t *data, size_t len, int send_err,
+                                                int recv_err, uint8_t source_addr, void *arg);
 
 struct thingset_can_request_response
 {
     struct k_sem sem;
     struct k_timer timer;
     uint32_t can_id;
-    thingset_can_response_callback_t callback;
+    thingset_can_reqresp_callback_t callback;
     void *cb_arg;
 };
 
@@ -258,8 +268,8 @@ int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
  * @param tx_len Length of the message.
  * @param target_addr Target node address (8-bit value) to send the message to.
  * @param target_bus Target bus number (4-bit value) to send the message to.
- * @param rsp_callback If a response is expected, this callback will be invoked,
- *                     either when it arrives or if a timeout or some other error occurs.
+ * @param callback This callback will be invoked when a response is received or an error during
+ *                 sending or receiving occurred. Set to NULL if no response is expected.
  * @param callback_arg User data for the callback.
  * @param timeout Timeout to wait for a response.
  *
@@ -267,7 +277,7 @@ int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
  */
 int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
                            uint8_t target_addr, uint8_t target_bus,
-                           thingset_can_response_callback_t rsp_callback, void *callback_arg,
+                           thingset_can_reqresp_callback_t callback, void *callback_arg,
                            k_timeout_t timeout);
 
 #ifdef CONFIG_THINGSET_CAN_REPORT_RX
@@ -337,7 +347,7 @@ int thingset_can_send_report(const char *path, enum thingset_data_format format)
  * @returns 0 for success or negative errno in case of error
  */
 int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus,
-                      thingset_can_response_callback_t rsp_callback, void *callback_arg,
+                      thingset_can_reqresp_callback_t callback, void *callback_arg,
                       k_timeout_t timeout);
 
 #ifdef CONFIG_THINGSET_CAN_REPORT_RX

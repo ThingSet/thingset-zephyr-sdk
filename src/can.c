@@ -413,13 +413,13 @@ static void thingset_can_reqresp_timeout_handler(struct k_timer *timer)
 {
     struct thingset_can_request_response *rr =
         CONTAINER_OF(timer, struct thingset_can_request_response, timer);
-    rr->callback(NULL, 0, -ETIMEDOUT, 0, rr->cb_arg);
+    rr->callback(NULL, 0, 0, -ETIMEDOUT, 0, rr->cb_arg);
     thingset_can_reset_request_response(rr);
 }
 
 int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t tx_len,
                            uint8_t target_addr, uint8_t target_bus,
-                           thingset_can_response_callback_t rsp_callback, void *callback_arg,
+                           thingset_can_reqresp_callback_t callback, void *callback_arg,
                            k_timeout_t timeout)
 {
     if (!device_is_ready(ts_can->dev)) {
@@ -434,12 +434,12 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
                   | THINGSET_CAN_TARGET_SET(target_addr),
     };
 
-    if (rsp_callback != NULL) {
+    if (callback != NULL) {
         if (k_sem_take(&ts_can->request_response.sem, timeout) != 0) {
             return -ETIMEDOUT;
         }
 
-        ts_can->request_response.callback = rsp_callback;
+        ts_can->request_response.callback = callback;
         ts_can->request_response.cb_arg = callback_arg;
         k_timer_init(&ts_can->request_response.timer, thingset_can_reqresp_timeout_handler, NULL);
         k_timer_start(&ts_can->request_response.timer, timeout, timeout);
@@ -472,7 +472,7 @@ static void thingset_can_reqresp_recv_callback(struct net_buf *buffer, int rem_l
         if (ts_can->request_response.callback != NULL
             && ts_can->request_response.can_id == addr.ext_id)
         {
-            ts_can->request_response.callback(ts_can->rx_buffer, len, 0,
+            ts_can->request_response.callback(ts_can->rx_buffer, len, 0, 0,
                                               (uint8_t)(addr.ext_id & 0xFF),
                                               ts_can->request_response.cb_arg);
             thingset_can_reset_request_response(&ts_can->request_response);
@@ -508,7 +508,7 @@ static void thingset_can_reqresp_sent_callback(int result, void *arg)
 {
     struct thingset_can *ts_can = arg;
     if (ts_can->request_response.callback != NULL && result != 0) {
-        ts_can->request_response.callback(NULL, 0, result, 0, ts_can->request_response.cb_arg);
+        ts_can->request_response.callback(NULL, 0, 0, result, 0, ts_can->request_response.cb_arg);
         thingset_can_reset_request_response(&ts_can->request_response);
     }
     else {
@@ -730,11 +730,11 @@ int thingset_can_send_report(const char *path, enum thingset_data_format format)
 }
 
 int thingset_can_send(uint8_t *tx_buf, size_t tx_len, uint8_t target_addr, uint8_t target_bus,
-                      thingset_can_response_callback_t rsp_callback, void *callback_arg,
+                      thingset_can_reqresp_callback_t callback, void *callback_arg,
                       k_timeout_t timeout)
 {
-    return thingset_can_send_inst(&ts_can_single, tx_buf, tx_len, target_addr, target_bus,
-                                  rsp_callback, callback_arg, timeout);
+    return thingset_can_send_inst(&ts_can_single, tx_buf, tx_len, target_addr, target_bus, callback,
+                                  callback_arg, timeout);
 }
 
 #ifdef CONFIG_THINGSET_CAN_REPORT_RX
