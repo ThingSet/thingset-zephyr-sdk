@@ -409,7 +409,7 @@ static struct isotp_fast_addr thingset_can_get_tx_addr(const struct isotp_fast_a
     };
 }
 
-void thingset_can_request_response_timeout_handler(struct k_timer *timer)
+static void thingset_can_reqresp_timeout_handler(struct k_timer *timer)
 {
     struct thingset_can_request_response *rr =
         CONTAINER_OF(timer, struct thingset_can_request_response, timer);
@@ -441,8 +441,7 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
 
         ts_can->request_response.callback = rsp_callback;
         ts_can->request_response.cb_arg = callback_arg;
-        k_timer_init(&ts_can->request_response.timer, thingset_can_request_response_timeout_handler,
-                     NULL);
+        k_timer_init(&ts_can->request_response.timer, thingset_can_reqresp_timeout_handler, NULL);
         k_timer_start(&ts_can->request_response.timer, timeout, timeout);
         ts_can->request_response.can_id = thingset_can_get_tx_addr(&tx_addr).ext_id;
     }
@@ -458,8 +457,8 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
     }
 }
 
-void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, struct isotp_fast_addr can_id,
-                              void *arg)
+static void thingset_can_reqresp_recv_callback(struct net_buf *buffer, int rem_len,
+                                               struct isotp_fast_addr addr, void *arg)
 {
     struct thingset_can *ts_can = arg;
 
@@ -471,10 +470,10 @@ void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, struct isotp_
         size_t len = net_buf_frags_len(buffer);
         net_buf_linearize(ts_can->rx_buffer, sizeof(ts_can->rx_buffer), buffer, 0, len);
         if (ts_can->request_response.callback != NULL
-            && ts_can->request_response.can_id == can_id.ext_id)
+            && ts_can->request_response.can_id == addr.ext_id)
         {
             ts_can->request_response.callback(ts_can->rx_buffer, len, 0,
-                                              (uint8_t)(can_id.ext_id & 0xFF),
+                                              (uint8_t)(addr.ext_id & 0xFF),
                                               ts_can->request_response.cb_arg);
             thingset_can_reset_request_response(&ts_can->request_response);
         }
@@ -484,8 +483,8 @@ void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, struct isotp_
             int tx_len =
                 thingset_process_message(&ts, ts_can->rx_buffer, len, sbuf->data, sbuf->size);
             if (tx_len > 0) {
-                uint8_t target_addr = THINGSET_CAN_SOURCE_GET(can_id.ext_id);
-                uint8_t target_bus = THINGSET_CAN_SOURCE_BUS_GET(can_id.ext_id);
+                uint8_t target_addr = THINGSET_CAN_SOURCE_GET(addr.ext_id);
+                uint8_t target_bus = THINGSET_CAN_SOURCE_BUS_GET(addr.ext_id);
                 int err = thingset_can_send_inst(ts_can, sbuf->data, tx_len, target_addr,
                                                  target_bus, NULL, NULL, K_NO_WAIT);
                 if (err != 0) {
@@ -499,12 +498,13 @@ void isotp_fast_recv_callback(struct net_buf *buffer, int rem_len, struct isotp_
     }
 }
 
-void isotp_fast_recv_error_callback(int8_t error, struct isotp_fast_addr can_id, void *arg)
+static void thingset_can_reqresp_recv_error_callback(int8_t error, struct isotp_fast_addr addr,
+                                                     void *arg)
 {
     LOG_ERR("RX error %d", error);
 }
 
-void isotp_fast_sent_callback(int result, void *arg)
+static void thingset_can_reqresp_sent_callback(int result, void *arg)
 {
     struct thingset_can *ts_can = arg;
     if (ts_can->request_response.callback != NULL && result != 0) {
@@ -644,8 +644,9 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
                   | THINGSET_CAN_TARGET_SET(ts_can->node_addr),
     };
     ts_can->ctx.get_tx_addr_callback = thingset_can_get_tx_addr;
-    isotp_fast_bind(&ts_can->ctx, can_dev, rx_addr, &fc_opts, isotp_fast_recv_callback, ts_can,
-                    isotp_fast_recv_error_callback, isotp_fast_sent_callback);
+    isotp_fast_bind(&ts_can->ctx, can_dev, rx_addr, &fc_opts, thingset_can_reqresp_recv_callback,
+                    ts_can, thingset_can_reqresp_recv_error_callback,
+                    thingset_can_reqresp_sent_callback);
 
     thingset_sdk_reschedule_work(&ts_can->live_reporting_work, K_NO_WAIT);
 #ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
