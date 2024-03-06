@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+
+tests:
+  thingset_sdk.storage_eeprom:
+    integration_platforms:
+      - native_posix_64
+    platform_exclude:
+      # native sim with at24 emul EEPROM currently fails for unknown reasons
+      - native_sim
+    extra_args: EXTRA_CFLAGS=-Werror
