@@ -116,13 +116,13 @@ ZTEST(thingset_can, test_receive_packetized_report)
 
     struct can_frame report_frames[] = {
         {
-            .id = 0x1D000002, /* node with address 0x02, seq 0x0, msg 0x0 */
+            .id = 0x1D000002, /* msg 0x0, first frame, seq 0x0 */
             .flags = CAN_FRAME_IDE,
             .data = { 0x1F, 0x19, 0x12, 0x34, 0x6B, 0x68, 0x65, 0x6C },
             .dlc = 8,
         },
         {
-            .id = 0x1D001102, /* node with address 0x02, seq 0x1, msg 0x0, end = true */
+            .id = 0x1D002102, /* msg 0x0, last frame, seq 0x1 */
             .flags = CAN_FRAME_IDE,
             .data = { 0x6C, 0x6F, 0x20, 0x77, 0x6F, 0x72, 0x6C, 0x64 },
             .dlc = 8,
@@ -171,13 +171,19 @@ ZTEST(thingset_can, test_send_packetized_report)
 
         for (uint32_t seq = 0; seq * CAN_MAX_DLEN < strlen(report_exp); seq++) {
             int missing_len = strlen(report_exp) - seq * CAN_MAX_DLEN;
-            uint32_t end = missing_len <= CAN_MAX_DLEN ? 0x00001000 : 0;
+            uint32_t mf_type;
+            if (missing_len > CAN_MAX_DLEN) {
+                mf_type = (seq == 0) ? 0x00000000 : 0x00001000;
+            }
+            else {
+                mf_type = (seq == 0) ? 0x00003000 : 0x00002000;
+            }
             err = k_msgq_get(&report_packets_msgq, &rx_frame, K_MSEC(100));
             zassert_equal(err, 0, "receiving CAN frame %d timed out", seq);
-            zassert_equal(rx_frame.id, 0x1d000001 | ((msg_no & 0x7) << 13) | end | (seq << 8),
+            zassert_equal(rx_frame.id, 0x1d000001 | ((msg_no & 0x3) << 14) | mf_type | (seq << 8),
                           "CAN ID 0x%x for seq %d of msg %d not correct", rx_frame.id, seq, msg_no);
             zassert_mem_equal(rx_frame.data, report_exp + seq * CAN_MAX_DLEN,
-                              end ? missing_len : CAN_MAX_DLEN);
+                              MIN(missing_len, CAN_MAX_DLEN));
         }
     }
 

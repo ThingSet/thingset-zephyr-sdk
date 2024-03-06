@@ -63,7 +63,9 @@ static const struct isotp_fast_opts fc_opts = {
 struct thingset_can_rx_context
 {
     uint8_t src_addr;
+    uint8_t msg;
     uint8_t seq;
+    bool started;
 };
 
 NET_BUF_POOL_DEFINE(thingset_can_rx_buffer_pool, CONFIG_THINGSET_CAN_REPORT_RX_NUM_BUFFERS,
@@ -193,12 +195,31 @@ static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame
 {
     struct thingset_can *ts_can = user_data;
     uint8_t source_addr = THINGSET_CAN_SOURCE_GET(frame->id);
+    uint8_t msg_no = THINGSET_CAN_MSG_NO_GET(frame->id);
     uint8_t seq = THINGSET_CAN_SEQ_NO_GET(frame->id);
 
     struct net_buf *buffer = thingset_can_get_rx_buf(source_addr);
     if (buffer != NULL) {
         struct thingset_can_rx_context *context =
             (struct thingset_can_rx_context *)buffer->user_data;
+
+        if ((frame->id & THINGSET_CAN_MF_TYPE_MASK) == THINGSET_CAN_MF_TYPE_SINGLE
+            || (frame->id & THINGSET_CAN_MF_TYPE_MASK) == THINGSET_CAN_MF_TYPE_FIRST)
+        {
+            context->msg = msg_no;
+            context->started = true;
+        }
+        else if (context->msg != msg_no) {
+            LOG_WRN("Out-of-message frame received");
+            thingset_can_free_rx_buf(buffer);
+            return;
+        }
+        else if (!context->started) {
+            LOG_WRN("Missing first frame");
+            thingset_can_free_rx_buf(buffer);
+            return;
+        }
+
         if ((context->seq & 0xF) == seq) {
             int chunk_len = can_dlc_to_bytes(frame->dlc);
             if (buffer->len + chunk_len > buffer->size) {
@@ -209,7 +230,9 @@ static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame
             uint8_t *buf = net_buf_add(buffer, chunk_len);
             LOG_DBG("Reassembling %d bytes from ID 0x%08X", chunk_len, frame->id);
             memcpy(buf, frame->data, chunk_len);
-            if (THINGSET_CAN_END_FLAG_GET(frame->id) != 0) {
+            if ((frame->id & THINGSET_CAN_MF_TYPE_MASK) == THINGSET_CAN_MF_TYPE_SINGLE
+                || (frame->id & THINGSET_CAN_MF_TYPE_MASK) == THINGSET_CAN_MF_TYPE_LAST)
+            {
                 LOG_DBG("Finished; dispatching %d bytes from node %x", buffer->len, source_addr);
                 ts_can->report_rx_cb(buffer->data, buffer->len, source_addr);
                 thingset_can_free_rx_buf(buffer);
@@ -218,8 +241,8 @@ static void thingset_can_report_rx_cb(const struct device *dev, struct can_frame
             context->seq++;
         }
         else {
-            /* out-of-sequence message received, so free the buffer */
-            LOG_WRN("Out-of-sequence message received");
+            /* out-of-sequence frame received, so free the buffer */
+            LOG_WRN("Out-of-sequence frame received");
             thingset_can_free_rx_buf(buffer);
         }
     }
@@ -257,16 +280,19 @@ int thingset_can_send_report_inst(struct thingset_can *ts_can, const char *path,
     };
 
     do {
+        uint32_t mf_type;
         if (len - pos > CAN_MAX_DLEN) {
             chunk_len = CAN_MAX_DLEN;
+            mf_type = (pos == 0) ? THINGSET_CAN_MF_TYPE_FIRST : THINGSET_CAN_MF_TYPE_CONSEC;
         }
         else {
             chunk_len = len - pos;
             end = true;
+            mf_type = (pos == 0) ? THINGSET_CAN_MF_TYPE_SINGLE : THINGSET_CAN_MF_TYPE_LAST;
         }
         memcpy(frame.data, tx_buf->data + pos, chunk_len);
         frame.id = THINGSET_CAN_PRIO_REPORT_LOW | THINGSET_CAN_TYPE_MF_REPORT
-                   | THINGSET_CAN_MSG_NO_SET(ts_can->msg_no) | THINGSET_CAN_END_FLAG_SET(end)
+                   | THINGSET_CAN_MSG_NO_SET(ts_can->msg_no) | mf_type
                    | THINGSET_CAN_SEQ_NO_SET(seq) | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
         frame.dlc = can_bytes_to_dlc(chunk_len);
         if (end && IS_ENABLED(CONFIG_CAN_FD_MODE)) {

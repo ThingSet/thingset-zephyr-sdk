@@ -44,14 +44,14 @@ extern "C" {
  *
  * Multi-frame reports:
  *
- *    28      26 25 24 23 20 19     16 15  13   12  11   8 7           0
- *   +----------+-----+-----+---------+------+-----+------+-------------+
- *   | Priority | 0x1 | res | src bus | msg# | end | seq# | source addr |
- *   +----------+-----+-----+---------+------+-----+------+-------------+
+ *    28      26 25 24 23 20 19     16 15  14 13     12 11   8 7           0
+ *   +----------+-----+-----+---------+------+---------+------+-------------+
+ *   | Priority | 0x1 | res | src bus | msg# | MF type | seq# | source addr |
+ *   +----------+-----+-----+---------+------+---------+------+-------------+
  *
  *   Priority: 5 or 7
- *   msg#: Wrapping message counter from 0 to 7
- *   end: End of message flag
+ *   msg#: Wrapping message counter from 0 to 3
+ *   MF type: 0: first frame, 1: consecutive frame, 2: last frame, 3: single frame
  *   seq#: Wrapping sequence counter from 0 to 15
  *   src bus and res: Either source bus or bridge number
  *
@@ -108,21 +108,21 @@ extern "C" {
 #define THINGSET_CAN_DATA_ID_GET(id) \
     (((uint32_t)id & THINGSET_CAN_DATA_ID_MASK) >> THINGSET_CAN_DATA_ID_POS)
 
-/* message number, end flag and sequence number for multi-frame reports */
+/* message number, type and sequence number for multi-frame reports */
 #define THINGSET_CAN_SEQ_NO_POS  (8U)
 #define THINGSET_CAN_SEQ_NO_MASK (0xF << THINGSET_CAN_SEQ_NO_POS)
 #define THINGSET_CAN_SEQ_NO_SET(no) \
     (((uint32_t)no << THINGSET_CAN_SEQ_NO_POS) & THINGSET_CAN_SEQ_NO_MASK)
 #define THINGSET_CAN_SEQ_NO_GET(id) \
     (((uint32_t)id & THINGSET_CAN_SEQ_NO_MASK) >> THINGSET_CAN_SEQ_NO_POS)
-#define THINGSET_CAN_END_FLAG_POS  (12U)
-#define THINGSET_CAN_END_FLAG_MASK (0x1 << THINGSET_CAN_END_FLAG_POS)
-#define THINGSET_CAN_END_FLAG_SET(val) \
-    (((uint32_t)val << THINGSET_CAN_END_FLAG_POS) & THINGSET_CAN_END_FLAG_MASK)
-#define THINGSET_CAN_END_FLAG_GET(id) \
-    (((uint32_t)id & THINGSET_CAN_END_FLAG_MASK) >> THINGSET_CAN_END_FLAG_POS)
-#define THINGSET_CAN_MSG_NO_POS  (13U)
-#define THINGSET_CAN_MSG_NO_MASK (0x7 << THINGSET_CAN_MSG_NO_POS)
+#define THINGSET_CAN_MF_TYPE_POS    (12U)
+#define THINGSET_CAN_MF_TYPE_MASK   (0x3 << THINGSET_CAN_MF_TYPE_POS)
+#define THINGSET_CAN_MF_TYPE_FIRST  (0U << THINGSET_CAN_MF_TYPE_POS)
+#define THINGSET_CAN_MF_TYPE_CONSEC (1U << THINGSET_CAN_MF_TYPE_POS)
+#define THINGSET_CAN_MF_TYPE_LAST   (2U << THINGSET_CAN_MF_TYPE_POS)
+#define THINGSET_CAN_MF_TYPE_SINGLE (3U << THINGSET_CAN_MF_TYPE_POS)
+#define THINGSET_CAN_MSG_NO_POS     (14U)
+#define THINGSET_CAN_MSG_NO_MASK    (0x3 << THINGSET_CAN_MSG_NO_POS)
 #define THINGSET_CAN_MSG_NO_SET(no) \
     (((uint32_t)no << THINGSET_CAN_MSG_NO_POS) & THINGSET_CAN_MSG_NO_MASK)
 #define THINGSET_CAN_MSG_NO_GET(id) \
