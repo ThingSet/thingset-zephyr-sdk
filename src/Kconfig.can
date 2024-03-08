@@ -38,7 +38,7 @@ config THINGSET_CAN_REPORT_RX
 config THINGSET_CAN_REPORT_RX_BUFFER_SIZE
     int "ThingSet CAN RX buffer size for reassembly of packetized reports"
     depends on THINGSET_CAN_REPORT_RX
-    range 32 512
+    range 32 1024
     default 64
     help
       Default value enough to receive at least a 10-element array via broadcast.
