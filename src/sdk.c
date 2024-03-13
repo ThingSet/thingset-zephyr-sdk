@@ -168,7 +168,15 @@ static int thingset_sdk_init(void)
 #endif
 
 #ifdef CONFIG_THINGSET_STORAGE
-    thingset_storage_load();
+    int err;
+    for (int i = 1; i <= CONFIG_THINGSET_STORAGE_LOAD_ATTEMPTS; i++) {
+        err = thingset_storage_load();
+        if (err == 0) {
+            break;
+        }
+        LOG_WRN("Loading data from storage failed (attempt %d/%d)", i,
+                CONFIG_THINGSET_STORAGE_LOAD_ATTEMPTS);
+    }
     thingset_set_update_callback(&ts, TS_SUBSET_NVM, thingset_storage_save_queued);
 #endif
 
