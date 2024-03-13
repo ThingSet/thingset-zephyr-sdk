@@ -25,6 +25,15 @@ config THINGSET_STORAGE_FLASH
 
 endchoice
 
+config THINGSET_STORAGE_LOAD_ATTEMPTS
+    int "Maximum number of attempts to load data from storage at boot"
+    range 1 100
+    default 3
+    help
+      Depending on the environment, loading data from e.g. an I2C EEPROM may fail occasionally with
+      bad CRCs due to noise in the communication. This Kconfig defines how often reading from the
+      storage should be retried.
+
 config THINGSET_STORAGE_CHANGE
     bool "Store data upon change to ThingSet stored items"
     default y
