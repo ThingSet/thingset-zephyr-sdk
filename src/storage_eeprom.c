@@ -8,6 +8,7 @@
 #include <zephyr/drivers/eeprom.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/crc.h>
 
 #include <thingset.h>
@@ -18,21 +19,18 @@
 
 LOG_MODULE_REGISTER(thingset_storage_eeprom, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
-/*
- * EEPROM header bytes:
- * - 0-1: Data objects version number
- * - 2-3: Number of data bytes
- * - 4-7: CRC32
- *
- * Data starts from byte 8
- */
-#define EEPROM_HEADER_SIZE 8
-
 #if DT_NODE_EXISTS(DT_CHOSEN(thingset_eeprom))
 #define EEPROM_DEVICE_NODE DT_CHOSEN(thingset_eeprom)
 #else
 #define EEPROM_DEVICE_NODE DT_NODELABEL(eeprom)
 #endif
+
+struct thingset_eeprom_header
+{
+    uint16_t version;
+    uint16_t data_len;
+    uint32_t crc;
+} __packed;
 
 static struct k_work_delayable storage_work;
 
@@ -40,6 +38,7 @@ static const struct device *eeprom_dev = DEVICE_DT_GET(EEPROM_DEVICE_NODE);
 
 int thingset_storage_load()
 {
+    struct thingset_eeprom_header header;
     int err;
 
     if (!device_is_ready(eeprom_dev)) {
@@ -47,46 +46,40 @@ int thingset_storage_load()
         return -ENODEV;
     }
 
-    uint8_t buf_header[EEPROM_HEADER_SIZE] = {};
-
-    err = eeprom_read(eeprom_dev, 0, buf_header, EEPROM_HEADER_SIZE);
+    err = eeprom_read(eeprom_dev, 0, &header, sizeof(header));
     if (err != 0) {
         LOG_ERR("EEPROM read error %d", err);
         return err;
     }
 
-    uint16_t version = *((uint16_t *)&buf_header[0]);
-    uint16_t len = *((uint16_t *)&buf_header[2]);
-    uint32_t crc = *((uint32_t *)&buf_header[4]);
+    LOG_DBG("EEPROM header: ver %d, len %d, CRC %.8x", header.version, header.data_len, header.crc);
 
-    LOG_DBG("EEPROM header: ver %d, len %d, CRC %.8x", version, len, crc);
-
-    if (version == 0xFFFF && len == 0xFFFF && crc == 0xFFFFFFFF) {
+    if (header.version == 0xFFFF && header.data_len == 0xFFFF && header.crc == 0xFFFFFFFF) {
         LOG_DBG("EEPROM empty");
         return 0;
     }
-    else if (version != CONFIG_THINGSET_STORAGE_DATA_VERSION) {
-        LOG_WRN("EEPROM data ignored due to version mismatch: %d", version);
+    else if (header.version != CONFIG_THINGSET_STORAGE_DATA_VERSION) {
+        LOG_WRN("EEPROM data ignored due to version mismatch: %d", header.version);
         return -EINVAL;
     }
 
     struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
 
-    if (len > sbuf->size) {
-        LOG_ERR("EEPROM buffer too small (%d bytes required)", len);
+    if (header.data_len > sbuf->size) {
+        LOG_ERR("EEPROM buffer too small (%d bytes required)", header.data_len);
         return -ENOMEM;
     }
 
     k_sem_take(&sbuf->lock, K_FOREVER);
 
-    err = eeprom_read(eeprom_dev, EEPROM_HEADER_SIZE, sbuf->data, len);
+    err = eeprom_read(eeprom_dev, sizeof(header), sbuf->data, header.data_len);
     if (err != 0) {
         LOG_ERR("EEPROM read failed: %d", err);
         goto out;
     }
 
-    if (crc32_ieee(sbuf->data, len) == crc) {
-        int status = thingset_import_data(&ts, sbuf->data, len, THINGSET_WRITE_MASK,
+    if (crc32_ieee(sbuf->data, header.data_len) == header.crc) {
+        int status = thingset_import_data(&ts, sbuf->data, header.data_len, THINGSET_WRITE_MASK,
                                           THINGSET_BIN_IDS_VALUES);
         if (status == 0) {
             LOG_DBG("EEPROM read and data successfully updated");
@@ -97,7 +90,8 @@ int thingset_storage_load()
         }
     }
     else {
-        LOG_ERR("EEPROM data CRC invalid, expected 0x%x and data_len %d", crc, len);
+        LOG_ERR("EEPROM data CRC invalid, expected 0x%x and data_len %d", header.crc,
+                header.data_len);
         err = -EINVAL;
     }
 
@@ -119,20 +113,27 @@ int thingset_storage_save()
     struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
     k_sem_take(&sbuf->lock, K_FOREVER);
 
-    int len = thingset_export_subsets(&ts, sbuf->data + EEPROM_HEADER_SIZE,
-                                      sbuf->size - EEPROM_HEADER_SIZE, TS_SUBSET_NVM,
+    int len = thingset_export_subsets(&ts, sbuf->data, sbuf->size, TS_SUBSET_NVM,
                                       THINGSET_BIN_IDS_VALUES);
     if (len > 0) {
-        uint32_t crc = crc32_ieee(sbuf->data + EEPROM_HEADER_SIZE, len);
+        uint32_t crc = crc32_ieee(sbuf->data, len);
 
-        *((uint16_t *)&sbuf->data[0]) = (uint16_t)CONFIG_THINGSET_STORAGE_DATA_VERSION;
-        *((uint16_t *)&sbuf->data[2]) = (uint16_t)(len);
-        *((uint32_t *)&sbuf->data[4]) = crc;
+        struct thingset_eeprom_header header = {
+            .version = CONFIG_THINGSET_STORAGE_DATA_VERSION,
+            .data_len = (uint16_t)len,
+            .crc = crc,
+        };
 
         LOG_DBG("EEPROM header: ver %d, len %d, CRC %.8x", CONFIG_THINGSET_STORAGE_DATA_VERSION,
                 len, crc);
 
-        err = eeprom_write(eeprom_dev, 0, sbuf->data, len + EEPROM_HEADER_SIZE);
+        err = eeprom_write(eeprom_dev, 0, &header, sizeof(header));
+        if (err != 0) {
+            LOG_DBG("Failed to write EEPROM header: %d", err);
+            goto out;
+        }
+
+        err = eeprom_write(eeprom_dev, sizeof(header), sbuf->data, len);
         if (err == 0) {
             LOG_DBG("EEPROM data successfully stored");
         }
@@ -145,6 +146,7 @@ int thingset_storage_save()
         err = -EINVAL;
     }
 
+out:
     k_sem_give(&sbuf->lock);
 
     return err;
