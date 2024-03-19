@@ -40,7 +40,7 @@ static const struct device *eeprom_dev = DEVICE_DT_GET(EEPROM_DEVICE_NODE);
 
 int thingset_storage_load()
 {
-    int err = 0;
+    int err;
 
     if (!device_is_ready(eeprom_dev)) {
         LOG_ERR("EEPROM device not ready");
@@ -61,37 +61,47 @@ int thingset_storage_load()
 
     LOG_DBG("EEPROM header: ver %d, len %d, CRC %.8x", version, len, crc);
 
+    if (version == 0xFFFF && len == 0xFFFF && crc == 0xFFFFFFFF) {
+        LOG_DBG("EEPROM empty");
+        return 0;
+    }
+    else if (version != CONFIG_THINGSET_STORAGE_DATA_VERSION) {
+        LOG_WRN("EEPROM data ignored due to version mismatch: %d", version);
+        return -EINVAL;
+    }
+
     struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
+
+    if (len > sbuf->size) {
+        LOG_ERR("EEPROM buffer too small (%d bytes required)", len);
+        return -ENOMEM;
+    }
+
     k_sem_take(&sbuf->lock, K_FOREVER);
 
-    if (version == CONFIG_THINGSET_STORAGE_DATA_VERSION && len <= sbuf->size) {
+    err = eeprom_read(eeprom_dev, EEPROM_HEADER_SIZE, sbuf->data, len);
+    if (err != 0) {
+        LOG_ERR("EEPROM read failed: %d", err);
+        goto out;
+    }
 
-        err = eeprom_read(eeprom_dev, EEPROM_HEADER_SIZE, sbuf->data, len);
-
-        if (crc32_ieee(sbuf->data, len) == crc) {
-            int status = thingset_import_data(&ts, sbuf->data, len, THINGSET_WRITE_MASK,
-                                              THINGSET_BIN_IDS_VALUES);
-            if (status == 0) {
-                LOG_DBG("EEPROM read and data successfully updated");
-            }
-            else {
-                LOG_ERR("Importing data failed with ThingSet response code 0x%X", -status);
-                err = -EINVAL;
-            }
+    if (crc32_ieee(sbuf->data, len) == crc) {
+        int status = thingset_import_data(&ts, sbuf->data, len, THINGSET_WRITE_MASK,
+                                          THINGSET_BIN_IDS_VALUES);
+        if (status == 0) {
+            LOG_DBG("EEPROM read and data successfully updated");
         }
         else {
-            LOG_ERR("EEPROM data CRC invalid, expected 0x%x and data_len %d", crc, len);
+            LOG_ERR("Importing data failed with ThingSet response code 0x%X", -status);
             err = -EINVAL;
         }
     }
-    else if (version == 0xFFFF && len == 0xFFFF && crc == 0xFFFFFFFF) {
-        LOG_DBG("EEPROM empty");
-    }
     else {
-        LOG_WRN("EEPROM data ignored due to version mismatch: %d", version);
+        LOG_ERR("EEPROM data CRC invalid, expected 0x%x and data_len %d", crc, len);
         err = -EINVAL;
     }
 
+out:
     k_sem_give(&sbuf->lock);
 
     return err;
