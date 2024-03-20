@@ -30,8 +30,7 @@ extern uint8_t eui64[8];
 static const struct can_filter sf_report_filter = {
     .id = THINGSET_CAN_TYPE_SF_REPORT,
     .mask = THINGSET_CAN_TYPE_MASK,
-    .flags =
-        CAN_FILTER_DATA | CAN_FILTER_IDE | (IS_ENABLED(CONFIG_CAN_FD_MODE) ? CAN_FILTER_FDF : 0),
+    .flags = CAN_FILTER_IDE,
 };
 #endif /* CONFIG_THINGSET_CAN_ITEM_RX */
 
@@ -39,15 +38,14 @@ static const struct can_filter sf_report_filter = {
 static const struct can_filter mf_report_filter = {
     .id = THINGSET_CAN_TYPE_MF_REPORT,
     .mask = THINGSET_CAN_TYPE_MASK,
-    .flags =
-        CAN_FILTER_DATA | CAN_FILTER_IDE | (IS_ENABLED(CONFIG_CAN_FD_MODE) ? CAN_FILTER_FDF : 0),
+    .flags = CAN_FILTER_IDE,
 };
 #endif /* CONFIG_THINGSET_CAN_REPORT_RX */
 
 static const struct can_filter addr_claim_filter = {
     .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_TARGET_SET(THINGSET_CAN_ADDR_BROADCAST),
     .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_TARGET_MASK,
-    .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
+    .flags = CAN_FILTER_IDE,
 };
 
 static const struct isotp_fast_opts fc_opts = {
@@ -685,7 +683,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS)
               | THINGSET_CAN_TARGET_SET(ts_can->node_addr),
         .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_SOURCE_MASK | THINGSET_CAN_TARGET_MASK,
-        .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
+        .flags = CAN_FILTER_IDE,
     };
     filter_id = can_add_rx_filter(ts_can->dev, thingset_can_addr_discovery_rx_cb, ts_can,
                                   &addr_discovery_filter);

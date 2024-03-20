@@ -152,12 +152,11 @@ static void check_frame_series(struct frame_desired *frames, size_t length, stru
 static int add_rx_msgq(uint32_t id, uint32_t mask)
 {
     int filter_id;
-    struct can_filter filter = { .flags = CAN_FILTER_DATA | ((id > 0x7FF) ? CAN_FILTER_IDE : 0),
-                                 .id = id,
-                                 .mask = mask };
-#ifdef CONFIG_CAN_FD_MODE
-    filter.flags |= CAN_FILTER_FDF;
-#endif
+    struct can_filter filter = {
+        .flags = ((id > 0x7FF) ? CAN_FILTER_IDE : 0),
+        .id = id,
+        .mask = mask,
+    };
 
     filter_id = can_add_rx_filter_msgq(can_dev, &frame_msgq, &filter);
     zassert_not_equal(filter_id, -ENOSPC, "Filter full");

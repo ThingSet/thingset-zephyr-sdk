@@ -914,8 +914,7 @@ static inline void prepare_filter(struct can_filter *filter, uint32_t rx_addr,
     }
 #endif /* CONFIG_ISOTP_FAST_CUSTOM_ADDRESSING */
     filter->mask = mask;
-    filter->flags = CAN_FILTER_DATA | CAN_FILTER_IDE
-                    | ((opts->flags & ISOTP_MSG_FDF) != 0 ? CAN_FILTER_FDF : 0);
+    filter->flags = CAN_FILTER_IDE;
 }
 
 int isotp_fast_bind(struct isotp_fast_ctx *ctx, const struct device *can_dev,
