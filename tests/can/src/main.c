@@ -152,7 +152,7 @@ ZTEST(thingset_can, test_send_packetized_report)
     struct can_filter rx_filter = {
         .id = 0x1D000000,
         .mask = 0x1F000000,
-        .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
+        .flags = CAN_FILTER_IDE,
     };
     struct can_frame rx_frame;
     int err;
@@ -200,7 +200,7 @@ ZTEST(thingset_can, test_send_request_to_node)
     struct can_filter other_node_filter = {
         .id = 0x1800CC00,
         .mask = 0x1F00FF00,
-        .flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
+        .flags = CAN_FILTER_IDE,
     };
     uint8_t req_buf[] = { 0x01, 0x00 }; /* simple single-frame request via ISO-TP */
     int err;
