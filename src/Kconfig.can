@@ -51,6 +51,14 @@ config THINGSET_CAN_REPORT_RX_NUM_BUFFERS
     help
       Maximum number of unique senders anticipated on the CAN bus.
 
+config THINGSET_STORAGE_EEPROM_PROGRESSIVE_IMPORT_EXPORT
+     bool "Enable progressive import/export for EEPROM storage."
+     select THINGSET_PROGRESSIVE_IMPORT_EXPORT
+     default n
+     help
+       When enabled, allows the loading and saving of data larger than the shared buffer
+       in EEPROM.
+
 config THINGSET_CAN_REPORT_RX_BUCKETS
     int "ThingSet CAN number of buckets into which RX buffers are divided"
     depends on THINGSET_CAN_REPORT_RX
