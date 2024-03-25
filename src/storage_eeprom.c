@@ -69,7 +69,7 @@ int thingset_storage_load()
 
     if (header.data_len > sbuf->size) {
 #ifdef CONFIG_THINGSET_STORAGE_EEPROM_PROGRESSIVE_IMPORT_EXPORT
-        int calculated_crc = 0x0;
+        uint32_t calculated_crc = 0x0;
         uint32_t last_id = 0;
         size_t processed_size = 0;
         size_t total_read_size = sizeof(header);
@@ -90,7 +90,7 @@ int thingset_storage_load()
             total_read_size += processed_size;
             len -= processed_size;
         } while (len > 0 && err > 0);
-        LOG_INF("Finished processing %d bytes; calculated CRC %.8x",
+        LOG_DBG("Finished processing %d bytes; calculated CRC %.8x",
                 total_read_size - sizeof(header), calculated_crc);
         if (!err) {
             thingset_import_data_progressively_end(&ts);
@@ -98,7 +98,7 @@ int thingset_storage_load()
 
         if (calculated_crc == header.crc) {
             if (!err) {
-                LOG_INF("EEPROM read and data successfully updated");
+                LOG_DBG("EEPROM read and data successfully updated");
             }
             else {
                 LOG_ERR("Importing data failed with ThingSet response code 0x%X", -err);
@@ -189,7 +189,7 @@ int thingset_storage_save()
     } while (rtn > 0 && err == 0);
     if (!err) {
         total_size -= sizeof(header);
-        LOG_INF("Wrote a total of %d bytes comprising %d items with checksum %.8x; writing "
+        LOG_DBG("Wrote a total of %d bytes comprising %d items with checksum %.8x; writing "
                 "header",
                 total_size, i, crc);
 
@@ -197,9 +197,7 @@ int thingset_storage_save()
         header.data_len = (uint16_t)total_size;
         header.crc = crc;
         err = eeprom_write(eeprom_dev, 0, &header, sizeof(header));
-    }
-    if (err == 0) {
-        LOG_INF("EEPROM data successfully stored");
+        LOG_DBG("EEPROM data successfully stored");
     }
     else {
         LOG_ERR("EEPROM write error %d", -err);
