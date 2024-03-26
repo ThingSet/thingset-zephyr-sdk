@@ -25,6 +25,12 @@ LOG_MODULE_REGISTER(thingset_storage_eeprom, CONFIG_THINGSET_SDK_LOG_LEVEL);
 #define EEPROM_DEVICE_NODE DT_NODELABEL(eeprom)
 #endif
 
+/* Testing showed that reading from the EEPROM resulted in corrupted data under certain conditions
+ * if large amounts of data (>8 kB) were read at once. The STM32 I2C driver has a max chunk length
+ * of 255 bytes, so the chunk size here should be smaller than that.
+ */
+#define MAX_READ_SIZE 128
+
 struct thingset_eeprom_header
 {
     uint16_t version;
@@ -74,13 +80,24 @@ int thingset_storage_load()
         size_t processed_size = 0;
         size_t total_read_size = sizeof(header);
         size_t len = header.data_len;
+        size_t read_offset = 0;
         do {
             int size = len > sbuf->size ? sbuf->size : len;
-            LOG_DBG("Reading %d bytes starting at offset %d", size, total_read_size);
-            err = eeprom_read(eeprom_dev, total_read_size, sbuf->data, size);
-            if (err) {
-                LOG_ERR("Error %d reading EEPROM.", -err);
-                break;
+            int num_chunks = DIV_ROUND_UP(size, MAX_READ_SIZE);
+            int remaining_bytes = size;
+            read_offset = total_read_size;
+            for (int i = 0; i < num_chunks; i++) {
+                size_t read_size =
+                    remaining_bytes > MAX_READ_SIZE ? MAX_READ_SIZE : remaining_bytes;
+                LOG_DBG("Reading %d bytes starting at offset %d", read_size, read_offset);
+                err =
+                    eeprom_read(eeprom_dev, read_offset, &sbuf->data[i * MAX_READ_SIZE], read_size);
+                if (err) {
+                    LOG_ERR("Error %d reading EEPROM.", -err);
+                    break;
+                }
+                read_offset += read_size;
+                remaining_bytes -= read_size;
             }
 
             err =
