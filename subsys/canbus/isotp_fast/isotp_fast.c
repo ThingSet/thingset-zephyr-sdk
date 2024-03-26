@@ -881,7 +881,7 @@ static inline void prepare_filter(struct can_filter *filter, uint32_t rx_addr,
                                   const struct isotp_fast_opts *opts)
 {
     filter->id = rx_addr;
-    uint32_t mask;
+    uint32_t mask = 0;
 #ifdef CONFIG_ISOTP_FAST_CUSTOM_ADDRESSING
     mask = CONFIG_ISOTP_FAST_CUSTOM_ADDRESSING_RX_MASK;
 #else
