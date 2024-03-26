@@ -2,25 +2,25 @@
 # SPDX-License-Identifier: Apache-2.0
 
 menuconfig THINGSET_SHELL
-    bool "Shell command"
-    depends on SHELL
-    help
-      Should not be used with the same serial interface as THINGSET_SERIAL
+	bool "Shell command"
+	depends on SHELL
+	help
+	  Should not be used with the same serial interface as THINGSET_SERIAL
 
 if THINGSET_SHELL
 
 config THINGSET_SHELL_CMD_BUF_SIZE
-    int "ThingSet shell command buffer size"
-    range 64 2048
-    default 128
+	int "ThingSet shell command buffer size"
+	range 64 2048
+	default 128
 
 config THINGSET_SHELL_REPORTING
-    bool "Print regular reports to console"
-    default y
-    help
-      Printing live metrics reports to the shell can quickly flood the shell
-      with too many messages.
+	bool "Print regular reports to console"
+	default y
+	help
+	  Printing live metrics reports to the shell can quickly flood the shell
+	  with too many messages.
 
-      Disable if reporting interval is too short and your shell is flooded.
+	  Disable if reporting interval is too short and your shell is flooded.
 
 endif # THINGSET_SHELL

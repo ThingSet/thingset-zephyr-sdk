@@ -2,44 +2,44 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config THINGSET_WEBSOCKET
-    depends on WEBSOCKET_CLIENT
-    bool "WebSocket interface"
+	depends on WEBSOCKET_CLIENT
+	bool "WebSocket interface"
 
 if THINGSET_WEBSOCKET
 
 config THINGSET_WEBSOCKET_SERVER_HOST
-    string "Default WebSocket server host name"
-    help
-      This default host name can be changed via ThingSet.
+	string "Default WebSocket server host name"
+	help
+	  This default host name can be changed via ThingSet.
 
 config THINGSET_WEBSOCKET_SERVER_PORT
-    int "Default WebSocket server port"
-    default 80
-    help
-      This default port can be changed via ThingSet.
+	int "Default WebSocket server port"
+	default 80
+	help
+	  This default port can be changed via ThingSet.
 
 config THINGSET_WEBSOCKET_AUTH_TOKEN
-    string "Default WebSocket server port"
-    help
-      This default port can be changed via ThingSet.
+	string "Default WebSocket server port"
+	help
+	  This default port can be changed via ThingSet.
 
 config THINGSET_WEBSOCKET_RX_BUF_SIZE
-    int "ThingSet WebSocket RX buffer size"
-    range 512 4096
-    default 1024
+	int "ThingSet WebSocket RX buffer size"
+	range 512 4096
+	default 1024
 
 config THINGSET_WEBSOCKET_THREAD_STACK_SIZE
-    int "ThingSet WebSocket thread stack size"
-    default 4096
-    help
-      Stack size of thread for processing ThingSet messages transmitted
-      via WebSocket.
+	int "ThingSet WebSocket thread stack size"
+	default 4096
+	help
+	  Stack size of thread for processing ThingSet messages transmitted
+	  via WebSocket.
 
 config THINGSET_WEBSOCKET_THREAD_PRIORITY
-    int "ThingSet WebSocket thread priority"
-    default 2
-    help
-      Priority of thread for processing ThingSet messages transmitted
-      via WebSocket.
+	int "ThingSet WebSocket thread priority"
+	default 2
+	help
+	  Priority of thread for processing ThingSet messages transmitted
+	  via WebSocket.
 
 endif # THINGSET_WEBSOCKET

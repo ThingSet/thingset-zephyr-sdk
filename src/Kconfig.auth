@@ -2,19 +2,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 menuconfig THINGSET_AUTH
-    bool "Basic Authentication"
+	bool "Basic Authentication"
 
 if THINGSET_AUTH
 
 config THINGSET_AUTH_TOKEN_MAX_SIZE
-    int "Auth token max size"
-    range 8 65
-    default 16
+	int "Auth token max size"
+	range 8 65
+	default 16
 
 config THINGSET_AUTH_TOKEN_EXPERT
-    string "Token to authenticate as expert user"
+	string "Token to authenticate as expert user"
 
 config THINGSET_AUTH_TOKEN_MANUFACTURER
-    string "Token to authenticate as manufacturer"
+	string "Token to authenticate as manufacturer"
 
 endif # THINGSET_AUTH

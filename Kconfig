@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 menuconfig THINGSET_SDK
-    bool "ThingSet SDK"
+	bool "ThingSet SDK"
 
 if THINGSET_SDK
 
@@ -20,61 +20,61 @@ rsource "src/Kconfig.wifi"
 menu "General Publication Settings"
 
 config THINGSET_SUBSET_LIVE_METRICS
-    bool "Use mLive subset (for regular reporting)"
-    default y
-    help
-      The live metrics subset is meant for data that is published very frequently
-      with intervals in the range of a few seconds.
+	bool "Use mLive subset (for regular reporting)"
+	default y
+	help
+	  The live metrics subset is meant for data that is published very frequently
+	  with intervals in the range of a few seconds.
 
 config THINGSET_REPORTING_LIVE_ENABLE_PRESET
-    bool "Enable regular reporting of live metrics by default"
-    depends on THINGSET_SUBSET_LIVE_METRICS
-    default y
+	bool "Enable regular reporting of live metrics by default"
+	depends on THINGSET_SUBSET_LIVE_METRICS
+	default y
 
 config THINGSET_REPORTING_LIVE_PERIOD_PRESET
-    int "Default period (s) for live metrics reporting"
-    depends on THINGSET_SUBSET_LIVE_METRICS
-    default 1
+	int "Default period (s) for live metrics reporting"
+	depends on THINGSET_SUBSET_LIVE_METRICS
+	default 1
 
 config THINGSET_SUBSET_SUMMARY_METRICS
-    bool "Use mSummary subset (for infrequent reporting)"
-    default y if THINGSET_LORAWAN
-    help
-      The summary metrics subset is meant for data that should be published
-      seldomly, e.g. LoRaWAN messages.
+	bool "Use mSummary subset (for infrequent reporting)"
+	default y if THINGSET_LORAWAN
+	help
+	  The summary metrics subset is meant for data that should be published
+	  seldomly, e.g. LoRaWAN messages.
 
 config THINGSET_REPORTING_SUMMARY_ENABLE_PRESET
-    bool "Enable regular reporting of summary metrics by default"
-    depends on THINGSET_SUBSET_SUMMARY_METRICS
-    default y
+	bool "Enable regular reporting of summary metrics by default"
+	depends on THINGSET_SUBSET_SUMMARY_METRICS
+	default y
 
 config THINGSET_REPORTING_SUMMARY_PERIOD_PRESET
-    int "Default period (s) for summary metrics reporting"
-    depends on THINGSET_SUBSET_SUMMARY_METRICS
-    default 900
+	int "Default period (s) for summary metrics reporting"
+	depends on THINGSET_SUBSET_SUMMARY_METRICS
+	default 900
 
 endmenu # General Publication Settings
 
 config THINGSET_GENERATE_NODE_ID
-    bool "Automatically generate node ID"
-    select HWINFO
-    select CRC
-    default y
+	bool "Automatically generate node ID"
+	select HWINFO
+	select CRC
+	default y
 
 config THINGSET_NODE_NAME
-    string "Default ThingSet node name"
-    default "ThingSet Node"
-    help
-      This node name is used for the pNodeName item and should be a description of
-      the device understandable by humans, e.g. the device type.
+	string "Default ThingSet node name"
+	default "ThingSet Node"
+	help
+	  This node name is used for the pNodeName item and should be a description of
+	  the device understandable by humans, e.g. the device type.
 
 config THINGSET_SHARED_TX_BUF_SIZE
-    int "Shared TX buffer size"
-    range 256 10240
-    default 1024
-    help
-      This buffer is used to create ThingSet responses for the different interfaces. It has to be
-      large enough to fit the largest expected response.
+	int "Shared TX buffer size"
+	range 256 10240
+	default 1024
+	help
+	  This buffer is used to create ThingSet responses for the different interfaces. It has to be
+	  large enough to fit the largest expected response.
 
 config THINGSET_SDK_THREAD_STACK_SIZE
 	int "Common thread stack size"

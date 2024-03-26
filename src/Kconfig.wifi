@@ -2,5 +2,5 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config THINGSET_WIFI
-    depends on WIFI
-    bool "WiFi interface"
+	depends on WIFI
+	bool "WiFi interface"

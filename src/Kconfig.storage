@@ -2,73 +2,72 @@
 # SPDX-License-Identifier: Apache-2.0
 
 menuconfig THINGSET_STORAGE
-    bool "Storage backend"
-    depends on EEPROM || NVS
-    help
-      Enables long-term storage of data in non-volatile memory (EEPROM or Flash).
+	bool "Storage backend"
+	depends on EEPROM || NVS
+	help
+	  Enables long-term storage of data in non-volatile memory (EEPROM or Flash).
 
 if THINGSET_STORAGE
 
 choice THINGSET_STORAGE_TYPE
-    prompt "Storage type"
-    help
-       Select whether the data should be stored in EEPROM or Flash.
+	prompt "Storage type"
+	help
+	   Select whether the data should be stored in EEPROM or Flash.
 
 config THINGSET_STORAGE_EEPROM
-    bool "EEPROM"
-    depends on EEPROM
-    select CRC
+	bool "EEPROM"
+	depends on EEPROM
+	select CRC
 
 config THINGSET_STORAGE_FLASH
-    bool "Flash/NVS"
-    depends on NVS
+	bool "Flash/NVS"
+	depends on NVS
 
 endchoice
 
 config THINGSET_STORAGE_LOAD_ATTEMPTS
-    int "Maximum number of attempts to load data from storage at boot"
-    range 1 100
-    default 3
-    help
-      Depending on the environment, loading data from e.g. an I2C EEPROM may fail occasionally with
-      bad CRCs due to noise in the communication. This Kconfig defines how often reading from the
-      storage should be retried.
+	int "Maximum number of attempts to load data from storage at boot"
+	range 1 100
+	default 3
+	help
+	  Depending on the environment, loading data from e.g. an I2C EEPROM may fail occasionally
+	  with bad CRCs due to noise in the communication. This Kconfig defines how often reading
+	  from the storage should be retried.
 
 config THINGSET_STORAGE_CHANGE
-    bool "Store data upon change to ThingSet stored items"
-    default y
-    help
-      If enabled, a callback is invoked once a data object which is part of the TS_SUBSET_NVM is
-      changed.
+	bool "Store data upon change to ThingSet stored items"
+	default y
+	help
+	  If enabled, a callback is invoked once a data object which is part of the TS_SUBSET_NVM is
+	  changed.
 
 config THINGSET_STORAGE_REGULAR
-    bool "Store data in regular intervals"
-    default y
+	bool "Store data in regular intervals"
+	default y
 
 config THINGSET_STORAGE_INTERVAL
-    int "Regular storage interval (in hours)"
-    depends on THINGSET_STORAGE_REGULAR
-    range 1 8760
-    default 6
+	int "Regular storage interval (in hours)"
+	depends on THINGSET_STORAGE_REGULAR
+	range 1 8760
+	default 6
 
 config THINGSET_STORAGE_DATA_VERSION
-    int "Data objects version"
-    range 1 65536
-    default 1
-    help
-      This version number has to be increased each time IDs previously used for data objects
-      stored in non-volatile memory are re-used for different data objects (different data type
-      or different semantics).
+	int "Data objects version"
+	range 1 65536
+	default 1
+	help
+	  This version number has to be increased each time IDs previously used for data objects
+	  stored in non-volatile memory are re-used for different data objects (different data type
+	  or different semantics).
 
-      Warning: This will discard previously stored data in order to prevent data corruption. Try
-      to avoid changing data object IDs used previously.
+	  Warning: This will discard previously stored data in order to prevent data corruption. Try
+	  to avoid changing data object IDs used previously.
 
 config THINGSET_STORAGE_EEPROM_PROGRESSIVE_IMPORT_EXPORT
-     bool "Enable progressive import/export for EEPROM storage."
-     select THINGSET_PROGRESSIVE_IMPORT_EXPORT
-     default n
-     help
-       When enabled, allows the loading and saving of data larger than the shared buffer
-       in EEPROM.
+	bool "Enable progressive import/export for EEPROM storage."
+	select THINGSET_PROGRESSIVE_IMPORT_EXPORT
+	help
+	  When enabled, allows the loading and saving of data larger than the shared buffer
+	  in EEPROM.
 
 endif # THINGSET_STORAGE
