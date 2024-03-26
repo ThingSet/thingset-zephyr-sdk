@@ -63,4 +63,12 @@ config THINGSET_STORAGE_DATA_VERSION
       Warning: This will discard previously stored data in order to prevent data corruption. Try
       to avoid changing data object IDs used previously.
 
+config THINGSET_STORAGE_EEPROM_PROGRESSIVE_IMPORT_EXPORT
+     bool "Enable progressive import/export for EEPROM storage."
+     select THINGSET_PROGRESSIVE_IMPORT_EXPORT
+     default n
+     help
+       When enabled, allows the loading and saving of data larger than the shared buffer
+       in EEPROM.
+
 endif # THINGSET_STORAGE
