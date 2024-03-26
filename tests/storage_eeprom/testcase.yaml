@@ -15,5 +15,5 @@ tests:
       # native sim with at24 emul EEPROM currently fails for unknown reasons
       - native_sim
     extra_args: EXTRA_CFLAGS=-Werror
-    extra-configs:
+    extra_configs:
       - CONFIG_THINGSET_STORAGE_EEPROM_PROGRESSIVE_IMPORT_EXPORT=y
