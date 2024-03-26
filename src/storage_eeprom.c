@@ -25,6 +25,8 @@ LOG_MODULE_REGISTER(thingset_storage_eeprom, CONFIG_THINGSET_SDK_LOG_LEVEL);
 #define EEPROM_DEVICE_NODE DT_NODELABEL(eeprom)
 #endif
 
+#define MAX_READ_SIZE 128
+
 struct thingset_eeprom_header
 {
     uint16_t version;
@@ -74,13 +76,23 @@ int thingset_storage_load()
         size_t processed_size = 0;
         size_t total_read_size = sizeof(header);
         size_t len = header.data_len;
+        size_t read_offset = 0;
         do {
             int size = len > sbuf->size ? sbuf->size : len;
-            LOG_DBG("Reading %d bytes starting at offset %d", size, total_read_size);
-            err = eeprom_read(eeprom_dev, total_read_size, sbuf->data, size);
-            if (err) {
-                LOG_ERR("Error %d reading EEPROM.", -err);
-                break;
+
+            read_offset = total_read_size;
+            int index = DIV_ROUND_UP(size, MAX_READ_SIZE);
+
+            for (int i = 0; i < index; i++) {
+                size_t read_size = size > MAX_READ_SIZE ? MAX_READ_SIZE : size;
+                LOG_DBG("Reading %d bytes starting at offset %d", read_size, read_offset);
+                err =
+                    eeprom_read(eeprom_dev, read_offset, &sbuf->data[i * MAX_READ_SIZE], read_size);
+                if (err) {
+                    LOG_ERR("Error %d reading EEPROM.", -err);
+                    break;
+                }
+                read_offset += read_size;
             }
 
             err =
