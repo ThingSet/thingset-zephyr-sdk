@@ -70,4 +70,12 @@ config THINGSET_STORAGE_EEPROM_PROGRESSIVE_IMPORT_EXPORT
 	  When enabled, allows the loading and saving of data larger than the shared buffer
 	  in EEPROM.
 
+config THINGSET_STORAGE_EEPROM_DUPLICATE
+	bool "Write EEPROM data twice to recover from power failures"
+	depends on THINGSET_STORAGE_EEPROM
+	help
+	  Divides the available EEPROM memory into two equal sections and writes the data into both
+	  sections each time. This allows to recover from power failures because at least one
+	  section will always have valid data.
+
 endif # THINGSET_STORAGE

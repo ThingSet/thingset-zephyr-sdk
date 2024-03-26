@@ -8,6 +8,15 @@ tests:
       # native sim with at24 emul EEPROM currently fails for unknown reasons
       - native_sim
     extra_args: EXTRA_CFLAGS=-Werror
+  thingset_sdk.storage_eeprom.duplicate:
+    integration_platforms:
+      - native_posix_64
+    platform_exclude:
+      # native sim with at24 emul EEPROM currently fails for unknown reasons
+      - native_sim
+    extra_args: EXTRA_CFLAGS=-Werror
+    extra_configs:
+      - CONFIG_THINGSET_STORAGE_EEPROM_DUPLICATE=y
   thingset_sdk.storage_eeprom.progressive:
     integration_platforms:
       - native_posix_64
@@ -17,3 +26,13 @@ tests:
     extra_args: EXTRA_CFLAGS=-Werror
     extra_configs:
       - CONFIG_THINGSET_STORAGE_EEPROM_PROGRESSIVE_IMPORT_EXPORT=y
+  thingset_sdk.storage_eeprom.progressive_duplicate:
+    integration_platforms:
+      - native_posix_64
+    platform_exclude:
+      # native sim with at24 emul EEPROM currently fails for unknown reasons
+      - native_sim
+    extra_args: EXTRA_CFLAGS=-Werror
+    extra_configs:
+      - CONFIG_THINGSET_STORAGE_EEPROM_PROGRESSIVE_IMPORT_EXPORT=y
+      - CONFIG_THINGSET_STORAGE_EEPROM_DUPLICATE=y

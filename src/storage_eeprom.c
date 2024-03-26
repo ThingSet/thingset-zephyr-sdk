@@ -42,17 +42,12 @@ static struct k_work_delayable storage_work;
 
 static const struct device *eeprom_dev = DEVICE_DT_GET(EEPROM_DEVICE_NODE);
 
-int thingset_storage_load()
+static int thingset_eeprom_load(off_t offset)
 {
     struct thingset_eeprom_header header;
     int err;
 
-    if (!device_is_ready(eeprom_dev)) {
-        LOG_ERR("EEPROM device not ready");
-        return -ENODEV;
-    }
-
-    err = eeprom_read(eeprom_dev, 0, &header, sizeof(header));
+    err = eeprom_read(eeprom_dev, offset, &header, sizeof(header));
     if (err != 0) {
         LOG_ERR("EEPROM read error %d", err);
         return err;
@@ -80,23 +75,23 @@ int thingset_storage_load()
         size_t processed_size = 0;
         size_t total_read_size = sizeof(header);
         size_t len = header.data_len;
-        size_t read_offset = 0;
+        size_t chunk_offset = 0;
         do {
             int size = len > sbuf->size ? sbuf->size : len;
             int num_chunks = DIV_ROUND_UP(size, MAX_READ_SIZE);
             int remaining_bytes = size;
-            read_offset = total_read_size;
+            chunk_offset = total_read_size;
             for (int i = 0; i < num_chunks; i++) {
                 size_t read_size =
                     remaining_bytes > MAX_READ_SIZE ? MAX_READ_SIZE : remaining_bytes;
-                LOG_DBG("Reading %d bytes starting at offset %d", read_size, read_offset);
-                err =
-                    eeprom_read(eeprom_dev, read_offset, &sbuf->data[i * MAX_READ_SIZE], read_size);
+                LOG_DBG("Reading %d bytes starting at offset %d", read_size, chunk_offset);
+                err = eeprom_read(eeprom_dev, offset + chunk_offset, &sbuf->data[i * MAX_READ_SIZE],
+                                  read_size);
                 if (err) {
                     LOG_ERR("Error %d reading EEPROM.", -err);
                     break;
                 }
-                read_offset += read_size;
+                chunk_offset += read_size;
                 remaining_bytes -= read_size;
             }
 
@@ -135,7 +130,7 @@ int thingset_storage_load()
 #endif /* CONFIG_THINGSET_STORAGE_EEPROM_PROGRESSIVE_IMPORT_EXPORT */
     }
     else {
-        err = eeprom_read(eeprom_dev, sizeof(header), sbuf->data, header.data_len);
+        err = eeprom_read(eeprom_dev, offset + sizeof(header), sbuf->data, header.data_len);
         if (err != 0) {
             LOG_ERR("EEPROM read failed: %d", err);
             goto out;
@@ -165,14 +160,9 @@ out:
     return err;
 }
 
-int thingset_storage_save()
+static int thingset_eeprom_save(off_t offset, size_t useable_size)
 {
     int err;
-
-    if (!device_is_ready(eeprom_dev)) {
-        LOG_ERR("EEPROM device not ready");
-        return -ENODEV;
-    }
 
     struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
     k_sem_take(&sbuf->lock, K_FOREVER);
@@ -197,7 +187,7 @@ int thingset_storage_save()
         }
         crc = crc32_ieee_update(crc, sbuf->data, size);
         LOG_DBG("Writing %d bytes to EEPROM", size);
-        err = eeprom_write(eeprom_dev, total_size, sbuf->data, size);
+        err = eeprom_write(eeprom_dev, offset + total_size, sbuf->data, size);
         if (err) {
             LOG_ERR("EEPROM write error %d", err);
             break;
@@ -213,7 +203,7 @@ int thingset_storage_save()
         /* now write the header */
         header.data_len = (uint16_t)total_size;
         header.crc = crc;
-        err = eeprom_write(eeprom_dev, 0, &header, sizeof(header));
+        err = eeprom_write(eeprom_dev, offset, &header, sizeof(header));
         LOG_DBG("EEPROM data successfully stored");
     }
     else {
@@ -234,13 +224,13 @@ int thingset_storage_save()
         LOG_DBG("EEPROM header: ver %d, len %d, CRC %.8x", CONFIG_THINGSET_STORAGE_DATA_VERSION,
                 len, crc);
 
-        err = eeprom_write(eeprom_dev, 0, &header, sizeof(header));
+        err = eeprom_write(eeprom_dev, offset, &header, sizeof(header));
         if (err != 0) {
             LOG_DBG("Failed to write EEPROM header: %d", err);
             goto out;
         }
 
-        err = eeprom_write(eeprom_dev, sizeof(header), sbuf->data, len);
+        err = eeprom_write(eeprom_dev, offset + sizeof(header), sbuf->data, len);
         if (err == 0) {
             LOG_DBG("EEPROM data successfully stored");
         }
@@ -257,6 +247,46 @@ out:
     k_sem_give(&sbuf->lock);
 
     return err;
+}
+
+int thingset_storage_load()
+{
+    if (!device_is_ready(eeprom_dev)) {
+        LOG_ERR("EEPROM device not ready");
+        return -ENODEV;
+    }
+
+#ifdef CONFIG_THINGSET_STORAGE_EEPROM_DUPLICATE
+    size_t eeprom_size = eeprom_get_size(eeprom_dev);
+    int err = thingset_eeprom_load(0);
+    if (err != 0) {
+        /* first data section invalid, try second one */
+        err = thingset_eeprom_load(eeprom_size / 2);
+    }
+    return err;
+#else
+    return thingset_eeprom_load(0);
+#endif
+}
+
+int thingset_storage_save()
+{
+    if (!device_is_ready(eeprom_dev)) {
+        LOG_ERR("EEPROM device not ready");
+        return -ENODEV;
+    }
+
+    size_t eeprom_size = eeprom_get_size(eeprom_dev);
+
+#ifdef CONFIG_THINGSET_STORAGE_EEPROM_DUPLICATE
+    int err = thingset_eeprom_save(0, eeprom_size / 2);
+    if (err != 0) {
+        return err;
+    }
+    return thingset_eeprom_save(eeprom_size / 2, eeprom_size / 2);
+#else
+    return thingset_eeprom_save(0, eeprom_size);
+#endif
 }
 
 void thingset_storage_save_queued()
