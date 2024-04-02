@@ -80,4 +80,54 @@ ZTEST(thingset_storage_eeprom, test_save_load_corrupted)
 #endif
 }
 
-ZTEST_SUITE(thingset_storage_eeprom, NULL, NULL, NULL, NULL, NULL);
+static void *thingset_storage_eeprom_setup(void)
+{
+#ifdef CONFIG_THINGSET_STORAGE_INHIBIT_OVERWRITE
+    int err;
+
+    /* verify that EEPROM data is actually corrupted */
+    err = thingset_storage_load();
+    zassert_not_equal(err, 0);
+
+    /* save without overwriting */
+    thingset_storage_save_queued(false);
+    k_sleep(K_MSEC(100));
+
+    /* verify that EEPROM data is still corrupted */
+    err = thingset_storage_load();
+    zassert_not_equal(err, 0);
+
+    /* force-save */
+    thingset_storage_save_queued(true);
+    k_sleep(K_MSEC(100));
+
+    /* verify that EEPROM data is now valid */
+    err = thingset_storage_load();
+    zassert_equal(err, 0);
+#endif
+
+    return NULL;
+}
+
+#ifdef CONFIG_THINGSET_STORAGE_INHIBIT_OVERWRITE
+/*
+ * The EEPROM data must be corrupted before the ThingSet storage is initialized in order to
+ * test the overwrite inhibit.
+ */
+static int invalidate_eeprom_data(void)
+{
+    const struct device *eeprom_dev = DEVICE_DT_GET(EEPROM_DEVICE_NODE);
+    int err;
+
+    uint8_t bad_data[8] = { 0xD, 0xE, 0xA, 0xD, 0xB, 0xE, 0xE, 0xF };
+
+    err = eeprom_write(eeprom_dev, 0, bad_data, sizeof(bad_data));
+    zassert_equal(err, 0, "Failed to write invalid data");
+
+    return 0;
+}
+
+SYS_INIT(invalidate_eeprom_data, APPLICATION, 0);
+#endif
+
+ZTEST_SUITE(thingset_storage_eeprom, NULL, thingset_storage_eeprom_setup, NULL, NULL, NULL);
