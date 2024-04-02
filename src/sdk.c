@@ -16,7 +16,6 @@
 
 #include <thingset.h>
 #include <thingset/sdk.h>
-#include <thingset/storage.h>
 
 LOG_MODULE_REGISTER(thingset_sdk, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
@@ -165,19 +164,6 @@ static int thingset_sdk_init(void)
 
 #ifdef CONFIG_THINGSET_GENERATE_NODE_ID
     generate_device_eui();
-#endif
-
-#ifdef CONFIG_THINGSET_STORAGE
-    int err;
-    for (int i = 1; i <= CONFIG_THINGSET_STORAGE_LOAD_ATTEMPTS; i++) {
-        err = thingset_storage_load();
-        if (err == 0) {
-            break;
-        }
-        LOG_WRN("Loading data from storage failed (attempt %d/%d)", i,
-                CONFIG_THINGSET_STORAGE_LOAD_ATTEMPTS);
-    }
-    thingset_set_update_callback(&ts, TS_SUBSET_NVM, thingset_storage_save_queued);
 #endif
 
     return 0;

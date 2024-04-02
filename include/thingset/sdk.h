@@ -101,12 +101,8 @@ extern "C" {
 /** Summarized data for low bandwidth interfaces like LoRaWAN */
 #define TS_SUBSET_SUMMARY (1U << 2)
 
-/*
- * The storage has to be initialized first, so that the configuration can be read by the SDK
- * and used by all other components (using default priority)
- */
-#define THINGSET_INIT_PRIORITY_STORAGE 30
-#define THINGSET_INIT_PRIORITY_SDK     40
+#define THINGSET_INIT_PRIORITY_SDK     30
+#define THINGSET_INIT_PRIORITY_STORAGE 40
 #define THINGSET_INIT_PRIORITY_DEFAULT 60
 
 extern char node_id[17];
