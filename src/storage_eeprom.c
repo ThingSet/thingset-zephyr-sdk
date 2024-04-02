@@ -25,12 +25,6 @@ LOG_MODULE_REGISTER(thingset_storage_eeprom, CONFIG_THINGSET_SDK_LOG_LEVEL);
 #define EEPROM_DEVICE_NODE DT_NODELABEL(eeprom)
 #endif
 
-/* Testing showed that reading from the EEPROM resulted in corrupted data under certain conditions
- * if large amounts of data (>8 kB) were read at once. The STM32 I2C driver has a max chunk length
- * of 255 bytes, so the chunk size here should be smaller than that.
- */
-#define MAX_READ_SIZE 128
-
 struct thingset_eeprom_header
 {
     uint16_t version;
@@ -76,14 +70,16 @@ static int thingset_eeprom_load(off_t offset)
         size_t chunk_offset = 0;
         do {
             int size = len > sbuf->size ? sbuf->size : len;
-            int num_chunks = DIV_ROUND_UP(size, MAX_READ_SIZE);
+            int num_chunks = DIV_ROUND_UP(size, CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE);
             int remaining_bytes = size;
             chunk_offset = total_read_size;
             for (int i = 0; i < num_chunks; i++) {
-                size_t read_size =
-                    remaining_bytes > MAX_READ_SIZE ? MAX_READ_SIZE : remaining_bytes;
+                size_t read_size = remaining_bytes > CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE
+                                       ? CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE
+                                       : remaining_bytes;
                 LOG_DBG("Reading %d bytes starting at offset %d", read_size, chunk_offset);
-                err = eeprom_read(eeprom_dev, offset + chunk_offset, &sbuf->data[i * MAX_READ_SIZE],
+                err = eeprom_read(eeprom_dev, offset + chunk_offset,
+                                  &sbuf->data[i * CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE],
                                   read_size);
                 if (err) {
                     LOG_ERR("Error %d reading EEPROM.", -err);
@@ -116,7 +112,8 @@ static int thingset_eeprom_load(off_t offset)
             }
         }
         else {
-            LOG_ERR("EEPROM data CRC invalid, expected 0x%x and data_len %d", header.crc, len);
+            LOG_ERR("EEPROM data CRC invalid, expected %.8x and data_len %d", header.crc,
+                    header.data_len);
             err = -EINVAL;
         }
 
@@ -175,6 +172,8 @@ static int thingset_eeprom_save(off_t offset, size_t useable_size)
     size_t size;
     size_t total_size = sizeof(header);
     uint32_t crc = 0x0;
+    uint8_t read_back[CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE];
+    size_t chunk_offset = 0;
     do {
         rtn = thingset_export_subsets_progressively(&ts, sbuf->data, sbuf->size, TS_SUBSET_NVM,
                                                     THINGSET_BIN_IDS_VALUES, &i, &size);
@@ -185,10 +184,40 @@ static int thingset_eeprom_save(off_t offset, size_t useable_size)
         }
         crc = crc32_ieee_update(crc, sbuf->data, size);
         LOG_DBG("Writing %d bytes to EEPROM", size);
-        err = eeprom_write(eeprom_dev, offset + total_size, sbuf->data, size);
-        if (err) {
-            LOG_ERR("EEPROM write error %d", err);
-            break;
+
+        int num_chunks = DIV_ROUND_UP(size, CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE);
+        int remaining_bytes = size;
+        chunk_offset = total_size;
+        for (int i = 0; i < num_chunks; i++) {
+            size_t write_size = remaining_bytes > CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE
+                                    ? CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE
+                                    : remaining_bytes;
+            for (int j = 0; j < CONFIG_THINGSET_STORAGE_LOAD_ATTEMPTS; j++) {
+                err = eeprom_write(eeprom_dev, offset + chunk_offset,
+                                   &sbuf->data[i * CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE],
+                                   write_size);
+                if (err) {
+                    continue;
+                }
+                err = eeprom_read(eeprom_dev, offset + chunk_offset, &read_back, write_size);
+                if (err) {
+                    LOG_DBG("Read back error");
+                    continue;
+                }
+                err = memcmp(&sbuf->data[i * CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE], read_back,
+                             write_size);
+                if (err) {
+                    LOG_DBG("Comparison failed error");
+                    continue;
+                }
+                else {
+                    break;
+                }
+            }
+            if (err) {
+                LOG_ERR("Error %d writing EEPROM.", -err);
+            }
+            chunk_offset += write_size;
         }
         total_size += size;
     } while (rtn > 0 && err == 0);

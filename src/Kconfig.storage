@@ -85,4 +85,12 @@ config THINGSET_STORAGE_EEPROM_DUPLICATE
 	  sections each time. This allows to recover from power failures because at least one
 	  section will always have valid data.
 
+config THINGSET_STORAGE_EEPROM_CHUNK_SIZE
+	int "Size of chunk when reading from/writing to EEPROM"
+	default 128
+	depends on THINGSET_STORAGE_EEPROM
+	help
+		When reading from or writing to EEPROM, transfer the data in chunks of this size.
+		This may resolve issues related to limitations with the I2C bus.
+
 endif # THINGSET_STORAGE
