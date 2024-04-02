@@ -31,8 +31,6 @@ LOG_MODULE_REGISTER(thingset_storage_nvs, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 #define THINGSET_DATA_ID 1
 
-static struct k_work_delayable storage_work;
-
 static struct nvs_fs fs;
 static bool nvs_initialized = false;
 
@@ -159,32 +157,3 @@ int thingset_storage_save()
 
     return err;
 }
-
-void thingset_storage_save_queued()
-{
-    thingset_sdk_reschedule_work(&storage_work, K_NO_WAIT);
-}
-
-static void regular_storage_handler(struct k_work *work)
-{
-    struct k_work_delayable *dwork = k_work_delayable_from_work(work);
-
-    thingset_storage_save();
-
-    if (IS_ENABLED(CONFIG_THINGSET_STORAGE_REGULAR)) {
-        thingset_sdk_reschedule_work(dwork, K_HOURS(CONFIG_THINGSET_STORAGE_INTERVAL));
-    }
-}
-
-static int thingset_storage_init(void)
-{
-    k_work_init_delayable(&storage_work, regular_storage_handler);
-
-    if (IS_ENABLED(CONFIG_THINGSET_STORAGE_REGULAR)) {
-        thingset_sdk_reschedule_work(&storage_work, K_HOURS(CONFIG_THINGSET_STORAGE_INTERVAL));
-    }
-
-    return 0;
-}
-
-SYS_INIT(thingset_storage_init, APPLICATION, THINGSET_INIT_PRIORITY_STORAGE);
