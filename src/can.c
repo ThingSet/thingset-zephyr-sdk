@@ -658,7 +658,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 
 #if CONFIG_THINGSET_STORAGE
     /* save node address as init value for next boot-up */
-    thingset_storage_save_queued();
+    thingset_storage_save_queued(false);
 #endif
 
     struct can_filter addr_discovery_filter = {

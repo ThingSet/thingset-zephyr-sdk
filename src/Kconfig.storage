@@ -51,6 +51,13 @@ config THINGSET_STORAGE_INTERVAL
 	range 1 8760
 	default 6
 
+config THINGSET_STORAGE_INHIBIT_OVERWRITE
+	bool "Inhibit overwrite of data if reading failed"
+	depends on THINGSET_STORAGE_REGULAR
+	help
+	  Disable regular storage in the background if previous loading of data failed because of
+	  bad CRC or wrong data version. Only empty EEPROM data will be overwritten.
+
 config THINGSET_STORAGE_DATA_VERSION
 	int "Data objects version"
 	range 1 65536
