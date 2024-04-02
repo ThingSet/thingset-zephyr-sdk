@@ -80,11 +80,4 @@ ZTEST(thingset_storage_eeprom, test_save_load_corrupted)
 #endif
 }
 
-static void *thingset_storage_eeprom_setup(void)
-{
-    thingset_init_global(&ts);
-
-    return NULL;
-}
-
-ZTEST_SUITE(thingset_storage_eeprom, NULL, thingset_storage_eeprom_setup, NULL, NULL, NULL);
+ZTEST_SUITE(thingset_storage_eeprom, NULL, NULL, NULL, NULL, NULL);

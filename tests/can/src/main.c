@@ -264,8 +264,6 @@ static void *thingset_can_setup(void)
     k_sem_init(&request_tx_sem, 0, 1);
     k_sem_init(&response_rx_sem, 0, 1);
 
-    thingset_init_global(&ts);
-
     zassert_true(device_is_ready(can_dev), "CAN device not ready");
 
     (void)can_stop(can_dev);
