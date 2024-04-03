@@ -16,12 +16,13 @@ LOG_MODULE_REGISTER(thingset_storage_common, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 static struct k_work_delayable storage_work;
 
-static bool storage_save_inhibit = IS_ENABLED(CONFIG_THINGSET_STORAGE_INHIBIT_OVERWRITE);
+static bool storage_save_allowed =
+    IS_ENABLED(CONFIG_THINGSET_STORAGE_INHIBIT_OVERWRITE) ? false : true;
 
 void thingset_storage_save_queued(bool force)
 {
     if (force) {
-        storage_save_inhibit = false;
+        storage_save_allowed = true;
     }
 
     thingset_sdk_reschedule_work(&storage_work, K_NO_WAIT);
@@ -29,15 +30,18 @@ void thingset_storage_save_queued(bool force)
 
 static void thingset_storage_update_handler()
 {
-    thingset_storage_save_queued(!storage_save_inhibit);
+    thingset_storage_save_queued(storage_save_allowed);
 }
 
 static void thingset_storage_save_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
 
-    if (!storage_save_inhibit) {
+    if (storage_save_allowed) {
         thingset_storage_save();
+    }
+    else {
+        LOG_WRN("Data not stored because previous load failed.");
     }
 
     if (IS_ENABLED(CONFIG_THINGSET_STORAGE_REGULAR)) {
@@ -59,7 +63,7 @@ static int thingset_storage_init(void)
     }
 
     if (err == 0) {
-        storage_save_inhibit = false;
+        storage_save_allowed = true;
     }
 
     k_work_init_delayable(&storage_work, thingset_storage_save_handler);
