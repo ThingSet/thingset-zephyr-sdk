@@ -20,9 +20,19 @@ static float test_float = 1234.56F;
 static char test_string[] = "Hello World!";
 
 THINGSET_ADD_GROUP(THINGSET_ID_ROOT, 0x200, "Test", THINGSET_NO_CALLBACK);
-THINGSET_ADD_ITEM_FLOAT(0x200, 0x201, "wFloat", &test_float, 1, THINGSET_ANY_RW, TS_SUBSET_NVM);
-THINGSET_ADD_ITEM_STRING(0x200, 0x202, "wString", test_string, sizeof(test_string), THINGSET_ANY_RW,
+THINGSET_ADD_ITEM_FLOAT(0x200, 0x201, "sFloat", &test_float, 1, THINGSET_ANY_RW, TS_SUBSET_NVM);
+THINGSET_ADD_ITEM_STRING(0x200, 0x202, "sString", test_string, sizeof(test_string), THINGSET_ANY_RW,
                          TS_SUBSET_NVM);
+
+#ifdef CONFIG_THINGSET_STORAGE_EEPROM_PROGRESSIVE_IMPORT_EXPORT
+
+float f32_arr[200] = { -1.1, -2.2, -3.3 };
+
+static THINGSET_DEFINE_FLOAT_ARRAY(f32_arr_item, 1, f32_arr, ARRAY_SIZE(f32_arr));
+
+THINGSET_ADD_ITEM_ARRAY(0x200, 0x203, "sArr", &f32_arr_item, THINGSET_ANY_RW, TS_SUBSET_NVM);
+
+#endif
 
 static void corrupt_data()
 {
