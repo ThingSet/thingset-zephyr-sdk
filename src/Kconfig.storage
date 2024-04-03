@@ -90,7 +90,7 @@ config THINGSET_STORAGE_EEPROM_CHUNK_SIZE
 	default 128
 	depends on THINGSET_STORAGE_EEPROM
 	help
-		When reading from or writing to EEPROM, transfer the data in chunks of this size.
-		This may resolve issues related to limitations with the I2C bus.
+	  When reading from or writing to EEPROM, transfer the data in chunks of this size.
+	  This may resolve issues related to limitations with the I2C bus.
 
 endif # THINGSET_STORAGE
