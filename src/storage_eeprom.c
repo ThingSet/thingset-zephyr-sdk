@@ -45,7 +45,7 @@ static int thingset_eeprom_load(off_t offset)
         return err;
     }
 
-    LOG_DBG("EEPROM header: ver %d, len %d, CRC %.8x", header.version, header.data_len, header.crc);
+    LOG_INF("EEPROM load: ver %d, len %d, CRC 0x%.8x", header.version, header.data_len, header.crc);
 
     if (header.version == 0xFFFF && header.data_len == 0xFFFF && header.crc == 0xFFFFFFFF) {
         LOG_DBG("EEPROM empty");
@@ -250,7 +250,7 @@ static int thingset_eeprom_save(off_t offset, size_t useable_size)
         header.data_len = (uint16_t)len;
         header.crc = crc;
 
-        LOG_DBG("EEPROM header: ver %d, len %d, CRC %.8x", CONFIG_THINGSET_STORAGE_DATA_VERSION,
+        LOG_INF("EEPROM save: ver %d, len %d, CRC 0x%.8x", CONFIG_THINGSET_STORAGE_DATA_VERSION,
                 len, crc);
 
         err = eeprom_write(eeprom_dev, offset, &header, sizeof(header));
