@@ -77,7 +77,7 @@ static int thingset_eeprom_load(off_t offset)
                 size_t read_size = remaining_bytes > CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE
                                        ? CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE
                                        : remaining_bytes;
-                LOG_DBG("Reading %d bytes starting at offset %d", read_size, chunk_offset);
+                LOG_DBG("Reading %d bytes starting at offset 0x%.4x", read_size, chunk_offset);
                 err = eeprom_read(eeprom_dev, offset + chunk_offset,
                                   &sbuf->data[i * CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE],
                                   read_size);
@@ -93,11 +93,11 @@ static int thingset_eeprom_load(off_t offset)
                 thingset_import_data_progressively(&ts, sbuf->data, size, THINGSET_BIN_IDS_VALUES,
                                                    THINGSET_WRITE_MASK, &last_id, &processed_size);
             calculated_crc = crc32_ieee_update(calculated_crc, sbuf->data, processed_size);
+            LOG_DBG("Updated CRC over %d bytes: 0x%.8x", processed_size, calculated_crc);
             total_read_size += processed_size;
             len -= processed_size;
         } while (len > 0 && err > 0);
-        LOG_DBG("Finished processing %d bytes; calculated CRC %.8x",
-                total_read_size - sizeof(header), calculated_crc);
+
         if (!err) {
             thingset_import_data_progressively_end(&ts);
         }
@@ -112,7 +112,7 @@ static int thingset_eeprom_load(off_t offset)
             }
         }
         else {
-            LOG_ERR("EEPROM data CRC invalid, expected %.8x and data_len %d", header.crc,
+            LOG_ERR("EEPROM data CRC invalid, expected 0x%.8x and data_len %d", header.crc,
                     header.data_len);
             err = -EINVAL;
         }
@@ -143,7 +143,7 @@ static int thingset_eeprom_load(off_t offset)
             }
         }
         else {
-            LOG_ERR("EEPROM data CRC invalid, expected 0x%x and data_len %d", header.crc,
+            LOG_ERR("EEPROM data CRC invalid, expected 0x%.8x and data_len %d", header.crc,
                     header.data_len);
             err = -EINVAL;
         }
@@ -183,7 +183,7 @@ static int thingset_eeprom_save(off_t offset, size_t useable_size)
             break;
         }
         crc = crc32_ieee_update(crc, sbuf->data, size);
-        LOG_DBG("Writing %d bytes to EEPROM", size);
+        LOG_DBG("Writing %d bytes to EEPROM, updated CRC: 0x%.8x", size, crc);
 
         int num_chunks = DIV_ROUND_UP(size, CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE);
         int remaining_bytes = size;
@@ -225,15 +225,14 @@ static int thingset_eeprom_save(off_t offset, size_t useable_size)
     } while (rtn > 0 && err == 0);
     if (!err) {
         total_size -= sizeof(header);
-        LOG_DBG("Wrote a total of %d bytes comprising %d items with checksum %.8x; writing "
-                "header",
-                total_size, i, crc);
 
         /* now write the header */
         header.data_len = (uint16_t)total_size;
         header.crc = crc;
         err = eeprom_write(eeprom_dev, offset, &header, sizeof(header));
-        LOG_DBG("EEPROM data successfully stored");
+
+        LOG_INF("EEPROM save: ver %d, len %d, CRC 0x%.8x", CONFIG_THINGSET_STORAGE_DATA_VERSION,
+                total_size, crc);
     }
     else {
         LOG_ERR("EEPROM write error %d", -err);
