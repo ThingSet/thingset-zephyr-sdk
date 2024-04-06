@@ -576,7 +576,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 
     k_work_init_delayable(&ts_can->live_reporting_work, thingset_can_live_reporting_handler);
 #ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
-    k_work_init_delayable(&ts_can->live_reporting_work, thingset_can_control_reporting_handler);
+    k_work_init_delayable(&ts_can->control_reporting_work, thingset_can_control_reporting_handler);
 #endif
     k_work_init_delayable(&ts_can->addr_claim_work, thingset_can_addr_claim_tx_handler);
 
