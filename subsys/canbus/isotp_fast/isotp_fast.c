@@ -205,8 +205,13 @@ struct isotp_fast_addr isotp_fast_get_reply_addr(struct isotp_fast_ctx *ctx,
             return ctx->get_tx_addr_callback(addr);
 #endif /* CONFIG_ISOTP_FAST_CUSTOM_ADDRESSING */
     }
-    __ASSERT(false,
-             "addressing_mode mode either not set or set to an invalid value on isotp_fast_ctx");
+
+    /*
+     * This cannot be reached unless addressing_mode was set to an invalid value. As C cannot
+     * guarantee that no invalid value is set to the enum, we still need to return something to
+     * avoid a warning for -Wreturn-type.
+     */
+    return *addr;
 }
 
 static void receive_report_error(struct isotp_fast_recv_ctx *rctx, int8_t err)
