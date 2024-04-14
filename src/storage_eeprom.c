@@ -47,8 +47,10 @@ static int thingset_eeprom_load(off_t offset)
 
     LOG_INF("EEPROM load: ver %d, len %d, CRC 0x%.8x", header.version, header.data_len, header.crc);
 
-    if (header.version == 0xFFFF && header.data_len == 0xFFFF && header.crc == 0xFFFFFFFF) {
-        LOG_DBG("EEPROM empty");
+    if ((header.version == 0xFFFF && header.data_len == 0xFFFF && header.crc == 0xFFFFFFFF)
+        || (header.version == 0U && header.data_len == 0U && header.crc == 0U))
+    {
+        LOG_INF("EEPROM empty, keeping default values for data objects");
         return 0;
     }
     else if (header.version != CONFIG_THINGSET_STORAGE_DATA_VERSION) {
