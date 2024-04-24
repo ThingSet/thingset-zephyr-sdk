@@ -68,7 +68,9 @@ static int thingset_storage_init(void)
 
     k_work_init_delayable(&storage_work, thingset_storage_save_handler);
 
-    thingset_set_update_callback(&ts, TS_SUBSET_NVM, thingset_storage_update_handler);
+    if (IS_ENABLED(CONFIG_THINGSET_STORAGE_SAVE_UPDATES)) {
+        thingset_set_update_callback(&ts, TS_SUBSET_NVM, thingset_storage_update_handler);
+    }
 
     if (IS_ENABLED(CONFIG_THINGSET_STORAGE_AUTOSAVE)) {
         thingset_sdk_reschedule_work(&storage_work,
