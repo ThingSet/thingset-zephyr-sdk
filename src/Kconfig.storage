@@ -34,26 +34,29 @@ config THINGSET_STORAGE_LOAD_ATTEMPTS
 	  with bad CRCs due to noise in the communication. This Kconfig defines how often reading
 	  from the storage should be retried.
 
-config THINGSET_STORAGE_CHANGE
-	bool "Store data upon change to ThingSet stored items"
+config THINGSET_STORAGE_SAVE_UPDATES
+	bool "Store data upon updates to ThingSet stored items"
 	default y
 	help
-	  If enabled, a callback is invoked once a data object which is part of the TS_SUBSET_NVM is
-	  changed.
+	  If enabled, data objects which are part of the TS_SUBSET_NVM subset are immediately stored
+	  in NVM after an update of one of these data objects via ThingSet.
 
-config THINGSET_STORAGE_REGULAR
+config THINGSET_STORAGE_AUTOSAVE
 	bool "Store data in regular intervals"
 	default y
+	help
+	  Store all data objects which are part of the TS_SUBSET_NVM subset in regular intervals to
+	  EEPROM or flash.
 
-config THINGSET_STORAGE_INTERVAL
+config THINGSET_STORAGE_AUTOSAVE_INTERVAL
 	int "Regular storage interval (in hours)"
-	depends on THINGSET_STORAGE_REGULAR
+	depends on THINGSET_STORAGE_AUTOSAVE
 	range 1 8760
 	default 6
 
 config THINGSET_STORAGE_INHIBIT_OVERWRITE
 	bool "Inhibit overwrite of data if reading failed"
-	depends on THINGSET_STORAGE_REGULAR
+	depends on THINGSET_STORAGE_AUTOSAVE
 	help
 	  Disable regular storage in the background if previous loading of data failed because of
 	  bad CRC or wrong data version. Only empty EEPROM data will be overwritten.
