@@ -332,6 +332,7 @@ out:
     return ret;
 }
 
+#ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
 static void thingset_can_live_reporting_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
@@ -349,6 +350,7 @@ static void thingset_can_live_reporting_handler(struct k_work *work)
 
     thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(ts_can->next_live_report_time));
 }
+#endif /* CONFIG_THINGSET_SUBSET_LIVE_METRICS */
 
 #ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
 static void thingset_can_item_tx_cb(const struct device *dev, int error, void *user_data)
@@ -574,7 +576,9 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     k_sem_init(&ts_can->request_response.sem, 1, 1);
     k_sem_init(&ts_can->report_tx_sem, 0, 1);
 
+#ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
     k_work_init_delayable(&ts_can->live_reporting_work, thingset_can_live_reporting_handler);
+#endif
 #ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
     k_work_init_delayable(&ts_can->control_reporting_work, thingset_can_control_reporting_handler);
 #endif
@@ -591,7 +595,23 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     k_event_init(&ts_can->events);
 
 #ifdef CONFIG_CAN_FD_MODE
-    can_set_mode(ts_can->dev, CAN_MODE_FD);
+    can_mode_t supported_modes;
+    err = can_get_capabilities(can_dev, &supported_modes);
+    if (err == 0 && (supported_modes & CAN_MODE_FD) != 0) {
+        err = can_set_mode(ts_can->dev, CAN_MODE_FD);
+        if (err == 0) {
+            LOG_DBG("Enabled CAN-FD mode");
+        }
+        else {
+            LOG_ERR("Failed to enable CAN-FD mode");
+            return -ENODEV;
+        }
+    }
+    else {
+        LOG_ERR("CAN device does not support CAN-FD; recompile with CAN_FD_MODE set to false.");
+        /* there is no point continuing, as we will still assume a 64-byte payload everywhere */
+        return -ENODEV;
+    }
 #endif
 
     can_start(ts_can->dev);
@@ -683,7 +703,9 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
                     ts_can, thingset_can_reqresp_recv_error_callback,
                     thingset_can_reqresp_sent_callback);
 
+#ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
     thingset_sdk_reschedule_work(&ts_can->live_reporting_work, K_NO_WAIT);
+#endif
 #ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
     thingset_sdk_reschedule_work(&ts_can->control_reporting_work, K_NO_WAIT);
 #endif
