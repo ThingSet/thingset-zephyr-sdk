@@ -600,7 +600,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     if (err == 0 && (supported_modes & CAN_MODE_FD) != 0) {
         err = can_set_mode(ts_can->dev, CAN_MODE_FD);
         if (err == 0) {
-            LOG_INF("Enabled CAN-FD mode");
+            LOG_DBG("Enabled CAN-FD mode");
         }
         else {
             LOG_ERR("Failed to enable CAN-FD mode");
