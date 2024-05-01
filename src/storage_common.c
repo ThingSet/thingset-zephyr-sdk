@@ -43,10 +43,9 @@ static void thingset_storage_save_handler(struct k_work *work)
     else {
         LOG_WRN("Data not stored because previous load failed.");
     }
+
 #ifdef CONFIG_THINGSET_STORAGE_AUTOSAVE
-    if (IS_ENABLED(CONFIG_THINGSET_STORAGE_AUTOSAVE)) {
-        thingset_sdk_reschedule_work(dwork, K_HOURS(CONFIG_THINGSET_STORAGE_AUTOSAVE_INTERVAL));
-    }
+    thingset_sdk_reschedule_work(dwork, K_HOURS(CONFIG_THINGSET_STORAGE_AUTOSAVE_INTERVAL));
 #endif
 }
 
