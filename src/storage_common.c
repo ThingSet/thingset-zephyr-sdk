@@ -73,11 +73,10 @@ static int thingset_storage_init(void)
     }
 
 #ifdef CONFIG_THINGSET_STORAGE_AUTOSAVE
-    if (IS_ENABLED(CONFIG_THINGSET_STORAGE_AUTOSAVE)) {
-        thingset_sdk_reschedule_work(&storage_work,
-                                     K_HOURS(CONFIG_THINGSET_STORAGE_AUTOSAVE_INTERVAL));
-    }
+    thingset_sdk_reschedule_work(&storage_work,
+                                 K_HOURS(CONFIG_THINGSET_STORAGE_AUTOSAVE_INTERVAL));
 #endif
+    
     return 0;
 }
 
