@@ -44,9 +44,9 @@ static void thingset_storage_save_handler(struct k_work *work)
         LOG_WRN("Data not stored because previous load failed.");
     }
 
-    if (IS_ENABLED(CONFIG_THINGSET_STORAGE_AUTOSAVE)) {
-        thingset_sdk_reschedule_work(dwork, K_HOURS(CONFIG_THINGSET_STORAGE_AUTOSAVE_INTERVAL));
-    }
+#ifdef CONFIG_THINGSET_STORAGE_AUTOSAVE
+    thingset_sdk_reschedule_work(dwork, K_HOURS(CONFIG_THINGSET_STORAGE_AUTOSAVE_INTERVAL));
+#endif
 }
 
 static int thingset_storage_init(void)
@@ -72,10 +72,9 @@ static int thingset_storage_init(void)
         thingset_set_update_callback(&ts, TS_SUBSET_NVM, thingset_storage_update_handler);
     }
 
-    if (IS_ENABLED(CONFIG_THINGSET_STORAGE_AUTOSAVE)) {
-        thingset_sdk_reschedule_work(&storage_work,
-                                     K_HOURS(CONFIG_THINGSET_STORAGE_AUTOSAVE_INTERVAL));
-    }
+#ifdef CONFIG_THINGSET_STORAGE_AUTOSAVE
+    thingset_sdk_reschedule_work(&storage_work, K_HOURS(CONFIG_THINGSET_STORAGE_AUTOSAVE_INTERVAL));
+#endif
 
     return 0;
 }
