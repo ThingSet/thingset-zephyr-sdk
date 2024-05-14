@@ -42,12 +42,6 @@ static const struct can_filter mf_report_filter = {
 };
 #endif /* CONFIG_THINGSET_CAN_REPORT_RX */
 
-static const struct can_filter addr_claim_filter = {
-    .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_TARGET_SET(THINGSET_CAN_ADDR_BROADCAST),
-    .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_TARGET_MASK,
-    .flags = CAN_FILTER_IDE,
-};
-
 static const struct isotp_fast_opts fc_opts = {
     .bs = 8, /* block size */
     .stmin = CONFIG_THINGSET_CAN_FRAME_SEPARATION_TIME,
@@ -132,12 +126,18 @@ static void thingset_can_addr_claim_tx_handler(struct k_work *work)
     struct thingset_can *ts_can = CONTAINER_OF(dwork, struct thingset_can, addr_claim_work);
 
     struct can_frame tx_frame = {
+        .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_PRIO_NETWORK_MGMT
+#ifdef CONFIG_THINGSET_CAN_ROUTING_BUSES
+              | THINGSET_CAN_TARGET_BUS_SET(ts_can->route)
+              | THINGSET_CAN_SOURCE_BUS_SET(ts_can->route)
+#else /* CONFIG_THINGSET_CAN_ROUTING_BRIDGES */
+              | THINGSET_CAN_BRIDGE_SET(ts_can->route)
+#endif
+              | THINGSET_CAN_TARGET_SET(THINGSET_CAN_ADDR_BROADCAST)
+              | THINGSET_CAN_SOURCE_SET(ts_can->node_addr),
         .flags = CAN_FRAME_IDE,
+        .dlc = sizeof(eui64),
     };
-    tx_frame.id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_PRIO_NETWORK_MGMT
-                  | THINGSET_CAN_TARGET_SET(THINGSET_CAN_ADDR_BROADCAST)
-                  | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
-    tx_frame.dlc = sizeof(eui64);
     memcpy(tx_frame.data, eui64, sizeof(eui64));
 
     int err = can_send(ts_can->dev, &tx_frame, K_MSEC(100), thingset_can_addr_claim_tx_cb, ts_can);
@@ -613,6 +613,21 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 #endif
 
     can_start(ts_can->dev);
+
+    struct can_filter addr_claim_filter = {
+        .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_TARGET_SET(THINGSET_CAN_ADDR_BROADCAST),
+        .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_TARGET_MASK,
+        .flags = CAN_FILTER_IDE,
+    };
+
+#ifdef CONFIG_THINGSET_CAN_ROUTING_BUSES
+    addr_claim_filter.id |=
+        THINGSET_CAN_TARGET_BUS_SET(bus_number) | THINGSET_CAN_SOURCE_BUS_SET(bus_number);
+    addr_claim_filter.mask |= THINGSET_CAN_TARGET_BUS_MASK | THINGSET_CAN_SOURCE_BUS_MASK;
+#elif defined(CONFIG_THINGSET_CAN_ROUTING_BRIDGES)
+    addr_claim_filter.id |= THINGSET_CAN_BRIDGE_SET(bus_number);
+    addr_claim_filter.mask |= THINGSET_CAN_BRIDGE_MASK;
+#endif
 
     filter_id =
         can_add_rx_filter(ts_can->dev, thingset_can_addr_claim_rx_cb, ts_can, &addr_claim_filter);
