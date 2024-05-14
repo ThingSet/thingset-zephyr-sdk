@@ -168,8 +168,14 @@ static void thingset_can_addr_claim_rx_cb(const struct device *dev, struct can_f
             THINGSET_CAN_SOURCE_GET(frame->id), data[0], data[1], data[2], data[3], data[4],
             data[5], data[6], data[7]);
 
-    if (ts_can->node_addr == THINGSET_CAN_SOURCE_GET(frame->id)) {
+    uint8_t source_addr = THINGSET_CAN_SOURCE_GET(frame->id);
+
+    if (ts_can->node_addr == source_addr) {
         k_event_post(&ts_can->events, EVENT_ADDRESS_ALREADY_USED);
+    }
+
+    if (ts_can->addr_claim_callback != NULL) {
+        ts_can->addr_claim_callback(data, source_addr);
     }
 
     /* Optimization: store in internal database to exclude from potentially available addresses */
@@ -724,6 +730,12 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 #endif
 
     return 0;
+}
+
+void thingset_can_set_addr_claim_rx_callback_inst(struct thingset_can *ts_can,
+                                                  thingset_can_addr_claim_rx_callback_t cb)
+{
+    ts_can->addr_claim_callback = cb;
 }
 
 #ifdef CONFIG_THINGSET_CAN_REPORT_RX

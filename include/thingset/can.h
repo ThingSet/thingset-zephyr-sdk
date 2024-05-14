@@ -194,6 +194,14 @@ extern "C" {
 #define THINGSET_CAN_REQRESP(id) ((id & THINGSET_CAN_TYPE_MASK) == THINGSET_CAN_TYPE_REQRESP)
 
 /**
+ * Callback typedef for received address claim frames from other nodes
+ *
+ * @param eui64 The EUI-64 of the node used for the address claim message.
+ * @param source_addr Node address the address claim was received from
+ */
+typedef void (*thingset_can_addr_claim_rx_callback_t)(const uint8_t eui64[8], uint8_t source_addr);
+
+/**
  * Callback typedef for received multi-frame reports (type 0x1) via CAN
  *
  * @param report_buf Pointer to the buffer containing the received report (text or binary format)
@@ -247,6 +255,7 @@ struct thingset_can
     struct k_work_delayable control_reporting_work;
 #endif
     struct k_work_delayable addr_claim_work;
+    thingset_can_addr_claim_rx_callback_t addr_claim_callback;
     struct isotp_fast_ctx ctx;
     struct k_sem report_tx_sem;
     struct k_event events;
@@ -301,6 +310,15 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
                            uint8_t target_addr, uint8_t route,
                            thingset_can_reqresp_callback_t callback, void *callback_arg,
                            k_timeout_t timeout);
+
+/**
+ * Set callback for received address claim frames from other nodes
+ *
+ * @param ts_can Pointer to the thingset_can context.
+ * @param cb Callback function.
+ */
+void thingset_can_set_addr_claim_rx_callback_inst(struct thingset_can *ts_can,
+                                                  thingset_can_addr_claim_rx_callback_t cb);
 
 #ifdef CONFIG_THINGSET_CAN_REPORT_RX
 /**
