@@ -129,6 +129,7 @@ extern "C" {
     (((uint32_t)id & THINGSET_CAN_MSG_NO_MASK) >> THINGSET_CAN_MSG_NO_POS)
 
 /* bus numbers for request/response messages and multi-frame reports */
+#ifdef CONFIG_THINGSET_CAN_ROUTING_BUSES
 #define THINGSET_CAN_SOURCE_BUS_POS  (16U)
 #define THINGSET_CAN_SOURCE_BUS_MASK (0xF << THINGSET_CAN_SOURCE_BUS_POS)
 #define THINGSET_CAN_SOURCE_BUS_SET(id) \
@@ -143,8 +144,10 @@ extern "C" {
 #define THINGSET_CAN_TARGET_BUS_GET(id) \
     (((uint32_t)id & THINGSET_CAN_TARGET_BUS_MASK) >> THINGSET_CAN_TARGET_BUS_POS)
 #define THINGSET_CAN_TARGET_BUS_DEFAULT (0x0)
+#endif /* CONFIG_THINGSET_CAN_ROUTING_BUSES */
 
 /* bridge numbers for request/response messages and multi-frame reports */
+#ifdef CONFIG_THINGSET_CAN_ROUTING_BRIDGES
 #define THINGSET_CAN_BRIDGE_POS  (16U)
 #define THINGSET_CAN_BRIDGE_MASK (0xFF << THINGSET_CAN_BRIDGE_POS)
 #define THINGSET_CAN_BRIDGE_SET(id) \
@@ -152,6 +155,7 @@ extern "C" {
 #define THINGSET_CAN_BRIDGE_GET(id) \
     (((uint32_t)id & THINGSET_CAN_BRIDGE_MASK) >> THINGSET_CAN_BRIDGE_POS)
 #define THINGSET_CAN_BRIDGE_LOCAL (0x00)
+#endif /* CONFIG_THINGSET_CAN_ROUTING_BRIDGES */
 
 /* random number for address discovery messages */
 #define THINGSET_CAN_RAND_POS     (16U)

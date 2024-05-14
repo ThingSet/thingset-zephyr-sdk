@@ -42,7 +42,7 @@ static const struct can_filter mf_report_filter = {
 };
 #endif /* CONFIG_THINGSET_CAN_REPORT_RX */
 
-static const struct can_filter addr_claim_filter = {
+static struct can_filter addr_claim_filter = {
     .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_TARGET_SET(THINGSET_CAN_ADDR_BROADCAST),
     .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_TARGET_MASK,
     .flags = CAN_FILTER_IDE,
@@ -584,6 +584,15 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 
     ts_can->dev = can_dev;
     ts_can->route = bus_number;
+
+#ifdef CONFIG_THINGSET_CAN_ROUTING_BUSES
+    addr_claim_filter.id |=
+        THINGSET_CAN_TARGET_BUS_SET(bus_number) | THINGSET_CAN_SOURCE_BUS_SET(bus_number);
+    addr_claim_filter.mask |= THINGSET_CAN_TARGET_BUS_MASK | THINGSET_CAN_SOURCE_BUS_MASK;
+#elif defined(CONFIG_THINGSET_CAN_ROUTING_BRIDGES)
+    addr_claim_filter.id |= THINGSET_CAN_BRIDGE_SET(bus_number);
+    addr_claim_filter.mask |= THINGSET_CAN_BRIDGE_MASK;
+#endif
 
     /* set initial address (will be changed if already used on the bus) */
     if (ts_can->node_addr < THINGSET_CAN_ADDR_MIN || ts_can->node_addr > THINGSET_CAN_ADDR_MAX) {
