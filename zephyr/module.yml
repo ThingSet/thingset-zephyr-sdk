@@ -1,7 +1,7 @@
 # Copyright (c) The ThingSet Project Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-name: ThingSet SDK
+name: thingset-sdk
 build:
   cmake: .
   kconfig: Kconfig

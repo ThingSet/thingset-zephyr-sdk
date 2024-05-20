@@ -1,21 +1,23 @@
 # Copyright (c) The ThingSet Project Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-target_sources_ifdef(CONFIG_THINGSET_SDK app PRIVATE sdk.c)
-target_sources_ifdef(CONFIG_THINGSET_SDK app PRIVATE packetizer.c)
+zephyr_library()
 
-target_sources_ifdef(CONFIG_THINGSET_AUTH app PRIVATE auth.c)
-target_sources_ifdef(CONFIG_THINGSET_BLE app PRIVATE ble.c)
-target_sources_ifdef(CONFIG_THINGSET_CAN app PRIVATE can.c)
-target_sources_ifdef(CONFIG_THINGSET_LOG_BACKEND app PRIVATE log_backend.c)
-target_sources_ifdef(CONFIG_THINGSET_LORAWAN app PRIVATE lorawan.c)
-target_sources_ifdef(CONFIG_THINGSET_SERIAL app PRIVATE serial.c)
-target_sources_ifdef(CONFIG_THINGSET_SHELL app PRIVATE shell.c)
-target_sources_ifdef(CONFIG_THINGSET_STORAGE app PRIVATE storage_common.c)
-target_sources_ifdef(CONFIG_THINGSET_STORAGE_EEPROM app PRIVATE storage_eeprom.c)
-target_sources_ifdef(CONFIG_THINGSET_STORAGE_FLASH app PRIVATE storage_flash.c)
-target_sources_ifdef(CONFIG_THINGSET_WEBSOCKET app PRIVATE websocket.c)
-target_sources_ifdef(CONFIG_THINGSET_WIFI app PRIVATE wifi.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_SDK sdk.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_SDK packetizer.c)
+
+zephyr_library_sources_ifdef(CONFIG_THINGSET_AUTH auth.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_BLE ble.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_CAN can.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_LOG_BACKEND log_backend.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_LORAWAN lorawan.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_SERIAL serial.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_SHELL shell.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_STORAGE storage_common.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_STORAGE_EEPROM storage_eeprom.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_STORAGE_FLASH storage_flash.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_WEBSOCKET websocket.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_WIFI wifi.c)
 
 generate_inc_file_for_target(
     app
