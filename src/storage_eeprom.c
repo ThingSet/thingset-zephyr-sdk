@@ -159,7 +159,7 @@ out:
 
 static int thingset_eeprom_save(off_t offset, size_t useable_size)
 {
-    int err;
+    int err = 0;
 
     struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
     k_sem_take(&sbuf->lock, K_FOREVER);
