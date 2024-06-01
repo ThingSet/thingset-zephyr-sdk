@@ -40,7 +40,7 @@ endif # ISOTP_FAST_CUSTOM_ADDRESSING
 
 config ISOTP_FAST_RX_MAX_PACKET_COUNT
 	int "Max packets for ISO-TP reception"
-	default 8
+	default 40
 	help
 	  Max number of packets expected in a single ISO-TP message.
 
