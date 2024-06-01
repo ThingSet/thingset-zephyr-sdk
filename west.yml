@@ -23,8 +23,9 @@ manifest:
           - hal_st
           - loramac-node
           - mbedtls
-          - tinycrypt
           - picolibc
+          - segger
+          - tinycrypt
     - name: thingset-node-c
       remote: thingset
       revision: d2a610db9a650067ce9fc3381c0b350c9246c88c
