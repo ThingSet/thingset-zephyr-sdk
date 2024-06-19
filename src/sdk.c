@@ -17,6 +17,10 @@
 #include <thingset.h>
 #include <thingset/sdk.h>
 
+#ifdef CONFIG_THINGSET_PID_EUI
+#include <unistd.h>
+#endif
+
 LOG_MODULE_REGISTER(thingset_sdk, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 /*
@@ -119,10 +123,19 @@ static void generate_device_eui()
 #ifndef CONFIG_BOARD_NATIVE_POSIX
     hwinfo_get_device_id(buf, sizeof(buf));
 #else
+
+#ifndef CONFIG_THINGSET_PID_EUI
     /* hwinfo is not available in native_posix, so we use random data instead */
     for (int i = 0; i < sizeof(buf); i++) {
         buf[i] = sys_rand32_get() & 0xFF;
     }
+#else
+    /* hwinfo is not available in native_posix, so we take task PID instead */
+    int pid = getpid();
+
+    snprintk(buf, sizeof(buf), "%X", pid);
+#endif
+
 #endif
 
     crc = crc32_ieee(buf, 8);
