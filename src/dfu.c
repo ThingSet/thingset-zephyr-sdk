@@ -25,6 +25,7 @@ static THINGSET_DEFINE_BYTES(bytes_item, bytes_buf, 0);
 static int32_t thingset_dfu_init();
 static int32_t thingset_dfu_write();
 static int32_t thingset_dfu_boot();
+static void thingset_dfu_reboot_work_handler(struct k_work *work);
 
 THINGSET_ADD_GROUP(TS_ID_ROOT, TS_ID_DFU, "DFU", THINGSET_NO_CALLBACK);
 THINGSET_ADD_FN_INT32(TS_ID_DFU, TS_ID_DFU_INIT, "xInit", &thingset_dfu_init, THINGSET_ANY_RW);
@@ -35,6 +36,8 @@ THINGSET_ADD_FN_INT32(TS_ID_DFU, TS_ID_DFU_BOOT, "xBoot", &thingset_dfu_boot, TH
 static bool dfu_initialized = false;
 
 static struct flash_img_context flash_img_ctx;
+
+K_WORK_DELAYABLE_DEFINE(reboot_work, &thingset_dfu_reboot_work_handler);
 
 static int32_t thingset_dfu_init()
 {
@@ -99,9 +102,16 @@ static int32_t thingset_dfu_boot()
         return err;
     }
 
-    LOG_INF("DFU finished, rebooting...");
+    LOG_INF("DFU finished, scheduling reboot...");
 
-    sys_reboot(SYS_REBOOT_COLD);
+    /* Schedule the reboot work to be executed after 1 second */
+    k_work_schedule(&reboot_work, K_SECONDS(1));
 
     return 0;
+}
+
+static void thingset_dfu_reboot_work_handler(struct k_work *work)
+{
+    LOG_INF("Rebooting now...");
+    sys_reboot(SYS_REBOOT_COLD);
 }
