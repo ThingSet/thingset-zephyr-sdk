@@ -25,6 +25,7 @@ extern uint8_t eui64[8];
 #define EVENT_ADDRESS_CLAIM_MSG_SENT    0x01
 #define EVENT_ADDRESS_CLAIMING_FINISHED 0x02
 #define EVENT_ADDRESS_ALREADY_USED      0x03
+#define EVENT_ADDRESS_DISCOVER_MSG_SENT 0x04
 
 #ifdef CONFIG_THINGSET_CAN_ITEM_RX
 static const struct can_filter sf_report_filter = {
@@ -117,6 +118,18 @@ static void thingset_can_addr_claim_tx_cb(const struct device *dev, int error, v
     }
     else {
         LOG_ERR("Address claim failed with %d", error);
+    }
+}
+
+static void thingset_can_addr_discover_tx_cb(const struct device *dev, int error, void *user_data)
+{
+    struct thingset_can *ts_can = user_data;
+
+    if (error == 0) {
+        k_event_post(&ts_can->events, EVENT_ADDRESS_DISCOVER_MSG_SENT);
+    }
+    else {
+        LOG_ERR("Address discovery failed with %d", error);
     }
 }
 
@@ -559,7 +572,7 @@ static void thingset_can_reqresp_sent_callback(int result, void *arg)
 }
 
 int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev,
-                           uint8_t bus_number)
+                           uint8_t bus_number, int timeout_ms)
 {
     struct can_frame tx_frame = {
         .flags = CAN_FRAME_IDE,
@@ -642,6 +655,8 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         return filter_id;
     }
 
+    uint32_t start = k_uptime_get();
+    uint32_t elapsed_ms = 0;
     while (1) {
         k_event_clear(&ts_can->events, EVENT_ADDRESS_ALREADY_USED);
 
@@ -651,8 +666,13 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
                       | THINGSET_CAN_RAND_SET(rand) | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
                       | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS);
         tx_frame.dlc = 0;
-        err = can_send(ts_can->dev, &tx_frame, K_MSEC(10), NULL, NULL);
+        err =
+            can_send(ts_can->dev, &tx_frame, K_MSEC(10), thingset_can_addr_discover_tx_cb, ts_can);
         if (err != 0) {
+            elapsed_ms += (k_uptime_get() - start);
+            if (timeout_ms > 0 && elapsed_ms > timeout_ms) {
+                return -ETIMEDOUT;
+            }
             k_sleep(K_MSEC(100));
             continue;
         }
@@ -843,7 +863,7 @@ static void thingset_can_thread()
     int err;
 
     LOG_DBG("Initialising ThingSet CAN");
-    err = thingset_can_init_inst(&ts_can_single, can_dev, CONFIG_THINGSET_CAN_DEFAULT_ROUTE);
+    err = thingset_can_init_inst(&ts_can_single, can_dev, CONFIG_THINGSET_CAN_DEFAULT_ROUTE, -1);
     if (err != 0) {
         LOG_ERR("Failed to init ThingSet CAN: %d", err);
         return;

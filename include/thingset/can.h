@@ -358,11 +358,13 @@ int thingset_can_set_item_rx_callback_inst(struct thingset_can *ts_can,
  * @param ts_can Pointer to the thingset_can context.
  * @param can_dev Pointer to the CAN device that should be used.
  * @param bus_number Assigned bus number of this CAN device (ignored if bridge routing is used)
+ * @param timeout_ms Timeout in milliseconds to wait for initialisation. Pass -1 to wait
+ * indefinitely.
  *
  * @returns 0 for success or negative errno in case of error
  */
 int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev,
-                           uint8_t bus_number);
+                           uint8_t bus_number, int timeout_ms);
 
 #else /* !CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES */
 
