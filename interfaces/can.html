@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CAN bus &mdash; ThingSet Zephyr SDK  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="LoRaWAN" href="lorawan.html" />
+    <link rel="prev" title="Bluetooth LE" href="ble.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #52595d" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            ThingSet Zephyr SDK
+              <img src="../_static/thingset_logo_white.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Interfaces</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="serial.html">Serial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="serial.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serial.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="shell.html">Shell</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="shell.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shell.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ble.html">Bluetooth LE</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ble.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ble.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">CAN bus</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="lorawan.html">LoRaWAN</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="lorawan.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lorawan.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Subsystems</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../subsys/sdk.html">SDK</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/sdk.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/sdk.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../subsys/log_backend.html">Log Backend</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/log_backend.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/log_backend.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../subsys/storage.html">Storage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/storage.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/storage.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Kconfig</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../kconfig.html">Kconfig Search</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #52595d" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ThingSet Zephyr SDK</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">CAN bus</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/ThingSet/thingset-node-c/blob/main/docs/interfaces/can.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="can-bus">
+<h1>CAN bus<a class="headerlink" href="#can-bus" title="Permalink to this heading"></a></h1>
+<section id="configuration-options">
+<h2>Configuration Options<a class="headerlink" href="#configuration-options" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../kconfig.html#CONFIG_THINGSET_CAN" title="CONFIG_THINGSET_CAN"><code class="xref kconfig kconfig-option docutils literal notranslate"><span class="pre">CONFIG_THINGSET_CAN</span></code></a></p></li>
+<li><p><a class="reference internal" href="../kconfig.html#CONFIG_THINGSET_CAN_THREAD_STACK_SIZE" title="CONFIG_THINGSET_CAN_THREAD_STACK_SIZE"><code class="xref kconfig kconfig-option docutils literal notranslate"><span class="pre">CONFIG_THINGSET_CAN_THREAD_STACK_SIZE</span></code></a></p></li>
+<li><p><a class="reference internal" href="../kconfig.html#CONFIG_THINGSET_CAN_THREAD_PRIORITY" title="CONFIG_THINGSET_CAN_THREAD_PRIORITY"><code class="xref kconfig kconfig-option docutils literal notranslate"><span class="pre">CONFIG_THINGSET_CAN_THREAD_PRIORITY</span></code></a></p></li>
+</ul>
+</section>
+<section id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this heading"></a></h2>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-defines">Defines</p>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SOURCE_POS">
+<span class="target" id="can_8h_1a4b8a7e0ae2c44a4fc77e81312e5a7b7b"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SOURCE_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_SOURCE_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SOURCE_MASK">
+<span class="target" id="can_8h_1a025ad3526a811d628de8552ad0ec3137"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SOURCE_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_SOURCE_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SOURCE_SET">
+<span class="target" id="can_8h_1a2ffaee59c6e7c17ad3421cf13a13c047"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SOURCE_SET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">addr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_SOURCE_SET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SOURCE_GET">
+<span class="target" id="can_8h_1a72bf1cbaeb792110a840fb9502e4d843"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SOURCE_GET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_SOURCE_GET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TARGET_POS">
+<span class="target" id="can_8h_1a62799a26205ac7c63cd6e62904ad499b"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TARGET_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_TARGET_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TARGET_MASK">
+<span class="target" id="can_8h_1a9efab7fba971f305e77c5a3723dfb223"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TARGET_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_TARGET_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TARGET_SET">
+<span class="target" id="can_8h_1a8e4c5d9318f6020b755aa95efbc19795"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TARGET_SET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">addr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_TARGET_SET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TARGET_GET">
+<span class="target" id="can_8h_1a0a92ad60fafbe78926a098c8c5398030"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TARGET_GET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_TARGET_GET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_ADDR_MIN">
+<span class="target" id="can_8h_1a28186865128a3cea56fc857d71ac15e5"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_ADDR_MIN</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_ADDR_MIN" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_ADDR_MAX">
+<span class="target" id="can_8h_1afbf8114f9ad643798ce10aebb09e6f48"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_ADDR_MAX</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_ADDR_MAX" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_ADDR_ANONYMOUS">
+<span class="target" id="can_8h_1a9a37f6f448cb882d3d13201a90e11467"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_ADDR_ANONYMOUS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_ADDR_ANONYMOUS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_ADDR_BROADCAST">
+<span class="target" id="can_8h_1a8679b5ade6f835576c232bbfc4a355e4"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_ADDR_BROADCAST</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_ADDR_BROADCAST" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_DATA_ID_POS">
+<span class="target" id="can_8h_1a981091efc7aa4bc78790cfe343d45dde"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_DATA_ID_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_DATA_ID_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_DATA_ID_MASK">
+<span class="target" id="can_8h_1ae327a58925dad17b08cade7512e1f8ff"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_DATA_ID_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_DATA_ID_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_DATA_ID_SET">
+<span class="target" id="can_8h_1ab8c90c1e1523f3cc97d7d75b13a6297b"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_DATA_ID_SET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_DATA_ID_SET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_DATA_ID_GET">
+<span class="target" id="can_8h_1af702836c9ab905f5a8eef07f30407e69"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_DATA_ID_GET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_DATA_ID_GET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SEQ_NO_POS">
+<span class="target" id="can_8h_1a3896d9841b5ad08b66fd628ca82ce5e6"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SEQ_NO_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_SEQ_NO_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SEQ_NO_MASK">
+<span class="target" id="can_8h_1a636b270e5ad349ade4fb86ec2e5a0e84"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SEQ_NO_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_SEQ_NO_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SEQ_NO_SET">
+<span class="target" id="can_8h_1adf998ac0d48b68048b695f22628e726f"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SEQ_NO_SET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">no</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_SEQ_NO_SET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SEQ_NO_GET">
+<span class="target" id="can_8h_1a97ec4d30a53dec150ea1a324f697b088"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SEQ_NO_GET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_SEQ_NO_GET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_MF_TYPE_POS">
+<span class="target" id="can_8h_1a77d65fbb9e809132c0713b1eb5e7aaa7"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_MF_TYPE_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_MF_TYPE_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_MF_TYPE_MASK">
+<span class="target" id="can_8h_1aedbfa83b04666439ca49740a1b56a48b"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_MF_TYPE_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_MF_TYPE_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_MF_TYPE_FIRST">
+<span class="target" id="can_8h_1a26c9cd3d63a3d7a5d1abe2948000530d"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_MF_TYPE_FIRST</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_MF_TYPE_FIRST" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_MF_TYPE_CONSEC">
+<span class="target" id="can_8h_1a5479dceda03fab4f3614a36929e7457a"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_MF_TYPE_CONSEC</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_MF_TYPE_CONSEC" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_MF_TYPE_LAST">
+<span class="target" id="can_8h_1a53e158d810009f03fc9fc94ac8c6dcee"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_MF_TYPE_LAST</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_MF_TYPE_LAST" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_MF_TYPE_SINGLE">
+<span class="target" id="can_8h_1afbbef8a2c313dc9cb2d1c7347f49d7c2"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_MF_TYPE_SINGLE</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_MF_TYPE_SINGLE" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_MSG_NO_POS">
+<span class="target" id="can_8h_1a3205e3fe117362facc294a695747d4ae"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_MSG_NO_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_MSG_NO_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_MSG_NO_MASK">
+<span class="target" id="can_8h_1af263f5794a6e7cff1f5a7bc5a2ab152c"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_MSG_NO_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_MSG_NO_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_MSG_NO_SET">
+<span class="target" id="can_8h_1a56e4cc8888b60382003b0c5cb97871c3"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_MSG_NO_SET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">no</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_MSG_NO_SET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_MSG_NO_GET">
+<span class="target" id="can_8h_1ab28672ee467b9d4f2ff2847b51ff722e"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_MSG_NO_GET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_MSG_NO_GET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SOURCE_BUS_POS">
+<span class="target" id="can_8h_1ab0731ed191e01c854b8acb72a9e47d11"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SOURCE_BUS_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_SOURCE_BUS_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SOURCE_BUS_MASK">
+<span class="target" id="can_8h_1a7df8e5a6379654e1b8acffa9770202c9"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SOURCE_BUS_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_SOURCE_BUS_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SOURCE_BUS_SET">
+<span class="target" id="can_8h_1ac2093a0a8922ad65a7a659653f8fb48f"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SOURCE_BUS_SET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_SOURCE_BUS_SET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SOURCE_BUS_GET">
+<span class="target" id="can_8h_1a027501734e7a1d3156a947719ff7b881"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SOURCE_BUS_GET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_SOURCE_BUS_GET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SOURCE_BUS_DEFAULT">
+<span class="target" id="can_8h_1aedb29cbec3b4480ee5d58afa673d3e37"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SOURCE_BUS_DEFAULT</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_SOURCE_BUS_DEFAULT" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TARGET_BUS_POS">
+<span class="target" id="can_8h_1a7a31e070e359d3075f92fdd217019862"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TARGET_BUS_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_TARGET_BUS_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TARGET_BUS_MASK">
+<span class="target" id="can_8h_1a0c9c78e61e5cea63a75d55dffb6a6bf3"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TARGET_BUS_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_TARGET_BUS_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TARGET_BUS_SET">
+<span class="target" id="can_8h_1a4cbb192b4ae6da4f85f19cb45bef7bf3"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TARGET_BUS_SET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_TARGET_BUS_SET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TARGET_BUS_GET">
+<span class="target" id="can_8h_1a957ebf8cb1d4ba3636b0814570bba288"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TARGET_BUS_GET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_TARGET_BUS_GET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TARGET_BUS_DEFAULT">
+<span class="target" id="can_8h_1a80ee2b4817c4c902d9850ba1121826f5"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TARGET_BUS_DEFAULT</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_TARGET_BUS_DEFAULT" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_BRIDGE_POS">
+<span class="target" id="can_8h_1abf7543397109bbc5589d684eef526b6b"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_BRIDGE_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_BRIDGE_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_BRIDGE_MASK">
+<span class="target" id="can_8h_1a3988f9039cf4f8a64d3e589a403856e2"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_BRIDGE_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_BRIDGE_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_BRIDGE_SET">
+<span class="target" id="can_8h_1aa642e7f7b2e906648c6a6203d9fbbef1"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_BRIDGE_SET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_BRIDGE_SET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_BRIDGE_GET">
+<span class="target" id="can_8h_1a3211ed10a29c8d61ad9455b1da7cf485"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_BRIDGE_GET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_BRIDGE_GET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_BRIDGE_LOCAL">
+<span class="target" id="can_8h_1a8a2698c03a74d9fcd7e89d2803df7202"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_BRIDGE_LOCAL</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_BRIDGE_LOCAL" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_RAND_POS">
+<span class="target" id="can_8h_1a235df5709f7209958b49f36e89dc55b2"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_RAND_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_RAND_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_RAND_MASK">
+<span class="target" id="can_8h_1a4f4ce4d8a0b86f8a2e6a7db155d7affa"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_RAND_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_RAND_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_RAND_SET">
+<span class="target" id="can_8h_1a724ee694e2d5e75cb503e947d08e4f67"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_RAND_SET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_RAND_SET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_RAND_GET">
+<span class="target" id="can_8h_1afa4586dc2efca46f95c59be07df3f513"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_RAND_GET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_RAND_GET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TYPE_POS">
+<span class="target" id="can_8h_1a6eb34dd5f880202077b577e42cc5cf65"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TYPE_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_TYPE_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TYPE_MASK">
+<span class="target" id="can_8h_1ad04d54610a9e3adf85ec7bafab75d875"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TYPE_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_TYPE_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TYPE_REQRESP">
+<span class="target" id="can_8h_1a19c59cb5de1d2c3838c3ea3645d8b0fd"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TYPE_REQRESP</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_TYPE_REQRESP" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TYPE_MF_REPORT">
+<span class="target" id="can_8h_1a43b600667795313078dfb1a1f396893e"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TYPE_MF_REPORT</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_TYPE_MF_REPORT" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TYPE_SF_REPORT">
+<span class="target" id="can_8h_1a457875fe93e5d07eca907754ff4ef091"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TYPE_SF_REPORT</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_TYPE_SF_REPORT" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_TYPE_NETWORK">
+<span class="target" id="can_8h_1ab92a665cbd2bdd3dd8ea380fe0a7e18a"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_TYPE_NETWORK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_TYPE_NETWORK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_PRIO_POS">
+<span class="target" id="can_8h_1a90a1d4349abfa6e47b89267cd673352b"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_PRIO_POS</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_PRIO_POS" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_PRIO_MASK">
+<span class="target" id="can_8h_1a0019bf3851016305535e0e559fdd7835"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_PRIO_MASK</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_PRIO_MASK" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_PRIO_SET">
+<span class="target" id="can_8h_1a8ad06f58cede3a6535b21a753a06fc2a"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_PRIO_SET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">prio</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_PRIO_SET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_PRIO_GET">
+<span class="target" id="can_8h_1a78981e135d0321c1bc3aeb23e9720be4"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_PRIO_GET</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_PRIO_GET" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_PRIO_CONTROL_EMERGENCY">
+<span class="target" id="can_8h_1a420983e851e75835cb456f2a7d140cdf"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_PRIO_CONTROL_EMERGENCY</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_PRIO_CONTROL_EMERGENCY" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_PRIO_CONTROL_HIGH">
+<span class="target" id="can_8h_1a5e3e4913a2dc8dbfb5158709ba328ae8"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_PRIO_CONTROL_HIGH</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_PRIO_CONTROL_HIGH" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_PRIO_CONTROL_LOW">
+<span class="target" id="can_8h_1a28586c6499e4b6eb845127fb47234554"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_PRIO_CONTROL_LOW</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_PRIO_CONTROL_LOW" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_PRIO_NETWORK_MGMT">
+<span class="target" id="can_8h_1ad20cd491e463b589fe157a97b0db3dda"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_PRIO_NETWORK_MGMT</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_PRIO_NETWORK_MGMT" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_PRIO_REPORT_HIGH">
+<span class="target" id="can_8h_1ade9bece0da210e691d1fc28c407f9024"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_PRIO_REPORT_HIGH</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_PRIO_REPORT_HIGH" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_PRIO_REQRESP">
+<span class="target" id="can_8h_1a20688ac08c2d36f69421d7f71af969ed"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_PRIO_REQRESP</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_PRIO_REQRESP" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_PRIO_REPORT_LOW">
+<span class="target" id="can_8h_1a19899e9ad4240cba5371bd7731c24f36"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_PRIO_REPORT_LOW</span></span></span><a class="headerlink" href="#c.THINGSET_CAN_PRIO_REPORT_LOW" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_CONTROL">
+<span class="target" id="can_8h_1ab5e1e5953443814403164dbeac875b5f"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_CONTROL</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_CONTROL" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_SF_REPORT">
+<span class="target" id="can_8h_1a58762cc4bdc685626836b1a9a50273ee"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_SF_REPORT</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_SF_REPORT" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_MF_REPORT">
+<span class="target" id="can_8h_1a267f2c0a21f7d48a84f68331e365c672"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_MF_REPORT</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_MF_REPORT" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.THINGSET_CAN_REQRESP">
+<span class="target" id="can_8h_1aa79c295a3007c07b31da3b093325d7be"></span><span class="sig-name descname"><span class="n"><span class="pre">THINGSET_CAN_REQRESP</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.THINGSET_CAN_REQRESP" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-typedefs">Typedefs</p>
+<dl class="c type">
+<dt class="sig sig-object c" id="c.thingset_can_addr_claim_rx_callback_t">
+<span class="target" id="can_8h_1ad661c7800bf6a0eea5838354b9fa0fc8"></span><span class="k"><span class="pre">typedef</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">(</span></span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">thingset_can_addr_claim_rx_callback_t</span></span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">(</span></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="n"><span class="pre">eui64</span></span><span class="p"><span class="pre">[</span></span><span class="m"><span class="pre">8</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="n"><span class="pre">source_addr</span></span><span class="p"><span class="pre">)</span></span><a class="headerlink" href="#c.thingset_can_addr_claim_rx_callback_t" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Callback typedef for received address claim frames from other nodes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param eui64<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The EUI-64 of the node used for the address claim message. </p>
+</dd>
+<dt class="field-even">Param source_addr<span class="colon">:</span></dt>
+<dd class="field-even"><p>Node address the address claim was received from </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c type">
+<dt class="sig sig-object c" id="c.thingset_can_report_rx_callback_t">
+<span class="target" id="can_8h_1ab14e0c908fef5828047c274894944c33"></span><span class="k"><span class="pre">typedef</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">(</span></span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">thingset_can_report_rx_callback_t</span></span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">(</span></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">report_buf</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">report_len</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="n"><span class="pre">source_addr</span></span><span class="p"><span class="pre">)</span></span><a class="headerlink" href="#c.thingset_can_report_rx_callback_t" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Callback typedef for received multi-frame reports (type 0x1) via CAN</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param report_buf<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pointer to the buffer containing the received report (text or binary format) </p>
+</dd>
+<dt class="field-even">Param report_len<span class="colon">:</span></dt>
+<dd class="field-even"><p>Length of the report in the buffer </p>
+</dd>
+<dt class="field-odd">Param source_addr<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Node address the report was received from </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c type">
+<dt class="sig sig-object c" id="c.thingset_can_item_rx_callback_t">
+<span class="target" id="can_8h_1a8913d472ab457596b19d186be2d7d0b1"></span><span class="k"><span class="pre">typedef</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">(</span></span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">thingset_can_item_rx_callback_t</span></span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">uint16_t</span></span><span class="w"> </span><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">value_len</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="n"><span class="pre">source_addr</span></span><span class="p"><span class="pre">)</span></span><a class="headerlink" href="#c.thingset_can_item_rx_callback_t" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Callback typedef for received single-frame reports (type 0x2) via CAN</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param data_id<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ThingSet data object ID </p>
+</dd>
+<dt class="field-even">Param value<span class="colon">:</span></dt>
+<dd class="field-even"><p>Buffer containing the CBOR raw data of the value </p>
+</dd>
+<dt class="field-odd">Param value_len<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Length of the value in the buffer </p>
+</dd>
+<dt class="field-even">Param source_addr<span class="colon">:</span></dt>
+<dd class="field-even"><p>Node address the item was received from </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c type">
+<dt class="sig sig-object c" id="c.thingset_can_reqresp_callback_t">
+<span class="target" id="can_8h_1a0f713b67edb03c7700864a3d42ef42d6"></span><span class="k"><span class="pre">typedef</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">(</span></span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">thingset_can_reqresp_callback_t</span></span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">len</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">send_err</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">recv_err</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="n"><span class="pre">source_addr</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">arg</span></span><span class="p"><span class="pre">)</span></span><a class="headerlink" href="#c.thingset_can_reqresp_callback_t" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Callback typedef for received responses via CAN ISO-TP</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param data<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Buffer containing the ThingSet response or NULL in case of error. </p>
+</dd>
+<dt class="field-even">Param length<span class="colon">:</span></dt>
+<dd class="field-even"><p>Length of the data in the buffer </p>
+</dd>
+<dt class="field-odd">Param send_err<span class="colon">:</span></dt>
+<dd class="field-odd"><p>0 for success or negative errno indicating a send error. </p>
+</dd>
+<dt class="field-even">Param recv_err<span class="colon">:</span></dt>
+<dd class="field-even"><p>0 for success or negative errno indicating a receive error. </p>
+</dd>
+<dt class="field-odd">Param source_addr<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Node address the response was received from </p>
+</dd>
+<dt class="field-even">Param arg<span class="colon">:</span></dt>
+<dd class="field-even"><p>User-data passed to the callback </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-functions">Functions</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.thingset_can_send_report">
+<span class="target" id="can_8h_1a743e8f834ac2e75af581f6441e5279a9"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">thingset_can_send_report</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">path</span></span>, <span class="k"><span class="pre">enum</span></span><span class="w"> </span><span class="n"><span class="pre">thingset_data_format</span></span><span class="w"> </span><span class="n"><span class="pre">format</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.thingset_can_send_report" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Send ThingSet report to the CAN bus.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – Path of subset/group/record to be published </p></li>
+<li><p><strong>format</strong> – Protocol data format to be used (text, binary with IDs or binary with names)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>0 for success or negative errno in case of error </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.thingset_can_send">
+<span class="target" id="can_8h_1af5342fb5d4cd7e9c5a570e7f51d7da02"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">thingset_can_send</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">tx_buf</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">tx_len</span></span>, <span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="n"><span class="pre">target_addr</span></span>, <span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="n"><span class="pre">route</span></span>, <a class="reference internal" href="#c.thingset_can_reqresp_callback_t" title="thingset_can_reqresp_callback_t"><span class="n"><span class="pre">thingset_can_reqresp_callback_t</span></span></a><span class="w"> </span><span class="n"><span class="pre">callback</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">callback_arg</span></span>, <span class="n"><span class="pre">k_timeout_t</span></span><span class="w"> </span><span class="n"><span class="pre">timeout</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.thingset_can_send" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Send ThingSet message to other node</p>
+<p>See thingset_can_send_inst() for function parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>0 for success or negative errno in case of error </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.thingset_can_get_inst">
+<span class="target" id="can_8h_1a274750600ea1a03f5ae3365e8a7c14da"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.thingset_can" title="thingset_can"><span class="n"><span class="pre">thingset_can</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">thingset_can_get_inst</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c.thingset_can_get_inst" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Get ThingSet CAN instance</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pointer to internal ThingSet CAN instance </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<dl class="c struct">
+<dt class="sig sig-object c" id="c.thingset_can_request_response">
+<span class="target" id="structthingset__can__request__response"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">thingset_can_request_response</span></span></span><a class="headerlink" href="#c.thingset_can_request_response" title="Permalink to this definition"></a><br /></dt>
+<dd><div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-members">Public Members</p>
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can_request_response.sem">
+<span class="target" id="structthingset__can__request__response_1a54e7c74aa621e9094ee3977c88a92331"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">k_sem</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sem</span></span></span><a class="headerlink" href="#c.thingset_can_request_response.sem" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can_request_response.timer">
+<span class="target" id="structthingset__can__request__response_1a09ee9d872a10851036a5b2ae676be306"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">k_timer</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">timer</span></span></span><a class="headerlink" href="#c.thingset_can_request_response.timer" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can_request_response.can_id">
+<span class="target" id="structthingset__can__request__response_1ab5877b320639a3fd9da35837e8ec58f1"></span><span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">can_id</span></span></span><a class="headerlink" href="#c.thingset_can_request_response.can_id" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can_request_response.callback">
+<span class="target" id="structthingset__can__request__response_1a9cf7ee78e7aac9abf4cd371744f5f3d8"></span><a class="reference internal" href="#c.thingset_can_reqresp_callback_t" title="thingset_can_reqresp_callback_t"><span class="n"><span class="pre">thingset_can_reqresp_callback_t</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">callback</span></span></span><a class="headerlink" href="#c.thingset_can_request_response.callback" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can_request_response.cb_arg">
+<span class="target" id="structthingset__can__request__response_1af067ac2047d4821665f584f382af5205"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">cb_arg</span></span></span><a class="headerlink" href="#c.thingset_can_request_response.cb_arg" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="c struct">
+<dt class="sig sig-object c" id="c.thingset_can">
+<span class="target" id="structthingset__can"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">thingset_can</span></span></span><a class="headerlink" href="#c.thingset_can" title="Permalink to this definition"></a><br /></dt>
+<dd><div class="docutils container">
+<em>#include &lt;can.h&gt;</em></div>
+<p>ThingSet CAN context storing all information required for one instance. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-members">Public Members</p>
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.dev">
+<span class="target" id="structthingset__can_1afaa30560b81c445c58a4df2f165583e5"></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">device</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">dev</span></span></span><a class="headerlink" href="#c.thingset_can.dev" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.live_reporting_work">
+<span class="target" id="structthingset__can_1a577bcf8735e97237229c4bd92a18bfb1"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">k_work_delayable</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">live_reporting_work</span></span></span><a class="headerlink" href="#c.thingset_can.live_reporting_work" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.addr_claim_work">
+<span class="target" id="structthingset__can_1a847ed2081efe51f47fd58aabe743bf2e"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">k_work_delayable</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">addr_claim_work</span></span></span><a class="headerlink" href="#c.thingset_can.addr_claim_work" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.addr_claim_callback">
+<span class="target" id="structthingset__can_1abcc95ccf9ffa4755ee276e65554ca452"></span><a class="reference internal" href="#c.thingset_can_addr_claim_rx_callback_t" title="thingset_can_addr_claim_rx_callback_t"><span class="n"><span class="pre">thingset_can_addr_claim_rx_callback_t</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">addr_claim_callback</span></span></span><a class="headerlink" href="#c.thingset_can.addr_claim_callback" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.ctx">
+<span class="target" id="structthingset__can_1a3b668b2e2c57108af1ffc353744583f6"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">isotp_fast_ctx</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ctx</span></span></span><a class="headerlink" href="#c.thingset_can.ctx" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.report_tx_sem">
+<span class="target" id="structthingset__can_1a1c85efb1b9a037cf9a96175ac3c56263"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">k_sem</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">report_tx_sem</span></span></span><a class="headerlink" href="#c.thingset_can.report_tx_sem" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.events">
+<span class="target" id="structthingset__can_1a5294dd76b71dfc422c83addadd8fad2b"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">k_event</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">events</span></span></span><a class="headerlink" href="#c.thingset_can.events" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.request_response">
+<span class="target" id="structthingset__can_1ade1ee090fbe1f71c1dd552b2a9e4b369"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.thingset_can_request_response" title="thingset_can_request_response"><span class="n"><span class="pre">thingset_can_request_response</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">request_response</span></span></span><a class="headerlink" href="#c.thingset_can.request_response" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.rx_buffer">
+<span class="target" id="structthingset__can_1afabab7d358378e50160500a025063904"></span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">rx_buffer</span></span></span><span class="p"><span class="pre">[</span></span><span class="n"><span class="pre">CONFIG_THINGSET_CAN_RX_BUF_SIZE</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#c.thingset_can.rx_buffer" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.next_live_report_time">
+<span class="target" id="structthingset__can_1a0374b1197f31c7442f19261977779a82"></span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">next_live_report_time</span></span></span><a class="headerlink" href="#c.thingset_can.next_live_report_time" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.node_addr">
+<span class="target" id="structthingset__can_1ae911171c928b3d1b57c0ec37431b6c32"></span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">node_addr</span></span></span><a class="headerlink" href="#c.thingset_can.node_addr" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.route">
+<span class="target" id="structthingset__can_1ab845dd4231fff7dd987465de3b9c56a0"></span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">route</span></span></span><a class="headerlink" href="#c.thingset_can.route" title="Permalink to this definition"></a><br /></dt>
+<dd><p>bus or bridge number </p>
+</dd></dl>
+
+<dl class="c var">
+<dt class="sig sig-object c" id="c.thingset_can.msg_no">
+<span class="target" id="structthingset__can_1a1f5ae31f7da97c1cb95ec49914ab6bc3"></span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">msg_no</span></span></span><a class="headerlink" href="#c.thingset_can.msg_no" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ble.html" class="btn btn-neutral float-left" title="Bluetooth LE" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="lorawan.html" class="btn btn-neutral float-right" title="LoRaWAN" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024 The ThingSet Project Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
