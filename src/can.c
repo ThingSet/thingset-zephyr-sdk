@@ -686,7 +686,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
                 /* address claiming is finished */
                 k_event_post(&ts_can->events, EVENT_ADDRESS_CLAIMING_FINISHED);
                 LOG_INF("Using CAN node address 0x%.2X on %s", ts_can->node_addr, 
-                    ts_can->dev->name);
+                        ts_can->dev->name);
                 break;
             }
 
