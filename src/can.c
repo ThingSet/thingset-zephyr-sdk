@@ -481,7 +481,7 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
         ts_can->request_response.callback = callback;
         ts_can->request_response.cb_arg = callback_arg;
         k_timer_init(&ts_can->request_response.timer, thingset_can_reqresp_timeout_handler, NULL);
-        k_timer_start(&ts_can->request_response.timer, timeout, timeout);
+        k_timer_start(&ts_can->request_response.timer, timeout, K_NO_WAIT);
         ts_can->request_response.can_id = thingset_can_get_tx_addr(&tx_addr).ext_id;
     }
 
