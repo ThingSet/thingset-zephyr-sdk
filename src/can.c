@@ -548,10 +548,15 @@ static void thingset_can_reqresp_recv_error_callback(int8_t error, struct isotp_
 static void thingset_can_reqresp_sent_callback(int result, void *arg)
 {
     struct thingset_can *ts_can = arg;
-    if (ts_can->request_response.callback != NULL && result != 0) {
+    if (ts_can->request_response.callback != NULL) {
         ts_can->request_response.callback(NULL, 0, 0, result, ts_can->request_response.can_id,
                                           ts_can->request_response.cb_arg);
         thingset_can_reset_request_response(&ts_can->request_response);
+        if (result == 0) {
+            /* maintain unlocking semantics of previous iteration of this code */
+            struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
+            k_sem_give(&sbuf->lock);
+        }
     }
     else {
         struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
