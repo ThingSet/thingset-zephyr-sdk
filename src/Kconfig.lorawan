@@ -4,3 +4,12 @@
 config THINGSET_LORAWAN
 	depends on LORAWAN
 	bool "LoRaWAN interface"
+
+if THINGSET_LORAWAN
+
+config THINGSET_LORAWAN_ABP
+	bool "Support for ABP activation"
+	help
+	  Enable End-Device activation for Activation By Personalization(ABP).
+
+endif # THINGSET_LORAWAN

@@ -9,6 +9,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/lorawan/lorawan.h>
 #include <zephyr/random/random.h>
+#include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/util.h>
 
 #include <thingset.h>
@@ -25,6 +26,12 @@ static uint8_t tx_buf[51];
 char lorawan_join_eui[8 * 2 + 1] = "0000000000000000";
 char lorawan_app_key[16 * 2 + 1] = "";
 uint32_t lorawan_dev_nonce;
+#ifdef CONFIG_THINGSET_LORAWAN_ABP
+char lorawan_dev_addr[4 * 2 + 1] = "";
+char lorawan_app_skey[16 * 2 + 1] = "";
+char lorawan_nwk_skey[16 * 2 + 1] = "";
+bool abp = false;
+#endif
 
 THINGSET_ADD_GROUP(TS_ID_ROOT, TS_ID_LORAWAN, "LoRaWAN", THINGSET_NO_CALLBACK);
 
@@ -39,6 +46,20 @@ THINGSET_ADD_ITEM_STRING(TS_ID_LORAWAN, TS_ID_LORAWAN_APP_KEY, "pAppKey", lorawa
 
 THINGSET_ADD_ITEM_UINT32(TS_ID_LORAWAN, TS_ID_LORAWAN_DEV_NONCE, "pDevNonce", &lorawan_dev_nonce,
                          THINGSET_ANY_RW, TS_SUBSET_NVM);
+
+#ifdef CONFIG_THINGSET_LORAWAN_ABP
+THINGSET_ADD_ITEM_BOOL(TS_ID_LORAWAN, TS_ID_LORAWAN_ABP, "pAbp", &abp, THINGSET_ANY_RW,
+                       TS_SUBSET_NVM);
+
+THINGSET_ADD_ITEM_STRING(TS_ID_LORAWAN, TS_ID_LORAWAN_DEV_ADDR, "pDevAddr", lorawan_dev_addr,
+                         sizeof(lorawan_dev_addr), THINGSET_ANY_RW, TS_SUBSET_NVM);
+
+THINGSET_ADD_ITEM_STRING(TS_ID_LORAWAN, TS_ID_LORAWAN_APP_SKEY, "pAppSKey", lorawan_app_skey,
+                         sizeof(lorawan_app_skey), THINGSET_ANY_RW, TS_SUBSET_NVM);
+
+THINGSET_ADD_ITEM_STRING(TS_ID_LORAWAN, TS_ID_LORAWAN_NWK_SKEY, "pNwkSKey", lorawan_nwk_skey,
+                         sizeof(lorawan_nwk_skey), THINGSET_ANY_RW, TS_SUBSET_NVM);
+#endif
 
 static void downlink_callback(uint8_t port, bool data_pending, int16_t rssi, int8_t snr,
                               uint8_t len, const uint8_t *data)
@@ -94,12 +115,29 @@ void lorawan_thread(void)
     join_cfg.otaa.nwk_key = app_key;
     join_cfg.otaa.dev_nonce = lorawan_dev_nonce;
 
+#ifdef CONFIG_THINGSET_LORAWAN_ABP
+    if (abp) {
+        uint8_t app_skey[16];
+        uint8_t nwk_skey[16];
+        uint32_t dev_addr = 0;
+
+        hex2bin(lorawan_app_skey, strlen(lorawan_app_skey), app_skey, sizeof(app_skey));
+        hex2bin(lorawan_nwk_skey, strlen(lorawan_nwk_skey), nwk_skey, sizeof(nwk_skey));
+        hex2bin(lorawan_dev_addr, strlen(lorawan_dev_addr), (uint8_t *)&dev_addr, sizeof(dev_addr));
+
+        join_cfg.mode = LORAWAN_ACT_ABP;
+        join_cfg.abp.dev_addr = sys_cpu_to_be32(dev_addr);
+        join_cfg.abp.nwk_skey = nwk_skey;
+        join_cfg.abp.app_skey = app_skey;
+    }
+#endif
+
     bool connected = false;
     uint32_t rejoin_wait_sec = 8;
     bool increased_dev_nonce = false;
     while (true) {
         if (!connected) {
-            LOG_INF("Joining network over OTAA");
+            LOG_INF("Joining network over %s", join_cfg.mode ? "ABP" : "OTAA");
             ret = lorawan_join(&join_cfg);
             if (ret < 0) {
                 LOG_ERR("lorawan_join_network failed: %d", ret);
