@@ -51,6 +51,10 @@ extern "C" {
 #define TS_ID_LORAWAN_JOIN_EUI  0x271
 #define TS_ID_LORAWAN_APP_KEY   0x272
 #define TS_ID_LORAWAN_DEV_NONCE 0x273
+#define TS_ID_LORAWAN_ABP       0x274
+#define TS_ID_LORAWAN_DEV_ADDR  0x275
+#define TS_ID_LORAWAN_APP_SKEY  0x276
+#define TS_ID_LORAWAN_NWK_SKEY  0x277
 
 /* Networking group items */
 #define TS_ID_NET                      0x28
