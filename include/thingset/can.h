@@ -271,6 +271,7 @@ struct thingset_can
 #ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
     int64_t next_control_report_time;
 #endif
+    struct k_timer timeout_timer;
     uint8_t node_addr;
     /** bus or bridge number */
     uint8_t route;
@@ -358,11 +359,12 @@ int thingset_can_set_item_rx_callback_inst(struct thingset_can *ts_can,
  * @param ts_can Pointer to the thingset_can context.
  * @param can_dev Pointer to the CAN device that should be used.
  * @param bus_number Assigned bus number of this CAN device (ignored if bridge routing is used)
+ * @param timeout Initialisation timeout. Set to K_FOREVER for no timeout.
  *
  * @returns 0 for success or negative errno in case of error
  */
 int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev,
-                           uint8_t bus_number);
+                           uint8_t bus_number, k_timeout_t timeout);
 
 #else /* !CONFIG_THINGSET_CAN_MULTIPLE_INSTANCES */
 
