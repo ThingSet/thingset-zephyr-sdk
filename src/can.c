@@ -449,7 +449,7 @@ static void thingset_can_reqresp_timeout_handler(struct k_timer *timer)
 {
     struct thingset_can_request_response *rr =
         CONTAINER_OF(timer, struct thingset_can_request_response, timer);
-    rr->callback(NULL, 0, 0, -ETIMEDOUT, rr->can_id, rr->cb_arg);
+    rr->callback(NULL, 0, 0, -ETIMEDOUT, THINGSET_CAN_SOURCE_GET(rr->can_id), rr->cb_arg);
     thingset_can_reset_request_response(rr);
 }
 
@@ -549,7 +549,8 @@ static void thingset_can_reqresp_sent_callback(int result, void *arg)
 {
     struct thingset_can *ts_can = arg;
     if (ts_can->request_response.callback != NULL) {
-        ts_can->request_response.callback(NULL, 0, 0, result, ts_can->request_response.can_id,
+        ts_can->request_response.callback(NULL, 0, 0, result,
+                                          THINGSET_CAN_SOURCE_GET(ts_can->request_response.can_id),
                                           ts_can->request_response.cb_arg);
         thingset_can_reset_request_response(&ts_can->request_response);
         if (result == 0) {
