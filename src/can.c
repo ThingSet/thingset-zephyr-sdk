@@ -449,7 +449,7 @@ static void thingset_can_reqresp_timeout_handler(struct k_timer *timer)
 {
     struct thingset_can_request_response *rr =
         CONTAINER_OF(timer, struct thingset_can_request_response, timer);
-    rr->callback(NULL, 0, 0, -ETIMEDOUT, 0, rr->cb_arg);
+    rr->callback(NULL, 0, 0, -ETIMEDOUT, THINGSET_CAN_SOURCE_GET(rr->can_id), rr->cb_arg);
     thingset_can_reset_request_response(rr);
 }
 
@@ -481,7 +481,7 @@ int thingset_can_send_inst(struct thingset_can *ts_can, uint8_t *tx_buf, size_t 
         ts_can->request_response.callback = callback;
         ts_can->request_response.cb_arg = callback_arg;
         k_timer_init(&ts_can->request_response.timer, thingset_can_reqresp_timeout_handler, NULL);
-        k_timer_start(&ts_can->request_response.timer, timeout, timeout);
+        k_timer_start(&ts_can->request_response.timer, timeout, K_NO_WAIT);
         ts_can->request_response.can_id = thingset_can_get_tx_addr(&tx_addr).ext_id;
     }
 
@@ -548,9 +548,16 @@ static void thingset_can_reqresp_recv_error_callback(int8_t error, struct isotp_
 static void thingset_can_reqresp_sent_callback(int result, void *arg)
 {
     struct thingset_can *ts_can = arg;
-    if (ts_can->request_response.callback != NULL && result != 0) {
-        ts_can->request_response.callback(NULL, 0, 0, result, 0, ts_can->request_response.cb_arg);
+    if (ts_can->request_response.callback != NULL) {
+        ts_can->request_response.callback(NULL, 0, 0, result,
+                                          THINGSET_CAN_SOURCE_GET(ts_can->request_response.can_id),
+                                          ts_can->request_response.cb_arg);
         thingset_can_reset_request_response(&ts_can->request_response);
+        if (result == 0) {
+            /* maintain unlocking semantics of previous iteration of this code */
+            struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
+            k_sem_give(&sbuf->lock);
+        }
     }
     else {
         struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
