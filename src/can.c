@@ -121,6 +121,15 @@ static void thingset_can_addr_claim_tx_cb(const struct device *dev, int error, v
     }
 }
 
+static void thingset_can_addr_discovery_tx_cb(const struct device *dev, int error, void *user_data)
+{
+    struct thingset_can *ts_can = user_data;
+
+    if (error != 0) {
+        LOG_ERR("Address discovery failed with %d", error);
+    }
+}
+
 static void thingset_can_addr_claim_tx_handler(struct k_work *work)
 {
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
@@ -675,7 +684,8 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
                       | THINGSET_CAN_RAND_SET(rand) | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
                       | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS);
         tx_frame.dlc = 0;
-        err = can_send(ts_can->dev, &tx_frame, K_MSEC(10), thingset_can_addr_claim_tx_cb, ts_can);
+        err =
+            can_send(ts_can->dev, &tx_frame, K_MSEC(10), thingset_can_addr_discovery_tx_cb, ts_can);
         if (err != 0) {
             k_sleep(K_MSEC(100));
             continue;
