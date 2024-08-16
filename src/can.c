@@ -123,8 +123,6 @@ static void thingset_can_addr_claim_tx_cb(const struct device *dev, int error, v
 
 static void thingset_can_addr_discovery_tx_cb(const struct device *dev, int error, void *user_data)
 {
-    struct thingset_can *ts_can = user_data;
-
     if (error != 0) {
         LOG_ERR("Address discovery failed with %d", error);
     }
