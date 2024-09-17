@@ -579,11 +579,6 @@ static void thingset_can_timeout_timer_expired(struct k_timer *timer)
     k_event_set(&ts_can->events, EVENT_ADDRESS_CLAIM_TIMED_OUT);
 }
 
-static void thingset_can_timeout_timer_stopped(struct k_timer *timer)
-{
-    ARG_UNUSED(timer);
-}
-
 int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can_dev,
                            uint8_t bus_number, k_timeout_t timeout)
 {
@@ -605,8 +600,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 #endif
     k_sem_init(&ts_can->request_response.sem, 1, 1);
     k_sem_init(&ts_can->report_tx_sem, 0, 1);
-    k_timer_init(&ts_can->timeout_timer, thingset_can_timeout_timer_expired,
-                 thingset_can_timeout_timer_stopped);
+    k_timer_init(&ts_can->timeout_timer, thingset_can_timeout_timer_expired, NULL);
 
 #ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
     k_work_init_delayable(&ts_can->live_reporting_work, thingset_can_live_reporting_handler);
