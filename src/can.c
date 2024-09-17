@@ -662,6 +662,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         can_add_rx_filter(ts_can->dev, thingset_can_addr_claim_rx_cb, ts_can, &addr_claim_filter);
     if (filter_id < 0) {
         LOG_ERR("Unable to add addr_claim filter: %d", filter_id);
+        k_timer_stop(&ts_can->timeout_timer);
         return filter_id;
     }
 
@@ -696,6 +697,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         }
         else if (event & EVENT_ADDRESS_CLAIM_TIMED_OUT) {
             LOG_ERR("Address claim timed out");
+            k_timer_stop(&ts_can->timeout_timer);
             return -ETIMEDOUT;
         }
         else {
@@ -709,6 +711,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
                                  false, K_MSEC(100));
             if (event & EVENT_ADDRESS_CLAIM_TIMED_OUT) {
                 LOG_ERR("Address claim timed out");
+                k_timer_stop(&ts_can->timeout_timer);
                 return -ETIMEDOUT;
             }
             else if (!(event & EVENT_ADDRESS_CLAIM_MSG_SENT)) {
