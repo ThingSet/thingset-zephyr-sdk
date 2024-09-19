@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bluetooth LE &mdash; ThingSet Zephyr SDK  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="CAN bus" href="can.html" />
+    <link rel="prev" title="Shell" href="shell.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #52595d" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            ThingSet Zephyr SDK
+              <img src="../_static/thingset_logo_white.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Interfaces</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="serial.html">Serial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="serial.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serial.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="shell.html">Shell</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="shell.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shell.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Bluetooth LE</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="can.html">CAN bus</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="can.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="can.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="lorawan.html">LoRaWAN</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="lorawan.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lorawan.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Subsystems</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../subsys/sdk.html">SDK</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/sdk.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/sdk.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../subsys/log_backend.html">Log Backend</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/log_backend.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/log_backend.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../subsys/storage.html">Storage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/storage.html#configuration-options">Configuration Options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsys/storage.html#api-reference">API Reference</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Kconfig</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../kconfig.html">Kconfig Search</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #52595d" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ThingSet Zephyr SDK</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Bluetooth LE</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/ThingSet/thingset-node-c/blob/main/docs/interfaces/ble.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="bluetooth-le">
+<h1>Bluetooth LE<a class="headerlink" href="#bluetooth-le" title="Permalink to this heading"></a></h1>
+<section id="configuration-options">
+<h2>Configuration Options<a class="headerlink" href="#configuration-options" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../kconfig.html#CONFIG_THINGSET_BLE" title="CONFIG_THINGSET_BLE"><code class="xref kconfig kconfig-option docutils literal notranslate"><span class="pre">CONFIG_THINGSET_BLE</span></code></a></p></li>
+<li><p><a class="reference internal" href="../kconfig.html#CONFIG_THINGSET_BLE_RX_BUF_SIZE" title="CONFIG_THINGSET_BLE_RX_BUF_SIZE"><code class="xref kconfig kconfig-option docutils literal notranslate"><span class="pre">CONFIG_THINGSET_BLE_RX_BUF_SIZE</span></code></a></p></li>
+</ul>
+</section>
+<section id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this heading"></a></h2>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-functions">Functions</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.thingset_ble_send_report">
+<span class="target" id="ble_8h_1a9c68233fe99efd291e8307a2e733b3a8"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">thingset_ble_send_report</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">path</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.thingset_ble_send_report" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Send ThingSet report to Bluetooth Central.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – Path to subset or group that should be reported</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>0 for success or negative errno in case of error </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.thingset_ble_send">
+<span class="target" id="ble_8h_1a515b58f098be46f20cb23f7e866555b1"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">thingset_ble_send</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">uint8_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">buf</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">len</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.thingset_ble_send" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Send ThingSet message (response or report) to Bluetooth Central.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buf</strong> – Buffer with ThingSet message (w/o SLIP characters) </p></li>
+<li><p><strong>len</strong> – Length of message</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>0 for success or negative errno in case of error </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.thingset_ble_set_rx_callback">
+<span class="target" id="ble_8h_1ac84590e05ae454675436850cfa880383"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">thingset_ble_set_rx_callback</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="../subsys/sdk.html#c.thingset_sdk_rx_callback_t" title="thingset_sdk_rx_callback_t"><span class="n"><span class="pre">thingset_sdk_rx_callback_t</span></span></a><span class="w"> </span><span class="n"><span class="pre">rx_cb</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.thingset_ble_set_rx_callback" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Set custom callback for received data.</p>
+<p>If this callback is set, ThingSet messages are not processed automatically anymore, but forwarded through the callback. </p>
+</dd></dl>
+
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="shell.html" class="btn btn-neutral float-left" title="Shell" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="can.html" class="btn btn-neutral float-right" title="CAN bus" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024 The ThingSet Project Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
