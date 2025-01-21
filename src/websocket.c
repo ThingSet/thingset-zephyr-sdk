@@ -57,8 +57,8 @@ THINGSET_ADD_ITEM_STRING(TS_ID_NET, TS_ID_NET_WEBSOCKET_AUTH_TOKEN, "sWebsocketA
 static int connect_server(int *sock, sa_family_t family, const char *host, uint16_t port)
 {
     const char *family_str = family == AF_INET ? "IPv4" : "IPv6";
-    static struct addrinfo hints;
-    struct addrinfo *addr;
+    static struct zsock_addrinfo hints;
+    struct zsock_addrinfo *addr;
     int ret = 0;
     char port_str[6];
 
@@ -66,7 +66,7 @@ static int connect_server(int *sock, sa_family_t family, const char *host, uint1
 
     hints.ai_family = family;
     hints.ai_socktype = SOCK_STREAM;
-    ret = getaddrinfo(host, port_str, &hints, &addr);
+    ret = zsock_getaddrinfo(host, port_str, &hints, &addr);
     if (ret != 0) {
         LOG_ERR("Unable to resolve %s for %s, ret:%d, errno:%d", family_str, host, ret, errno);
         return ret;
@@ -83,16 +83,17 @@ static int connect_server(int *sock, sa_family_t family, const char *host, uint1
             CA_CERTIFICATE_TAG,
         };
 
-        *sock = socket(addr->ai_family, addr->ai_socktype, IPPROTO_TLS_1_2);
+        *sock = zsock_socket(addr->ai_family, addr->ai_socktype, IPPROTO_TLS_1_2);
         if (*sock >= 0) {
-            ret = setsockopt(*sock, SOL_TLS, TLS_SEC_TAG_LIST, sec_tag_list, sizeof(sec_tag_list));
+            ret = zsock_setsockopt(*sock, SOL_TLS, TLS_SEC_TAG_LIST, sec_tag_list,
+                                   sizeof(sec_tag_list));
             if (ret < 0) {
                 LOG_ERR("Failed to set secure option (%d)", -errno);
                 ret = -errno;
                 goto fail;
             }
 
-            ret = setsockopt(*sock, SOL_TLS, TLS_HOSTNAME, host, strlen(host) + 1);
+            ret = zsock_setsockopt(*sock, SOL_TLS, TLS_HOSTNAME, host, strlen(host) + 1);
             if (ret < 0) {
                 LOG_ERR("Failed to set TLS_HOSTNAME option (%d)", -errno);
                 ret = -errno;
@@ -101,7 +102,7 @@ static int connect_server(int *sock, sa_family_t family, const char *host, uint1
         }
     }
     else {
-        *sock = socket(addr->ai_family, addr->ai_socktype, IPPROTO_TCP);
+        *sock = zsock_socket(addr->ai_family, addr->ai_socktype, IPPROTO_TCP);
     }
 
     if (*sock < 0) {
@@ -109,7 +110,7 @@ static int connect_server(int *sock, sa_family_t family, const char *host, uint1
         return -errno;
     }
 
-    ret = connect(*sock, addr->ai_addr, addr->ai_addrlen);
+    ret = zsock_connect(*sock, addr->ai_addr, addr->ai_addrlen);
     if (ret < 0) {
         LOG_ERR("Failed to connect to socket (%d)", -errno);
         ret = -errno;
@@ -120,7 +121,7 @@ static int connect_server(int *sock, sa_family_t family, const char *host, uint1
 
 fail:
     if (*sock >= 0) {
-        close(*sock);
+        zsock_close(*sock);
         *sock = -1;
     }
 
@@ -298,7 +299,7 @@ static void websocket_thread(void)
         }
         else {
             LOG_ERR("Failed to connect to WebSocket (%d)", websock);
-            close(sock);
+            zsock_close(sock);
             k_sleep(K_SECONDS(10));
             continue;
         }

@@ -3,20 +3,20 @@
 tests:
   thingset_sdk.storage_eeprom.default:
     integration_platforms:
-      - native_posix_64
+      - native_posix/native/64
     platform_exclude:
       # native sim with at24 emul EEPROM currently fails for unknown reasons
       - native_sim
     extra_args: EXTRA_CFLAGS=-Werror
   thingset_sdk.storage_eeprom.inhibit_overwrite:
     integration_platforms:
-      - native_posix_64
+      - native_posix/native/64
     extra_args: EXTRA_CFLAGS=-Werror
     extra_configs:
       - CONFIG_THINGSET_STORAGE_INHIBIT_OVERWRITE=y
   thingset_sdk.storage_eeprom.duplicate:
     integration_platforms:
-      - native_posix_64
+      - native_posix/native/64
     platform_exclude:
       # native sim with at24 emul EEPROM currently fails for unknown reasons
       - native_sim
@@ -25,7 +25,7 @@ tests:
       - CONFIG_THINGSET_STORAGE_EEPROM_DUPLICATE=y
   thingset_sdk.storage_eeprom.progressive:
     integration_platforms:
-      - native_posix_64
+      - native_posix/native/64
     platform_exclude:
       # native sim with at24 emul EEPROM currently fails for unknown reasons
       - native_sim
@@ -34,7 +34,7 @@ tests:
       - CONFIG_THINGSET_STORAGE_EEPROM_PROGRESSIVE_IMPORT_EXPORT=y
   thingset_sdk.storage_eeprom.progressive_duplicate:
     integration_platforms:
-      - native_posix_64
+      - native_posix/native/64
     platform_exclude:
       # native sim with at24 emul EEPROM currently fails for unknown reasons
       - native_sim

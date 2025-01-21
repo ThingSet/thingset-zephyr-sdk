@@ -73,7 +73,7 @@ static void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t
             struct net_if_ipv4 *ipv4;
             err = net_if_config_ipv4_get(iface, &ipv4);
             if (!err) {
-                uint32_t ip = ipv4->unicast[0].address.in_addr.s_addr;
+                uint32_t ip = ipv4->unicast[0].ipv4.address.in_addr.s_addr;
                 snprintf(ipv4_addr, sizeof(ipv4_addr), "%d.%d.%d.%d", ip & 0xFF, (ip >> 8) & 0xFF,
                          (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
                 LOG_INF("WiFi connected with status %d, IP: %s", status->status, ipv4_addr);
