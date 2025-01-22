@@ -221,7 +221,7 @@ static void websocket_regular_report_handler(struct k_work *work)
 #endif
 
 /* disabled because struct sigaction is not found when compiled for Zephyr v3.6 */
-#if defined(CONFIG_BOARD_NATIVE_POSIX) && 0
+#if defined(CONFIG_BOARD_NATIVE_SIM) && 0
 static struct sigaction sigact_default;
 
 static void websocket_shutdown(int sig)
@@ -245,7 +245,7 @@ static void websocket_thread(void)
     int ret;
 
 /* disabled because struct sigaction is not found when compiled for Zephyr v3.6 */
-#if defined(CONFIG_BOARD_NATIVE_POSIX) && 0
+#if defined(CONFIG_BOARD_NATIVE_SIM) && 0
     /* Ensure graceful shutdown of the socket for Ctrl+C on the console. */
     struct sigaction sigact = { 0 };
     sigact.sa_handler = websocket_shutdown;

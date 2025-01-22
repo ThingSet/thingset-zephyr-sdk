@@ -2,10 +2,10 @@
 
 This repository contains a software development kit (SDK) based on Zephyr RTOS to integrate communication interfaces using the ThingSet protocol into an application with minimum effort.
 
-## Testing with native_posix board
+## Testing with native_sim board
 
 ```
-west build -b native_posix samples/counter -t run
+west build -b native_sim samples/counter -t run
 ```
 
 ## Testing with LoRaWAN
@@ -17,10 +17,10 @@ west build -b olimex_lora_stm32wl_devkit samples/counter -- -DEXTRA_CONF_FILE=lo
 ## Testing with CAN bus
 
 ```
-west build -b native_posix samples/counter -t run -- -DEXTRA_CONF_FILE=can.conf
+west build -b native_sim samples/counter -t run -- -DEXTRA_CONF_FILE=can.conf
 ```
 
-## Testing WebSocket with native_posix
+## Testing WebSocket with native_sim
 
 Start net-setup from Zephyr net-tools to create `zeth` interface:
 
@@ -41,7 +41,7 @@ sudo iptables -A FORWARD -i zeth -o wifi0 -j ACCEPT
 Afterwards run the nativ_posix board with websocket support from another shell:
 
 ```
-west build -b native_posix samples/counter -- -DEXTRA_CONF_FILE="native_websocket.conf storage_flash.conf"
+west build -b native_sim samples/counter -- -DEXTRA_CONF_FILE="native_websocket.conf storage_flash.conf"
 ./build/zephyr/zephyr.exe -flash=samples/counter/virtual-flash.bin
 ```
 

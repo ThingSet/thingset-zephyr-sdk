@@ -120,23 +120,23 @@ static void generate_device_eui()
 
     BUILD_ASSERT(sizeof(eui64) == 8);
 
-#ifndef CONFIG_BOARD_NATIVE_POSIX
+#ifndef CONFIG_BOARD_NATIVE_SIM
     hwinfo_get_device_id(buf, sizeof(buf));
 #else
 
 #ifndef CONFIG_THINGSET_PID_EUI
-    /* hwinfo is not available in native_posix, so we use random data instead */
+    /* hwinfo is not available in native_sim, so we use random data instead */
     for (int i = 0; i < sizeof(buf); i++) {
         buf[i] = sys_rand32_get() & 0xFF;
     }
 #else
-    /* hwinfo is not available in native_posix, so we take task PID instead */
+    /* hwinfo is not available in native_sim, so we take task PID instead */
     int pid = getpid();
 
     snprintk(buf, sizeof(buf), "%X", pid);
 #endif
 
-#endif
+#endif /* CONFIG_BOARD_NATIVE_SIM */
 
     crc = crc32_ieee(buf, 8);
     memcpy(eui64, &crc, 4);

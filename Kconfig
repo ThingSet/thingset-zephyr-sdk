@@ -65,7 +65,7 @@ config THINGSET_GENERATE_NODE_ID
 config THINGSET_PID_EUI
 	bool "Use task PID as EUI basis for EUI generation"
 	depends on THINGSET_GENERATE_NODE_ID
-	depends on BOARD_NATIVE_POSIX
+	depends on BOARD_NATIVE_SIM
 
 config THINGSET_NODE_NAME
 	string "Default ThingSet node name"
