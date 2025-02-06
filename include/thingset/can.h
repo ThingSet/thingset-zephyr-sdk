@@ -269,6 +269,8 @@ struct thingset_can
 #endif
     int64_t next_live_report_time;
 #ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
+    bool control_enable;
+    uint32_t control_period;
     int64_t next_control_report_time;
 #endif
     struct k_timer timeout_timer;
