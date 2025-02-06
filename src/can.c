@@ -61,6 +61,11 @@ struct thingset_can_rx_context
     bool started;
 };
 
+#ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
+bool control_reporting_enable = IS_ENABLED(CONFIG_THINGSET_REPORTING_CONTROL_ENABLE_PRESET);
+uint32_t control_reporting_period = CONFIG_THINGSET_CAN_CONTROL_REPORTING_PERIOD;
+#endif
+
 NET_BUF_POOL_DEFINE(thingset_can_rx_buffer_pool, CONFIG_THINGSET_CAN_REPORT_RX_NUM_BUFFERS,
                     CONFIG_THINGSET_CAN_REPORT_RX_BUFFER_SIZE,
                     sizeof(struct thingset_can_rx_context), NULL);
@@ -383,7 +388,7 @@ static void thingset_can_control_reporting_handler(struct k_work *work)
     struct shared_buffer *sbuf = thingset_sdk_shared_buffer();
 
     struct thingset_data_object *obj = NULL;
-    while (live_reporting_enable
+    while (ts_can->control_enable
            && (obj = thingset_iterate_subsets(&ts, CONFIG_THINGSET_CAN_CONTROL_SUBSET, obj))
                   != NULL)
     {
@@ -418,11 +423,10 @@ static void thingset_can_control_reporting_handler(struct k_work *work)
         obj++; /* continue with object behind current one */
     }
 
-    ts_can->next_control_report_time += CONFIG_THINGSET_CAN_CONTROL_REPORTING_PERIOD;
+    ts_can->next_control_report_time += ts_can->control_period;
     if (ts_can->next_control_report_time <= k_uptime_get()) {
         /* ensure proper initialization of next_control_report_time */
-        ts_can->next_control_report_time =
-            k_uptime_get() + CONFIG_THINGSET_CAN_CONTROL_REPORTING_PERIOD;
+        ts_can->next_control_report_time = k_uptime_get() + ts_can->control_period;
     }
 
     thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(ts_can->next_control_report_time));
@@ -606,6 +610,8 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     k_work_init_delayable(&ts_can->live_reporting_work, thingset_can_live_reporting_handler);
 #endif
 #ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
+    ts_can->control_enable = control_reporting_enable;
+    ts_can->control_period = control_reporting_period;
     k_work_init_delayable(&ts_can->control_reporting_work, thingset_can_control_reporting_handler);
 #endif
     k_work_init_delayable(&ts_can->addr_claim_work, thingset_can_addr_claim_tx_handler);
