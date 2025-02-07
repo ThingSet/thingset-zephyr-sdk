@@ -401,7 +401,7 @@ static void thingset_can_control_reporting_handler(struct k_work *work)
         else if (data_len > 0) {
             memcpy(frame.data, sbuf->data, data_len);
             k_sem_give(&sbuf->lock);
-            frame.id = THINGSET_CAN_TYPE_SF_REPORT | THINGSET_CAN_PRIO_REPORT_LOW
+            frame.id = THINGSET_CAN_TYPE_SF_REPORT | THINGSET_CAN_PRIO_CONTROL_LOW
                        | THINGSET_CAN_DATA_ID_SET(obj->id)
                        | THINGSET_CAN_SOURCE_SET(ts_can->node_addr);
 #ifdef CONFIG_CAN_FD_MODE
