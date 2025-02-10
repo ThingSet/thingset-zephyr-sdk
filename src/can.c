@@ -605,7 +605,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     k_work_init_delayable(&ts_can->live_reporting_work, thingset_can_live_reporting_handler);
 #endif
 #ifdef CONFIG_THINGSET_CAN_CONTROL_REPORTING
-    ts_can->control_enable = IS_ENABLED(CONFIG_THINGSET_REPORTING_CONTROL_ENABLE_PRESET);
+    ts_can->control_enable = IS_ENABLED(CONFIG_THINGSET_CAN_CONTROL_REPORTING_ENABLE_PRESET);
     ts_can->control_period = CONFIG_THINGSET_CAN_CONTROL_REPORTING_PERIOD;
     k_work_init_delayable(&ts_can->control_reporting_work, thingset_can_control_reporting_handler);
 #endif
