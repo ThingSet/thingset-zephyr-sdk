@@ -91,6 +91,11 @@ config THINGSET_CAN_CONTROL_SUBSET
 	hex "Subset containing control data to be published"
 	depends on THINGSET_CAN_CONTROL_REPORTING
 
+config THINGSET_CAN_CONTROL_REPORTING_ENABLE_PRESET
+	bool "Control reporting broadcast will be enabled at boot time if set"
+	depends on THINGSET_CAN_CONTROL_REPORTING
+	default y
+
 config THINGSET_CAN_CONTROL_REPORTING_PERIOD
 	int "Control data reporting interval in milliseconds"
 	depends on THINGSET_CAN_CONTROL_REPORTING
