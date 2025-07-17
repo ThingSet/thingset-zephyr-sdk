@@ -709,8 +709,6 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         return filter_id;
     }
 
-    uint32_t start = k_uptime_get();
-    uint32_t elapsed_ms = 0;
     k_sleep(K_MSEC(sys_rand32_get() % 50));
     while (1) {
         k_event_clear(&ts_can->events, EVENT_ADDRESS_ALREADY_USED);
@@ -727,11 +725,6 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
                            ts_can);
 
             if (err != 0) {
-                elapsed_ms += (k_uptime_get() - start);
-                if (timeout_ms > 0 && elapsed_ms > timeout_ms) {
-                    can_remove_rx_filter(ts_can->dev, filter_id);
-                    return -ETIMEDOUT;
-                }
                 k_sleep(K_MSEC(100));
                 continue;
             }
@@ -749,9 +742,15 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
          * claim - if we've already got one from the previous discovery frame trasmissions then
          * immediately retry with a new address
          */
-        uint32_t event =
-            k_event_wait(&ts_can->events, EVENT_ADDRESS_ALREADY_USED, false, K_MSEC(500));
-        if (event & EVENT_ADDRESS_ALREADY_USED) {
+        uint32_t event = k_event_wait(&ts_can->events,
+                                      EVENT_ADDRESS_ALREADY_USED | EVENT_ADDRESS_CLAIM_TIMED_OUT,
+                                      false, K_MSEC(500));
+        if (event & EVENT_ADDRESS_CLAIM_TIMED_OUT) {
+            LOG_ERR("Address claim timed out");
+            k_timer_stop(&ts_can->timeout_timer);
+            return -ETIMEDOUT;
+        }
+        else if (event & EVENT_ADDRESS_ALREADY_USED) {
             /* try again with new random node_addr */
             ts_can->node_addr =
                 CONFIG_THINGSET_CAN_ADDR_MIN
@@ -765,9 +764,15 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
             thingset_sdk_reschedule_work(&ts_can->addr_claim_work, K_NO_WAIT);
 
             event = k_event_wait(&ts_can->events,
-                                 EVENT_ADDRESS_CLAIM_MSG_SENT | EVENT_ADDRESS_ALREADY_USED, false,
-                                 K_MSEC(100));
-            if (event & EVENT_ADDRESS_ALREADY_USED) {
+                                 EVENT_ADDRESS_CLAIM_MSG_SENT | EVENT_ADDRESS_ALREADY_USED
+                                     | EVENT_ADDRESS_CLAIM_TIMED_OUT,
+                                 false, K_MSEC(100));
+            if (event & EVENT_ADDRESS_CLAIM_TIMED_OUT) {
+                LOG_ERR("Address claim timed out");
+                k_timer_stop(&ts_can->timeout_timer);
+                return -ETIMEDOUT;
+            }
+            else if (event & EVENT_ADDRESS_ALREADY_USED) {
                 ts_can->node_addr =
                     CONFIG_THINGSET_CAN_ADDR_MIN
                     + sys_rand32_get()
@@ -797,6 +802,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
             if (err_cnt_after.tx_err_cnt <= err_cnt_before.tx_err_cnt) {
                 /* address claiming is finished */
                 k_event_post(&ts_can->events, EVENT_ADDRESS_CLAIMING_FINISHED);
+                k_timer_stop(&ts_can->timeout_timer);
                 LOG_INF("Using CAN node address 0x%.2X on %s", ts_can->node_addr,
                         ts_can->dev->name);
                 break;
