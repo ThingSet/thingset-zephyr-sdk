@@ -780,7 +780,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
                 LOG_WRN("Node addr already in use, trying 0x%.2X", ts_can->node_addr);
                 continue;
             }
-            if (!(event & EVENT_ADDRESS_CLAIM_MSG_SENT)) {
+            else if (!(event & EVENT_ADDRESS_CLAIM_MSG_SENT)) {
                 k_sleep(K_MSEC(100));
 
                 /**
