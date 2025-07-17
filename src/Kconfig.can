@@ -11,6 +11,14 @@ menuconfig THINGSET_CAN
 
 if THINGSET_CAN
 
+config THINGSET_CAN_ADDR_MIN
+	int "CAN address range minimum"
+	default 1
+
+config THINGSET_CAN_ADDR_MAX
+	int "CAN address range maximum"
+	default 252
+
 config THINGSET_CAN_RX_BUF_SIZE
 	int "ThingSet CAN RX buffer size"
 	range 64 2048
@@ -187,5 +195,9 @@ config THINGSET_CAN_THREAD_PRIORITY
 	  via CAN ISO-TP.
 
 	  Only available for single-instance implementation.
+
+config THINGSET_CAN_SAVE_ADDR_ON_STARTUP
+	bool "ThingSet CAN persist CAN address on startup"
+	default y
 
 endif # THINGSET_CAN
