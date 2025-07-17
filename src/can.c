@@ -22,10 +22,13 @@ LOG_MODULE_REGISTER(thingset_can, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 extern uint8_t eui64[8];
 
-#define EVENT_ADDRESS_CLAIM_MSG_SENT    BIT(1)
-#define EVENT_ADDRESS_CLAIMING_FINISHED BIT(2)
-#define EVENT_ADDRESS_ALREADY_USED      BIT(3)
+#define EVENT_ADDRESS_CLAIM_MSG_SENT    BIT(0)
+#define EVENT_ADDRESS_CLAIMING_FINISHED BIT(1)
+#define EVENT_ADDRESS_ALREADY_USED      BIT(2)
+#define EVENT_ADDRESS_DISCOVER_MSG_SENT BIT(3)
 #define EVENT_ADDRESS_CLAIM_TIMED_OUT   BIT(4)
+
+#define NUM_DISCO_FRAME_TX (3)
 
 #ifdef CONFIG_THINGSET_CAN_ITEM_RX
 static const struct can_filter sf_report_filter = {
@@ -121,9 +124,14 @@ static void thingset_can_addr_claim_tx_cb(const struct device *dev, int error, v
     }
 }
 
-static void thingset_can_addr_discovery_tx_cb(const struct device *dev, int error, void *user_data)
+static void thingset_can_addr_discover_tx_cb(const struct device *dev, int error, void *user_data)
 {
-    if (error != 0) {
+    struct thingset_can *ts_can = user_data;
+
+    if (error == 0) {
+        k_event_post(&ts_can->events, EVENT_ADDRESS_DISCOVER_MSG_SENT);
+    }
+    else {
         LOG_ERR("Address discovery failed with %d", error);
     }
 }
@@ -154,12 +162,27 @@ static void thingset_can_addr_claim_tx_handler(struct k_work *work)
     }
 }
 
+static void thingset_can_any_addr_discovery_rx_cb(const struct device *dev, struct can_frame *frame,
+                                                  void *user_data)
+{
+    struct thingset_can *ts_can = user_data;
+
+    uint8_t source_addr = THINGSET_CAN_TARGET_GET(frame->id);
+    if (source_addr == ts_can->node_addr) {
+        /* seen a discovery frame for an address we are already in the process of claiming */
+        LOG_DBG("Received address discovery frame with ID %X (rand %.2X)", frame->id,
+                THINGSET_CAN_RAND_GET(frame->id));
+
+        thingset_sdk_reschedule_work(&ts_can->addr_claim_work, K_NO_WAIT);
+    }
+}
+
 static void thingset_can_addr_discovery_rx_cb(const struct device *dev, struct can_frame *frame,
                                               void *user_data)
 {
     struct thingset_can *ts_can = user_data;
 
-    LOG_INF("Received address discovery frame with ID %X (rand %.2X)", frame->id,
+    LOG_DBG("Received address discovery frame with ID %X (rand %.2X)", frame->id,
             THINGSET_CAN_RAND_GET(frame->id));
 
     thingset_sdk_reschedule_work(&ts_can->addr_claim_work, K_NO_WAIT);
@@ -171,7 +194,7 @@ static void thingset_can_addr_claim_rx_cb(const struct device *dev, struct can_f
     struct thingset_can *ts_can = user_data;
     uint8_t *data = frame->data;
 
-    LOG_INF("Received address claim from node 0x%.2X with EUI-64 "
+    LOG_DBG("Received address claim from node 0x%.2X with EUI-64 "
             "%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x",
             THINGSET_CAN_SOURCE_GET(frame->id), data[0], data[1], data[2], data[3], data[4],
             data[5], data[6], data[7]);
@@ -583,7 +606,11 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
 {
     struct can_frame tx_frame = {
         .flags = CAN_FRAME_IDE,
+        .dlc = sizeof(eui64),
     };
+
+    memcpy(tx_frame.data, eui64, sizeof(eui64));
+
     int filter_id;
     int err;
 
@@ -615,8 +642,10 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
     ts_can->route = bus_number;
 
     /* set initial address (will be changed if already used on the bus) */
-    if (ts_can->node_addr < THINGSET_CAN_ADDR_MIN || ts_can->node_addr > THINGSET_CAN_ADDR_MAX) {
-        ts_can->node_addr = THINGSET_CAN_ADDR_MIN;
+    if (ts_can->node_addr < CONFIG_THINGSET_CAN_ADDR_MIN
+        || ts_can->node_addr > CONFIG_THINGSET_CAN_ADDR_MAX)
+    {
+        ts_can->node_addr = CONFIG_THINGSET_CAN_ADDR_MIN;
     }
 
     k_event_init(&ts_can->events);
@@ -667,39 +696,67 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         return filter_id;
     }
 
+    struct can_filter any_addr_discovery_filter = {
+        .id = THINGSET_CAN_TYPE_NETWORK | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS),
+        .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_SOURCE_MASK,
+        .flags = CAN_FILTER_IDE,
+    };
+
+    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_any_addr_discovery_rx_cb, ts_can,
+                                  &any_addr_discovery_filter);
+    if (filter_id < 0) {
+        LOG_ERR("Unable to add any_addr_disc filter: %d", filter_id);
+        return filter_id;
+    }
+
+    uint32_t start = k_uptime_get();
+    uint32_t elapsed_ms = 0;
+    k_sleep(K_MSEC(sys_rand32_get() % 50));
     while (1) {
-        k_event_clear(&ts_can->events, EVENT_ADDRESS_CLAIM_MSG_SENT
-                                           | EVENT_ADDRESS_CLAIMING_FINISHED
-                                           | EVENT_ADDRESS_ALREADY_USED);
+        k_event_clear(&ts_can->events, EVENT_ADDRESS_ALREADY_USED);
 
         /* send out address discovery frame */
         uint8_t rand = sys_rand32_get() & 0xFF;
         tx_frame.id = THINGSET_CAN_PRIO_NETWORK_MGMT | THINGSET_CAN_TYPE_NETWORK
                       | THINGSET_CAN_RAND_SET(rand) | THINGSET_CAN_TARGET_SET(ts_can->node_addr)
                       | THINGSET_CAN_SOURCE_SET(THINGSET_CAN_ADDR_ANONYMOUS);
-        tx_frame.dlc = 0;
-        err =
-            can_send(ts_can->dev, &tx_frame, K_MSEC(10), thingset_can_addr_discovery_tx_cb, ts_can);
-        if (err != 0) {
-            k_sleep(K_MSEC(100));
-            continue;
+
+        /* send up to three discovery frames at 100ms intervals */
+        for (int i = 0; i < NUM_DISCO_FRAME_TX; ++i) {
+            err = can_send(ts_can->dev, &tx_frame, K_MSEC(10), thingset_can_addr_discover_tx_cb,
+                           ts_can);
+
+            if (err != 0) {
+                elapsed_ms += (k_uptime_get() - start);
+                if (timeout_ms > 0 && elapsed_ms > timeout_ms) {
+                    can_remove_rx_filter(ts_can->dev, filter_id);
+                    return -ETIMEDOUT;
+                }
+                k_sleep(K_MSEC(100));
+                continue;
+            }
+
+            /* don't send any more discovery frames if the address is already in use */
+            uint32_t event =
+                k_event_wait(&ts_can->events, EVENT_ADDRESS_ALREADY_USED, false, K_MSEC(100));
+            if (event & EVENT_ADDRESS_ALREADY_USED) {
+                break;
+            }
         }
 
-        /* wait 500 ms for address claim message from other node */
-        uint32_t event = k_event_wait(&ts_can->events,
-                                      EVENT_ADDRESS_ALREADY_USED | EVENT_ADDRESS_CLAIM_TIMED_OUT,
-                                      false, K_MSEC(500));
+        /**
+         * wait 500 ms after sending last discovery frame for another node to transmit an address
+         * claim - if we've already got one from the previous discovery frame trasmissions then
+         * immediately retry with a new address
+         */
+        uint32_t event =
+            k_event_wait(&ts_can->events, EVENT_ADDRESS_ALREADY_USED, false, K_MSEC(500));
         if (event & EVENT_ADDRESS_ALREADY_USED) {
-            /* try again with new random node_addr between 0x01 and 0xFD */
+            /* try again with new random node_addr */
             ts_can->node_addr =
-                THINGSET_CAN_ADDR_MIN
-                + sys_rand32_get() % (THINGSET_CAN_ADDR_MAX - THINGSET_CAN_ADDR_MIN);
+                CONFIG_THINGSET_CAN_ADDR_MIN
+                + sys_rand32_get() % (CONFIG_THINGSET_CAN_ADDR_MAX - CONFIG_THINGSET_CAN_ADDR_MIN);
             LOG_WRN("Node addr already in use, trying 0x%.2X", ts_can->node_addr);
-        }
-        else if (event & EVENT_ADDRESS_CLAIM_TIMED_OUT) {
-            LOG_ERR("Address claim timed out");
-            k_timer_stop(&ts_can->timeout_timer);
-            return -ETIMEDOUT;
         }
         else {
             struct can_bus_err_cnt err_cnt_before;
@@ -708,15 +765,29 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
             thingset_sdk_reschedule_work(&ts_can->addr_claim_work, K_NO_WAIT);
 
             event = k_event_wait(&ts_can->events,
-                                 EVENT_ADDRESS_CLAIM_MSG_SENT | EVENT_ADDRESS_CLAIM_TIMED_OUT,
-                                 false, K_MSEC(100));
-            if (event & EVENT_ADDRESS_CLAIM_TIMED_OUT) {
-                LOG_ERR("Address claim timed out");
-                k_timer_stop(&ts_can->timeout_timer);
-                return -ETIMEDOUT;
+                                 EVENT_ADDRESS_CLAIM_MSG_SENT | EVENT_ADDRESS_ALREADY_USED, false,
+                                 K_MSEC(100));
+            if (event & EVENT_ADDRESS_ALREADY_USED) {
+                ts_can->node_addr =
+                    CONFIG_THINGSET_CAN_ADDR_MIN
+                    + sys_rand32_get()
+                          % (CONFIG_THINGSET_CAN_ADDR_MAX - CONFIG_THINGSET_CAN_ADDR_MIN);
+                LOG_WRN("Node addr already in use, trying 0x%.2X", ts_can->node_addr);
+                continue;
             }
-            else if (!(event & EVENT_ADDRESS_CLAIM_MSG_SENT)) {
+            if (!(event & EVENT_ADDRESS_CLAIM_MSG_SENT)) {
                 k_sleep(K_MSEC(100));
+
+                /**
+                 * check for a timeout here to prevent an infinite loop in the case that discovery
+                 * frames transmit successfully but an address claim fails
+                 */
+                elapsed_ms += (k_uptime_get() - start);
+                if (timeout_ms > 0 && elapsed_ms > timeout_ms) {
+                    can_remove_rx_filter(ts_can->dev, filter_id);
+                    return -ETIMEDOUT;
+                }
+
                 continue;
             }
 
@@ -726,7 +797,6 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
             if (err_cnt_after.tx_err_cnt <= err_cnt_before.tx_err_cnt) {
                 /* address claiming is finished */
                 k_event_post(&ts_can->events, EVENT_ADDRESS_CLAIMING_FINISHED);
-                k_timer_stop(&ts_can->timeout_timer);
                 LOG_INF("Using CAN node address 0x%.2X on %s", ts_can->node_addr,
                         ts_can->dev->name);
                 break;
@@ -738,7 +808,7 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         }
     }
 
-#if CONFIG_THINGSET_STORAGE
+#if defined(CONFIG_THINGSET_STORAGE) && defined(CONFIG_THINGSET_CAN_SAVE_ADDR_ON_STARTUP)
     /* save node address as init value for next boot-up */
     thingset_storage_save_queued(false);
 #endif
@@ -749,12 +819,15 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         .mask = THINGSET_CAN_TYPE_MASK | THINGSET_CAN_SOURCE_MASK | THINGSET_CAN_TARGET_MASK,
         .flags = CAN_FILTER_IDE,
     };
-    filter_id = can_add_rx_filter(ts_can->dev, thingset_can_addr_discovery_rx_cb, ts_can,
-                                  &addr_discovery_filter);
-    if (filter_id < 0) {
-        LOG_ERR("Unable to add addr_discovery filter: %d", filter_id);
-        return filter_id;
+    int new_filter_id = can_add_rx_filter(ts_can->dev, thingset_can_addr_discovery_rx_cb, ts_can,
+                                          &addr_discovery_filter);
+    if (new_filter_id < 0) {
+        LOG_ERR("Unable to add addr_discovery filter: %d", new_filter_id);
+        return new_filter_id;
     }
+
+    /* now remove the any-address discovery filter having set up the more specific one */
+    can_remove_rx_filter(ts_can->dev, filter_id);
 
     struct isotp_fast_addr rx_addr = {
         .ext_id = THINGSET_CAN_TYPE_REQRESP | THINGSET_CAN_PRIO_REQRESP
