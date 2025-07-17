@@ -199,18 +199,18 @@ static int thingset_eeprom_save(off_t offset, size_t useable_size)
                                    &sbuf->data[i * CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE],
                                    write_size);
                 if (err) {
-                    LOG_DBG("Write error %d", -err);
+                    LOG_ERR("Write error %d, attempt %i, write size %i", -err, i, write_size);
                     continue;
                 }
                 err = eeprom_read(eeprom_dev, offset + chunk_offset, &read_back, write_size);
                 if (err) {
-                    LOG_DBG("Read error %d", -err);
+                    LOG_ERR("Read error %d, attempt %i, write size %i", -err, i, write_size);
                     continue;
                 }
                 err = memcmp(&sbuf->data[i * CONFIG_THINGSET_STORAGE_EEPROM_CHUNK_SIZE], read_back,
                              write_size);
                 if (err) {
-                    LOG_DBG("Verify error %d", err);
+                    LOG_ERR("Verify error %d, attempt %i, write size %i", -err, i, write_size);
                     continue;
                 }
                 else {
@@ -218,6 +218,7 @@ static int thingset_eeprom_save(off_t offset, size_t useable_size)
                 }
             }
             if (err) {
+                k_sem_give(&ts.lock);
                 LOG_ERR("Error %d writing EEPROM.", -err);
                 break;
             }
