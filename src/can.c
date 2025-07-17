@@ -745,17 +745,17 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
         uint32_t event = k_event_wait(&ts_can->events,
                                       EVENT_ADDRESS_ALREADY_USED | EVENT_ADDRESS_CLAIM_TIMED_OUT,
                                       false, K_MSEC(500));
-        if (event & EVENT_ADDRESS_CLAIM_TIMED_OUT) {
-            LOG_ERR("Address claim timed out");
-            k_timer_stop(&ts_can->timeout_timer);
-            return -ETIMEDOUT;
-        }
-        else if (event & EVENT_ADDRESS_ALREADY_USED) {
+        if (event & EVENT_ADDRESS_ALREADY_USED) {
             /* try again with new random node_addr */
             ts_can->node_addr =
                 CONFIG_THINGSET_CAN_ADDR_MIN
                 + sys_rand32_get() % (CONFIG_THINGSET_CAN_ADDR_MAX - CONFIG_THINGSET_CAN_ADDR_MIN);
             LOG_WRN("Node addr already in use, trying 0x%.2X", ts_can->node_addr);
+        }
+        else if (event & EVENT_ADDRESS_CLAIM_TIMED_OUT) {
+            LOG_ERR("Address claim timed out");
+            k_timer_stop(&ts_can->timeout_timer);
+            return -ETIMEDOUT;
         }
         else {
             struct can_bus_err_cnt err_cnt_before;
