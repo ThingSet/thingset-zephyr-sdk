@@ -782,17 +782,6 @@ int thingset_can_init_inst(struct thingset_can *ts_can, const struct device *can
             }
             else if (!(event & EVENT_ADDRESS_CLAIM_MSG_SENT)) {
                 k_sleep(K_MSEC(100));
-
-                /**
-                 * check for a timeout here to prevent an infinite loop in the case that discovery
-                 * frames transmit successfully but an address claim fails
-                 */
-                elapsed_ms += (k_uptime_get() - start);
-                if (timeout_ms > 0 && elapsed_ms > timeout_ms) {
-                    can_remove_rx_filter(ts_can->dev, filter_id);
-                    return -ETIMEDOUT;
-                }
-
                 continue;
             }
 
