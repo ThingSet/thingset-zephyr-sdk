@@ -15,7 +15,7 @@ config THINGSET_SHELL_CMD_BUF_SIZE
 	default 128
 
 config THINGSET_SHELL_REPORTING
-	bool "Print regular reports to console"
+	bool "Print regular reports to shell"
 	default y
 	help
 	  Printing live metrics reports to the shell can quickly flood the shell
