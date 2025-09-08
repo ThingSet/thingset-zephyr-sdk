@@ -91,8 +91,9 @@ THINGSET_ADD_GROUP(TS_ID_ROOT, TS_ID_REPORTING, "_Reporting", THINGSET_NO_CALLBA
 THINGSET_ADD_GROUP(TS_ID_REPORTING, TS_ID_REP_LIVE, TS_NAME_SUBSET_LIVE, NULL);
 THINGSET_ADD_ITEM_BOOL(TS_ID_REP_LIVE, TS_ID_REP_LIVE_ENABLE, "sEnable", &live_reporting_enable,
                        THINGSET_ANY_RW, TS_SUBSET_NVM);
-THINGSET_ADD_ITEM_UINT32(TS_ID_REP_LIVE, TS_ID_REP_LIVE_PERIOD, "sPeriod_s", &live_reporting_period,
-                         THINGSET_ANY_RW, TS_SUBSET_NVM);
+/* Period is now defined in milliseconds */
+THINGSET_ADD_ITEM_UINT32(TS_ID_REP_LIVE, TS_ID_REP_LIVE_PERIOD, "sPeriod_ms",
+                         &live_reporting_period, THINGSET_ANY_RW, TS_SUBSET_NVM);
 #endif
 
 #ifdef CONFIG_THINGSET_SUBSET_SUMMARY_METRICS
