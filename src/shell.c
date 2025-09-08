@@ -72,7 +72,7 @@ static void shell_regular_report_handler(struct k_work *work)
         k_sem_give(&tx_buf->lock);
     }
 
-    pub_time += 1000 * live_reporting_period;
+    pub_time += live_reporting_period;
     thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(pub_time));
 }
 

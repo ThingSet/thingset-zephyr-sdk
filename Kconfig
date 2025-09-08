@@ -33,9 +33,9 @@ config THINGSET_REPORTING_LIVE_ENABLE_PRESET
 	default y
 
 config THINGSET_REPORTING_LIVE_PERIOD_PRESET
-	int "Default period (s) for live metrics reporting"
-	depends on THINGSET_SUBSET_LIVE_METRICS
-	default 1
+    int "Default period (ms) for live metrics reporting"
+    depends on THINGSET_SUBSET_LIVE_METRICS
+    default 1000
 
 config THINGSET_SUBSET_SUMMARY_METRICS
 	bool "Use mSummary subset (for infrequent reporting)"

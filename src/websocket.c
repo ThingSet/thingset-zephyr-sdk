@@ -215,7 +215,7 @@ static void websocket_regular_report_handler(struct k_work *work)
         thingset_websocket_send_report(TS_NAME_SUBSET_LIVE);
     }
 
-    pub_time += 1000 * live_reporting_period;
+    pub_time += live_reporting_period;
     thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(pub_time));
 }
 
