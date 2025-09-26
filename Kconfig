@@ -32,7 +32,7 @@ config THINGSET_REPORTING_LIVE_ENABLE_PRESET
 	depends on THINGSET_SUBSET_LIVE_METRICS
 	default y
 
-config THINGSET_REPORTING_LIVE_PERIOD_PRESET
+config THINGSET_REPORTING_LIVE_PERIOD_PRESET_MS
     int "Default period (ms) for live metrics reporting"
     depends on THINGSET_SUBSET_LIVE_METRICS
     default 1000
