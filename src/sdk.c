@@ -54,7 +54,7 @@ static struct k_work_q thingset_workq;
 
 #ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
 bool live_reporting_enable = IS_ENABLED(CONFIG_THINGSET_REPORTING_LIVE_ENABLE_PRESET);
-uint32_t live_reporting_period = CONFIG_THINGSET_REPORTING_LIVE_PERIOD_PRESET;
+uint32_t live_reporting_period = CONFIG_THINGSET_REPORTING_LIVE_PERIOD_PRESET_MS;
 #endif
 
 #ifdef CONFIG_THINGSET_SUBSET_SUMMARY_METRICS
