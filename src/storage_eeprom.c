@@ -21,6 +21,8 @@ LOG_MODULE_REGISTER(thingset_storage_eeprom, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
 #if DT_NODE_EXISTS(DT_CHOSEN(thingset_eeprom))
 #define EEPROM_DEVICE_NODE DT_CHOSEN(thingset_eeprom)
+#elif DT_NODE_EXISTS(DT_ALIAS(eeprom_0))
+#define EEPROM_DEVICE_NODE DT_ALIAS(eeprom_0)
 #else
 #define EEPROM_DEVICE_NODE DT_NODELABEL(eeprom)
 #endif
