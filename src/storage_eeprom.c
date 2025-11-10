@@ -218,7 +218,7 @@ static int thingset_eeprom_save(off_t offset, size_t useable_size)
                 }
             }
             if (err) {
-                k_sem_give(&ts.lock);
+                thingset_export_subsets_progressively_abort(&ts);
                 LOG_ERR("Error %d writing EEPROM.", -err);
                 break;
             }
