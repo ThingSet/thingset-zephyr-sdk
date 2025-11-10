@@ -61,10 +61,11 @@ THINGSET_ADD_ITEM_STRING(TS_ID_LORAWAN, TS_ID_LORAWAN_NWK_SKEY, "pNwkSKey", lora
                          sizeof(lorawan_nwk_skey), THINGSET_ANY_RW, TS_SUBSET_NVM);
 #endif
 
-static void downlink_callback(uint8_t port, bool data_pending, int16_t rssi, int8_t snr,
-                              uint8_t len, const uint8_t *data)
+static void downlink_callback(uint8_t port, uint8_t flags, int16_t rssi, int8_t snr, uint8_t len,
+                              const uint8_t *data)
 {
-    LOG_INF("Port %d, Pending %d, RSSI %ddB, SNR %ddBm", port, data_pending, rssi, snr);
+    LOG_INF("Port %d, Pending %d, RSSI %ddB, SNR %ddBm", port, flags & LORAWAN_DATA_PENDING, rssi,
+            snr);
     if (data) {
         LOG_HEXDUMP_INF(data, len, "Payload: ");
     }
