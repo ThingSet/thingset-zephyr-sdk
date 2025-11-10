@@ -30,6 +30,6 @@ manifest:
           - zcbor
     - name: thingset-node-c
       remote: thingset
-      revision: 6033e55a10963c774290f3305688bd462753a2b3
+      revision: 3883e8fd429a7b8a2916c730c42aa1aabe48dfb3
       path: modules/thingset-node-c
       import: true
