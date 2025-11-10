@@ -12,10 +12,10 @@ manifest:
   projects:
     - name: zephyr
       remote: zephyrproject
-      revision: v4.0-branch
+      revision: v4.2-branch
       import:
         name-allowlist:
-          - cmsis
+          - cmsis_6
           - edtt
           - hal_espressif
           - hal_nordic

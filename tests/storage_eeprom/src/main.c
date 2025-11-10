@@ -13,7 +13,13 @@
 #include <thingset/sdk.h>
 #include <thingset/storage.h>
 
+#if DT_NODE_EXISTS(DT_CHOSEN(thingset_eeprom))
 #define EEPROM_DEVICE_NODE DT_CHOSEN(thingset_eeprom)
+#elif DT_NODE_EXISTS(DT_ALIAS(eeprom_0))
+#define EEPROM_DEVICE_NODE DT_ALIAS(eeprom_0)
+#else
+#define EEPROM_DEVICE_NODE DT_NODELABEL(eeprom)
+#endif
 
 /* test data objects */
 static float test_float = 1234.56F;

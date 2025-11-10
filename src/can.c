@@ -354,10 +354,10 @@ static void thingset_can_live_reporting_handler(struct k_work *work)
         thingset_can_send_report_inst(ts_can, TS_NAME_SUBSET_LIVE, THINGSET_BIN_IDS_VALUES);
     }
 
-    ts_can->next_live_report_time += 1000 * live_reporting_period;
+    ts_can->next_live_report_time += live_reporting_period;
     if (ts_can->next_live_report_time <= k_uptime_get()) {
         /* ensure proper initialization of next_live_report_time */
-        ts_can->next_live_report_time = k_uptime_get() + 1000 * live_reporting_period;
+        ts_can->next_live_report_time = k_uptime_get() + live_reporting_period;
     }
 
     thingset_sdk_reschedule_work(dwork, K_TIMEOUT_ABS_MS(ts_can->next_live_report_time));
