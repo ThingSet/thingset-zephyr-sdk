@@ -4,40 +4,50 @@ on: [push, pull_request]
 
 jobs:
   build:
+    # Avoid running twice if pushing to a PR branch in the base repo
+    if: >
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
     runs-on: ubuntu-latest
-    container: zephyrprojectrtos/ci:v0.26.5
-    env:
-      CMAKE_PREFIX_PATH: /opt/toolchains
+    defaults:
+      run:
+        working-directory: firmware
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
-          path: thingset-zephyr-sdk
+          path: firmware
           fetch-depth: 0 # necessary to get tags
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Zephyr project setup
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
+        with:
+          app-path: firmware
+          toolchains: arm-zephyr-eabi:riscv64-zephyr-elf
+
       - name: Coding style check
-        working-directory: thingset-zephyr-sdk
         run: |
-          apt-get update
-          apt-get install -y clang-format-15 colordiff
+          sudo apt-get update
+          sudo apt-get install -y clang-format-15 colordiff
           git status
           bash scripts/check-style.sh
 
-      - name: Initialize west workspace
-        working-directory: thingset-zephyr-sdk
+      - name: Fetch hal_espressif binary blobs
         run: |
-          west init -l .
-          west update
           west blobs fetch hal_espressif
 
       - name: Install docs dependencies
-        working-directory: thingset-zephyr-sdk
+        if: github.ref == 'refs/heads/main'
         run: |
           sudo apt install -y git make python3 python3-pip doxygen
           pip3 install -r docs/requirements.txt
 
       - name: Run sample build tests
-        working-directory: thingset-zephyr-sdk
         run: |
           west build -p -b olimex_lora_stm32wl_devkit samples/counter -- -DEXTRA_CONF_FILE=lorawan.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
           west build -p -b esp32c3_devkitm samples/counter -- -DEXTRA_CONF_FILE=ble.conf -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
@@ -52,12 +62,10 @@ jobs:
           west build -p -b xiao_esp32c3 samples/serial_ble_gateway -- -DCONFIG_COMPILER_WARNINGS_AS_ERRORS=y
 
       - name: Run unit tests
-        working-directory: thingset-zephyr-sdk
         run: |
           ../zephyr/scripts/twister -T ./tests --integration --inline-logs
 
       - name: Build documentation
-        working-directory: thingset-zephyr-sdk
         run: |
           cd docs
           make html
@@ -67,7 +75,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./thingset-zephyr-sdk/docs/build/html/
+          publish_dir: docs/build/html/
           enable_jekyll: false
           allow_empty_commit: false
           force_orphan: true
