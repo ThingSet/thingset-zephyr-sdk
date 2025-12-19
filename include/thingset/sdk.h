@@ -94,7 +94,7 @@ extern "C" {
 #define TS_ID_SUBSET_LIVE     0x31
 #define TS_ID_REP_LIVE        0x310
 #define TS_ID_REP_LIVE_ENABLE 0x311
-#define TS_ID_REP_LIVE_PERIOD 0x312
+#define TS_ID_REP_LIVE_PERIOD 0x313 // in ms (0x312 was used to store period in s)
 
 #define TS_NAME_SUBSET_SUMMARY   "mSummary"
 #define TS_ID_SUBSET_SUMMARY     0x32
