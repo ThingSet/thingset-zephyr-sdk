@@ -94,6 +94,7 @@ static struct k_sem rx_buf_lock;
 static thingset_sdk_rx_callback_t rx_callback;
 
 static struct k_work_delayable processing_work;
+static struct k_work_delayable adv_work;
 #ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
 static struct k_work_delayable reporting_work;
 #endif
@@ -168,6 +169,8 @@ static void thingset_bluetooth_disconn(struct bt_conn *conn, uint8_t reason)
         bt_conn_unref(ble_conn);
         ble_conn = NULL;
     }
+
+    thingset_sdk_reschedule_work(&adv_work, K_NO_WAIT);
 }
 
 int thingset_bluetooth_send(const uint8_t *buf, size_t len)
@@ -222,6 +225,17 @@ static void regular_report_handler(struct k_work *work)
 
 #endif
 
+static void adv_work_handler(struct k_work *work)
+{
+    int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+    if (err) {
+        LOG_ERR("Advertising failed to start (err %d)", err);
+    }
+    else {
+        LOG_INF("Waiting for Bluetooth connections...");
+    }
+}
+
 static void process_msg_handler(struct k_work *work)
 {
     if (rx_buf_pos > 0) {
@@ -259,6 +273,7 @@ static int thingset_bluetooth_init()
 {
     k_sem_init(&rx_buf_lock, 1, 1);
 
+    k_work_init_delayable(&adv_work, adv_work_handler);
     k_work_init_delayable(&processing_work, process_msg_handler);
 #ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
     k_work_init_delayable(&reporting_work, regular_report_handler);
@@ -270,12 +285,7 @@ static int thingset_bluetooth_init()
         return err;
     }
 
-    err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
-    if (err) {
-        LOG_ERR("Advertising failed to start (err %d)", err);
-        return err;
-    }
-    LOG_INF("Waiting for Bluetooth connections...");
+    thingset_sdk_reschedule_work(&adv_work, K_NO_WAIT);
 
 #ifdef CONFIG_THINGSET_SUBSET_LIVE_METRICS
     thingset_sdk_reschedule_work(&reporting_work, K_NO_WAIT);
