@@ -31,7 +31,7 @@ The full license text is available at `<https://creativecommons.org/licenses/by-
 
     interfaces/serial
     interfaces/shell
-    interfaces/ble
+    interfaces/bluetooth
     interfaces/can
     interfaces/lorawan
 

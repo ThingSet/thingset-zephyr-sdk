@@ -7,7 +7,7 @@ menuconfig THINGSET_SDK
 if THINGSET_SDK
 
 rsource "src/Kconfig.auth"
-rsource "src/Kconfig.ble"
+rsource "src/Kconfig.bluetooth"
 rsource "src/Kconfig.can"
 rsource "src/Kconfig.dfu"
 rsource "src/Kconfig.log_backend"

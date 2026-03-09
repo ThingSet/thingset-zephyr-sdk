@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef THINGSET_BLE_H_
-#define THINGSET_BLE_H_
+#ifndef THINGSET_BLUETOOTH_H_
+#define THINGSET_BLUETOOTH_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
  *
  * @returns 0 for success or negative errno in case of error
  */
-int thingset_ble_send_report(const char *path);
+int thingset_bluetooth_send_report(const char *path);
 
 /**
  * Send ThingSet message (response or report) to Bluetooth Central.
@@ -31,7 +31,7 @@ int thingset_ble_send_report(const char *path);
  *
  * @returns 0 for success or negative errno in case of error
  */
-int thingset_ble_send(const uint8_t *buf, size_t len);
+int thingset_bluetooth_send(const uint8_t *buf, size_t len);
 
 /**
  * Set custom callback for received data.
@@ -39,10 +39,10 @@ int thingset_ble_send(const uint8_t *buf, size_t len);
  * If this callback is set, ThingSet messages are not processed automatically anymore, but
  * forwarded through the callback.
  */
-void thingset_ble_set_rx_callback(thingset_sdk_rx_callback_t rx_cb);
+void thingset_bluetooth_set_rx_callback(thingset_sdk_rx_callback_t rx_cb);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* THINGSET_BLE_H_ */
+#endif /* THINGSET_BLUETOOTH_H_ */

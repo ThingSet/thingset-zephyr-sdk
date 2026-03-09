@@ -9,7 +9,7 @@
 #include <zephyr/logging/log_ctrl.h>
 
 #include <thingset.h>
-#include <thingset/ble.h>
+#include <thingset/bluetooth.h>
 #include <thingset/sdk.h>
 #include <thingset/serial.h>
 
@@ -115,8 +115,8 @@ static void process(const struct log_backend *const backend, union log_msg_gener
 #ifdef CONFIG_THINGSET_SERIAL
     thingset_serial_send_report("Log");
 #endif
-#ifdef CONFIG_THINGSET_BLE
-    thingset_ble_send_report("Log");
+#ifdef CONFIG_THINGSET_BLUETOOTH
+    thingset_bluetooth_send_report("Log");
 #endif
 }
 

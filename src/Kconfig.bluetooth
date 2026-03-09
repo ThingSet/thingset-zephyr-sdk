@@ -1,0 +1,22 @@
+# Copyright (c) The ThingSet Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+config THINGSET_BLE
+	bool "Bluetooth LE [DEPRECATED]"
+	select THINGSET_BLUETOOTH
+	select DEPRECATED
+	help
+	  This option is deprecated and should be replaced with THINGSET_BLUETOOTH.
+
+menuconfig THINGSET_BLUETOOTH
+	bool "Bluetooth Low Energy interface"
+	depends on BT
+
+if THINGSET_BLUETOOTH
+
+config THINGSET_BLUETOOTH_RX_BUF_SIZE
+	int "ThingSet Bluetooth RX buffer size"
+	range 64 2048
+	default 512
+
+endif # THINGSET_BLUETOOTH

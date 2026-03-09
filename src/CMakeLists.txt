@@ -7,7 +7,7 @@ zephyr_library_sources_ifdef(CONFIG_THINGSET_SDK sdk.c)
 zephyr_library_sources_ifdef(CONFIG_THINGSET_SDK packetizer.c)
 
 zephyr_library_sources_ifdef(CONFIG_THINGSET_AUTH auth.c)
-zephyr_library_sources_ifdef(CONFIG_THINGSET_BLE ble.c)
+zephyr_library_sources_ifdef(CONFIG_THINGSET_BLUETOOTH bluetooth.c)
 zephyr_library_sources_ifdef(CONFIG_THINGSET_CAN can.c)
 zephyr_library_sources_ifdef(CONFIG_THINGSET_DFU dfu.c)
 zephyr_library_sources_ifdef(CONFIG_THINGSET_LOG_BACKEND log_backend.c)

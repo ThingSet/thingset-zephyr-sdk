@@ -7,7 +7,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 
-#include "thingset/ble.h"
+#include "thingset/bluetooth.h"
 #include "thingset/sdk.h"
 #include "thingset/serial.h"
 
@@ -34,7 +34,7 @@ void flash_led()
 
 void serial_rx_callback(const uint8_t *buf, size_t len)
 {
-    thingset_ble_send(buf, len);
+    thingset_bluetooth_send(buf, len);
     flash_led();
 }
 
@@ -47,7 +47,7 @@ void ble_rx_callback(const uint8_t *buf, size_t len)
 int main(void)
 {
     thingset_serial_set_rx_callback(serial_rx_callback);
-    thingset_ble_set_rx_callback(ble_rx_callback);
+    thingset_bluetooth_set_rx_callback(ble_rx_callback);
 
     if (!device_is_ready(led.port)) {
         /* ignore LED if not available */
