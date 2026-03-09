@@ -105,7 +105,9 @@ static inline void free_recv_ctx(struct isotp_fast_recv_ctx *rctx)
     LOG_DBG("Freeing receive context %x", rctx->rx_addr.ext_id);
     k_timer_stop(&rctx->timer);
     sys_slist_find_and_remove(&rctx->ctx->isotp_recv_ctx_list, &rctx->node);
-    net_buf_unref(rctx->buffer);
+    if (rctx->buffer->ref > 0) {
+        net_buf_unref(rctx->buffer);
+    }
 #ifdef ISOTP_FAST_RECEIVE_QUEUE
     k_msgq_purge(&rctx->recv_queue);
     k_msgq_cleanup(&rctx->recv_queue);
