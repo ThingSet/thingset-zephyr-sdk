@@ -6,8 +6,8 @@
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
-#include <zephyr/fs/nvs.h>
 #include <zephyr/kernel.h>
+#include <zephyr/kvss/nvs.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/storage/flash_map.h>
 
@@ -39,13 +39,13 @@ static int data_storage_init()
     struct flash_pages_info page_info;
     int err;
 
-    fs.flash_device = FIXED_PARTITION_DEVICE(NVS_PARTITION);
+    fs.flash_device = PARTITION_DEVICE(NVS_PARTITION);
     if (!device_is_ready(fs.flash_device)) {
         LOG_ERR("Flash device not ready");
         return -ENODEV;
     }
 
-    fs.offset = FIXED_PARTITION_OFFSET(NVS_PARTITION);
+    fs.offset = PARTITION_OFFSET(NVS_PARTITION);
     err = flash_get_page_info_by_offs(fs.flash_device, fs.offset, &page_info);
     if (err) {
         LOG_ERR("Unable to get flash page info");
@@ -53,7 +53,7 @@ static int data_storage_init()
     }
 
     fs.sector_size = page_info.size;
-    fs.sector_count = FIXED_PARTITION_SIZE(NVS_PARTITION) / page_info.size;
+    fs.sector_count = PARTITION_SIZE(NVS_PARTITION) / page_info.size;
 
     err = nvs_mount(&fs);
     if (err) {

@@ -7,6 +7,7 @@
 #include <zephyr/device.h>
 #include <zephyr/logging/log_backend.h>
 #include <zephyr/logging/log_ctrl.h>
+#include <zephyr/logging/log_msg.h>
 
 #include <thingset.h>
 #include <thingset/bluetooth.h>
@@ -74,6 +75,7 @@ static void process(const struct log_backend *const backend, union log_msg_gener
         return;
     }
 
+    uint8_t core_id = log_msg_get_core_id(msg);
     uint8_t domain_id = log_msg_get_domain(msg);
     int16_t source_id;
 
@@ -108,8 +110,8 @@ static void process(const struct log_backend *const backend, union log_msg_gener
     snprintf(log_module, sizeof(log_module), "%s", sname);
 
     /* HEXDUMPs are ignored and the log messages should be extracted w/o line ending */
-    log_output_process(&log_output_thingset, 0, NULL, NULL, NULL, log_level, package, NULL, 0,
-                       LOG_OUTPUT_FLAG_CRLF_NONE);
+    log_output_process(&log_output_thingset, 0, NULL, NULL, NULL, core_id, log_level, package, NULL,
+                       0, LOG_OUTPUT_FLAG_CRLF_NONE);
 
     /* ToDo: Implement rate limit to avoid congestion */
 #ifdef CONFIG_THINGSET_SERIAL

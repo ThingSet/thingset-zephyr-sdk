@@ -14,13 +14,13 @@ jobs:
         working-directory: firmware
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           path: firmware
           fetch-depth: 0 # necessary to get tags
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.12
 

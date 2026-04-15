@@ -17,7 +17,7 @@
 
 LOG_MODULE_REGISTER(thingset_dfu, CONFIG_THINGSET_SDK_LOG_LEVEL);
 
-#define TARGET_IMAGE_AREA FIXED_PARTITION_ID(slot1_partition)
+#define TARGET_IMAGE_AREA PARTITION_ID(slot1_partition)
 
 static uint8_t bytes_buf[CONFIG_THINGSET_DFU_CHUNK_SIZE];
 static THINGSET_DEFINE_BYTES(bytes_item, bytes_buf, 0);

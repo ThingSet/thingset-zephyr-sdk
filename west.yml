@@ -12,7 +12,7 @@ manifest:
   projects:
     - name: zephyr
       remote: zephyrproject
-      revision: v4.3-branch
+      revision: v4.4-branch
       import:
         name-allowlist:
           - cmsis_6
@@ -26,6 +26,7 @@ manifest:
           - mcuboot
           - picolibc
           - segger
+          - tf-psa-crypto
           - tinycrypt
           - zcbor
     - name: thingset-node-c
