@@ -62,7 +62,7 @@ static void wifi_connect_handler(struct k_work *work)
     }
 }
 
-static void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
+static void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint64_t mgmt_event,
                                     struct net_if *iface)
 {
     const struct wifi_status *status = cb->info;

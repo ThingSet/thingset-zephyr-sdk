@@ -12,7 +12,7 @@ manifest:
   projects:
     - name: zephyr
       remote: zephyrproject
-      revision: v4.4-branch
+      revision: v4.5-branch
       import:
         name-allowlist:
           - cmsis_6
