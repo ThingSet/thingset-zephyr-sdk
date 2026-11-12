@@ -198,9 +198,7 @@ static void serial_rx_cb(const struct device *dev, void *user_data)
 {
     uint8_t c;
 
-    if (!uart_irq_update(uart_dev)) {
-        return;
-    }
+    uart_irq_update(uart_dev);
 
     while (uart_irq_rx_ready(uart_dev)) {
         uart_fifo_read(uart_dev, &c, 1);
