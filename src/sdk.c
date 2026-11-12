@@ -172,7 +172,7 @@ static int thingset_sdk_init(void)
     k_work_queue_start(&thingset_workq, thread_stack_area, K_THREAD_STACK_SIZEOF(thread_stack_area),
                        CONFIG_THINGSET_SDK_THREAD_PRIORITY, NULL);
 
-    k_thread_name_set(&thingset_workq.thread, "thingset_sdk");
+    k_thread_name_set(k_work_queue_thread_get(&thingset_workq), "thingset_sdk");
 
     thingset_init_global(&ts);
 
