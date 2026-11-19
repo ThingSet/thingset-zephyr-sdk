@@ -200,7 +200,7 @@ static void serial_rx_cb(const struct device *dev, void *user_data)
 
     uart_irq_update(uart_dev);
 
-    while (uart_irq_rx_ready(uart_dev)) {
+    while (uart_irq_is_pending(uart_dev)) {
         uart_fifo_read(uart_dev, &c, 1);
         serial_rx_buf_put(c);
     }
